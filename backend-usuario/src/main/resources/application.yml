@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: backend-usuario
+
+  # Base de datos PostgreSQL (esquema `usuario`, gestionado por Spring Boot)
+  datasource:
+    url: jdbc:postgresql://localhost:5432/colab
+    username: ${DB_USERNAME:postgres}
+    password: 12349876
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway gestiona el esquema; JPA solo valida la coherencia con las entidades.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: usuario
+
+  # Migraciones Flyway sobre el esquema `usuario`
+  flyway:
+    enabled: true
+    schemas: usuario
+    locations: classpath:db/migration
+
+# Integración con la IA "La BestIA" (TECSUP - OpenWebUI)
+colab:
+  jwt:
+    # Clave para firmar los JWT (HS256). Debe tener al menos 32 caracteres.
+    secret: ${JWT_SECRET:clave-secreta-local-de-desarrollo-cambiar-en-prod-1234567890}
+    expiracion-ms: ${JWT_EXPIRACION_MS:86400000}
+  ia:
+    # "mock" para desarrollo/pruebas sin la red de TECSUP; "real" dentro del instituto.
+    provider: ${IA_PROVIDER:mock}
+    openwebui-url: ${OPENWEBUI_URL:http://192.168.17.11:3000}
+    api-key: ${USER_API_KEY:}
+    model: ${MODEL:Qwen/Qwen3.6-35B-A3B-FP8}
+
+server:
+  port: 8081

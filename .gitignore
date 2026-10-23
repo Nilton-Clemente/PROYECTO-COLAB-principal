@@ -1,0 +1,49 @@
+# Cada herramienta (Spring Initializr, Android Studio, Vite, Django) genera su
+# propio .gitignore. Este es una red de seguridad común para el monorepo.
+
+# ===== Java / Spring Boot =====
+target/
+*.class
+*.jar
+.mvn/wrapper/maven-wrapper.jar
+*.log
+
+# Artefactos temporales locales (diagnostico manual)
+backend-usuario/build-out.txt
+backend-usuario/deps.txt
+
+# ===== Gradle (Android / Spring con Gradle) =====
+build/
+.gradle/
+local.properties
+
+# ===== Android =====
+*.apk
+*.aab
+*.keystore
+captures/
+.externalNativeBuild/
+.cxx/
+
+# ===== Node / React =====
+node_modules/
+dist/
+.env
+.env.local
+
+# ===== Python / Django =====
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+*.sqlite3
+*.db
+staticfiles/
+
+# ===== IDEs / editores / SO =====
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
