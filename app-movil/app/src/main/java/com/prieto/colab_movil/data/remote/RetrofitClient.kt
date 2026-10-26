@@ -7,7 +7,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "http://10.0.2.2:8081/"
+    // IP local de tu PC en la red Wi-Fi (funciona tanto para teléfono físico como para emulador)
+    private const val BASE_URL = "http://10.200.173.165:8081/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
