@@ -1,5 +1,6 @@
 package com.prieto.colab_movil.data.remote
 
+import com.prieto.colab_movil.BuildConfig
 import com.prieto.colab_movil.data.session.SessionManager
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -9,9 +10,6 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    // IP local de tu PC en la red Wi-Fi (funciona tanto para teléfono físico como para emulador)
-    private const val BASE_URL = "http://10.200.173.179:8082/"
-
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
@@ -37,7 +35,7 @@ object RetrofitClient {
 
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(BuildConfig.BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

@@ -1,7 +1,21 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
 }
+
+// Lee la URL del backend desde local.properties (archivo NO versionado).
+// Cada máquina define su propia IP/puerto sin tocar el código ni el historial.
+val localProperties = Properties().apply {
+    val localFile = rootProject.file("local.properties")
+    if (localFile.exists()) {
+        localFile.inputStream().use { load(it) }
+    }
+}
+val baseUrl: String = localProperties.getProperty("base.url")
+    ?: (project.findProperty("base.url") as String?)
+    ?: "http://10.0.2.2:8082/"
 
 android {
     namespace = "com.prieto.colab_movil"
@@ -15,6 +29,8 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -32,6 +48,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
