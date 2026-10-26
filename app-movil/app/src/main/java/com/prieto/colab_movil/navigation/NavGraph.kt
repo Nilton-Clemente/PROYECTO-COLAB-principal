@@ -7,12 +7,15 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.prieto.colab_movil.data.session.SessionManager
 import com.prieto.colab_movil.ui.login.LoginScreen
+import com.prieto.colab_movil.ui.perfil.PerfilScreen
 import com.prieto.colab_movil.ui.register.RegisterScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
+    object Perfil : Screen("perfil")
 }
 
 @Composable
@@ -28,7 +31,10 @@ fun AppNavigation(
         composable(Screen.Login.route) {
             LoginScreen(
                 onLoginSuccess = { token ->
-                    Toast.makeText(context, "¡Sesión iniciada con éxito!", Toast.LENGTH_LONG).show()
+                    SessionManager.token = token
+                    navController.navigate(Screen.Perfil.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
                 },
                 onRegisterClick = {
                     navController.navigate(Screen.Register.route)
@@ -57,6 +63,10 @@ fun AppNavigation(
                     Toast.makeText(context, "Términos y condiciones TECSUP", Toast.LENGTH_SHORT).show()
                 }
             )
+        }
+
+        composable(Screen.Perfil.route) {
+            PerfilScreen()
         }
     }
 }
