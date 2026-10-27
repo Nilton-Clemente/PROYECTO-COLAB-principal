@@ -4,12 +4,15 @@ import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.prieto.colab_movil.data.session.SessionManager
 import com.prieto.colab_movil.ui.login.LoginScreen
 import com.prieto.colab_movil.ui.perfil.PerfilScreen
+import com.prieto.colab_movil.ui.proyectos.DetalleProyectoScreen
 import com.prieto.colab_movil.ui.proyectos.ProyectosScreen
 import com.prieto.colab_movil.ui.register.RegisterScreen
 
@@ -18,6 +21,9 @@ sealed class Screen(val route: String) {
     object Register : Screen("register")
     object Proyectos : Screen("proyectos")
     object Perfil : Screen("perfil")
+    object DetalleProyecto : Screen("proyecto_detalle/{proyectoId}") {
+        fun createRoute(proyectoId: Long) = "proyecto_detalle/$proyectoId"
+    }
 }
 
 @Composable
@@ -69,6 +75,9 @@ fun AppNavigation(
 
         composable(Screen.Proyectos.route) {
             ProyectosScreen(
+                onProyectoClick = { proyecto ->
+                    navController.navigate(Screen.DetalleProyecto.createRoute(proyecto.id))
+                },
                 onPerfilClick = {
                     navController.navigate(Screen.Perfil.route)
                 },
@@ -81,6 +90,19 @@ fun AppNavigation(
                 onNotificacionesClick = {
                     Toast.makeText(context, "Notificaciones", Toast.LENGTH_SHORT).show()
                 }
+            )
+        }
+
+        composable(
+            route = Screen.DetalleProyecto.route,
+            arguments = listOf(navArgument("proyectoId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val proyectoId = backStackEntry.arguments?.getLong("proyectoId") ?: 1L
+            DetalleProyectoScreen(
+                proyectoId = proyectoId,
+                onBack = { navController.popBackStack() },
+                onPerfil = { navController.navigate(Screen.Perfil.route) },
+                onEditar = { Toast.makeText(context, "Editar proyecto", Toast.LENGTH_SHORT).show() }
             )
         }
 

@@ -115,6 +115,7 @@ sealed interface Insignia {
 }
 
 data class Proyecto(
+    val id: Long = 0L,
     val codigo: String,
     val titulo: String,
     val estado: EstadoProyecto,
@@ -153,6 +154,7 @@ private fun mapToProyecto(dto: ProyectoResponseDto): Proyecto {
     val insignia = Insignia.Fecha(dto.fechaEntrega ?: "Por definir")
 
     return Proyecto(
+        id = dto.id,
         codigo = codigo,
         titulo = dto.nombre,
         estado = estado,

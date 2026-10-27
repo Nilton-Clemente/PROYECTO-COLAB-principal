@@ -13,5 +13,8 @@ data class ProyectoResponseDto(
     @SerializedName("restricciones") val restricciones: String?,
     @SerializedName("fechaEntrega") val fechaEntrega: String?,
     @SerializedName("tipo") val tipo: String?,
-    @SerializedName("tecnologias") val tecnologias: List<TecnologiaDto>?
+    @SerializedName("tecnologias") val tecnologias: List<TecnologiaDto>?,
+    @SerializedName("requerimientosFuncionales") val requerimientosFuncionales: List<RequerimientoFuncionalDto>?,
+    @SerializedName("requerimientosNoFuncionales") val requerimientosNoFuncionales: List<RequerimientoNoFuncionalDto>?,
+    @SerializedName("casosDeUso") val casosDeUso: List<CasoUsoDto>?
 )
