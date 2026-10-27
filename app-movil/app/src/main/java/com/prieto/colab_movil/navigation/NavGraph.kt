@@ -10,11 +10,13 @@ import androidx.navigation.compose.rememberNavController
 import com.prieto.colab_movil.data.session.SessionManager
 import com.prieto.colab_movil.ui.login.LoginScreen
 import com.prieto.colab_movil.ui.perfil.PerfilScreen
+import com.prieto.colab_movil.ui.proyectos.ProyectosScreen
 import com.prieto.colab_movil.ui.register.RegisterScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
+    object Proyectos : Screen("proyectos")
     object Perfil : Screen("perfil")
 }
 
@@ -32,7 +34,7 @@ fun AppNavigation(
             LoginScreen(
                 onLoginSuccess = { token ->
                     SessionManager.token = token
-                    navController.navigate(Screen.Perfil.route) {
+                    navController.navigate(Screen.Proyectos.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
@@ -61,6 +63,23 @@ fun AppNavigation(
                 },
                 onTermsClick = {
                     Toast.makeText(context, "Términos y condiciones TECSUP", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+
+        composable(Screen.Proyectos.route) {
+            ProyectosScreen(
+                onPerfilClick = {
+                    navController.navigate(Screen.Perfil.route)
+                },
+                onInvitacionesClick = {
+                    Toast.makeText(context, "Sección de Invitaciones", Toast.LENGTH_SHORT).show()
+                },
+                onCrearClick = {
+                    Toast.makeText(context, "Crear nuevo proyecto", Toast.LENGTH_SHORT).show()
+                },
+                onNotificacionesClick = {
+                    Toast.makeText(context, "Notificaciones", Toast.LENGTH_SHORT).show()
                 }
             )
         }
