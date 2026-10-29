@@ -3,7 +3,9 @@ package com.prieto.colab_movil.data.repository
 import com.prieto.colab_movil.data.model.IntegranteResponseDto
 import com.prieto.colab_movil.data.model.InvitacionResponseDto
 import com.prieto.colab_movil.data.model.PerfilResponseDto
+import com.prieto.colab_movil.data.model.ProyectoRequest
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
+import com.prieto.colab_movil.data.model.TecnologiaDto
 import com.prieto.colab_movil.data.remote.PerfilApiService
 import com.prieto.colab_movil.data.remote.ProyectoApiService
 import com.prieto.colab_movil.data.remote.RetrofitClient
@@ -16,6 +18,8 @@ interface ProyectoRepository {
     suspend fun verProyecto(id: Long): Result<ProyectoResponseDto>
     suspend fun verEquipo(id: Long): Result<List<IntegranteResponseDto>>
     suspend fun listarInvitaciones(): Result<List<InvitacionResponseDto>>
+    suspend fun listarTecnologias(): Result<List<TecnologiaDto>>
+    suspend fun crearProyecto(request: ProyectoRequest): Result<ProyectoResponseDto>
 }
 
 class ProyectoRepositoryImpl(
@@ -85,6 +89,32 @@ class ProyectoRepositoryImpl(
             }
         } catch (e: Exception) {
             Result.success(emptyList())
+        }
+    }
+
+    override suspend fun listarTecnologias(): Result<List<TecnologiaDto>> = withContext(Dispatchers.IO) {
+        try {
+            val response = proyectoApiService.listarTecnologias()
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Error al cargar tecnologías (${response.code()})"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun crearProyecto(request: ProyectoRequest): Result<ProyectoResponseDto> = withContext(Dispatchers.IO) {
+        try {
+            val response = proyectoApiService.crearProyecto(request)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Error al guardar el proyecto (${response.code()})"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }

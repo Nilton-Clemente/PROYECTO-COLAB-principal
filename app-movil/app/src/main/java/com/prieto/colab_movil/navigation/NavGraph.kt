@@ -12,6 +12,7 @@ import androidx.navigation.navArgument
 import com.prieto.colab_movil.data.session.SessionManager
 import com.prieto.colab_movil.ui.login.LoginScreen
 import com.prieto.colab_movil.ui.perfil.PerfilScreen
+import com.prieto.colab_movil.ui.proyectos.CrearProyectoScreen
 import com.prieto.colab_movil.ui.proyectos.DetalleProyectoScreen
 import com.prieto.colab_movil.ui.proyectos.ProyectosScreen
 import com.prieto.colab_movil.ui.register.RegisterScreen
@@ -24,6 +25,7 @@ sealed class Screen(val route: String) {
     object DetalleProyecto : Screen("proyecto_detalle/{proyectoId}") {
         fun createRoute(proyectoId: Long) = "proyecto_detalle/$proyectoId"
     }
+    object CrearProyecto : Screen("crear_proyecto")
 }
 
 @Composable
@@ -85,10 +87,22 @@ fun AppNavigation(
                     Toast.makeText(context, "Sección de Invitaciones", Toast.LENGTH_SHORT).show()
                 },
                 onCrearClick = {
-                    Toast.makeText(context, "Crear nuevo proyecto", Toast.LENGTH_SHORT).show()
+                    navController.navigate(Screen.CrearProyecto.route)
                 },
                 onNotificacionesClick = {
                     Toast.makeText(context, "Notificaciones", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+
+        composable(Screen.CrearProyecto.route) {
+            CrearProyectoScreen(
+                onGuardar = {
+                    Toast.makeText(context, "Proyecto guardado correctamente", Toast.LENGTH_SHORT).show()
+                    navController.popBackStack()
+                },
+                onCancelar = {
+                    navController.popBackStack()
                 }
             )
         }

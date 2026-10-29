@@ -57,6 +57,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,6 +73,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -180,6 +182,10 @@ fun ProyectosScreen(
     onInvitacionesClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.cargarDatos()
+    }
 
     when (val state = uiState) {
         is ProyectosUiState.Loading -> {
@@ -475,7 +481,7 @@ private fun ProyectoCard(p: Proyecto, onClick: () -> Unit, onOpciones: () -> Uni
             .background(SurfaceLowest)
             .clickable(onClick = onClick)
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(verticalAlignment = Alignment.Top) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -501,23 +507,17 @@ private fun ProyectoCard(p: Proyecto, onClick: () -> Unit, onOpciones: () -> Uni
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
                 .background(SurfaceLow)
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Row(
+            Text(
+                if (finalizado) "100%" else "${(p.progreso * 100).toInt()}% completado",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colorProgreso,
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(p.etapaIcono, null, tint = colorProgreso, modifier = Modifier.size(16.dp))
-                    Text(p.etapaTexto, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = if (finalizado) Secondary else OnSurfaceVariant)
-                }
-                Text(
-                    if (finalizado) "100%" else "${(p.progreso * 100).toInt()}% completado",
-                    fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = colorProgreso
-                )
-            }
+                textAlign = TextAlign.End
+            )
             BarraProgreso(p.progreso, colorProgreso)
         }
 
@@ -547,14 +547,14 @@ private fun BarraProgreso(progreso: Float, color: Color) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(8.dp)
+            .height(6.dp)
             .clip(CircleShape)
             .background(SurfaceHigh)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth(progreso.coerceIn(0f, 1f))
-                .height(8.dp)
+                .height(6.dp)
                 .clip(CircleShape)
                 .background(color)
         )

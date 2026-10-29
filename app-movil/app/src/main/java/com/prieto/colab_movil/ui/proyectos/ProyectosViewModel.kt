@@ -16,10 +16,6 @@ class ProyectosViewModel(
     private val _uiState = MutableStateFlow<ProyectosUiState>(ProyectosUiState.Loading)
     val uiState: StateFlow<ProyectosUiState> = _uiState.asStateFlow()
 
-    init {
-        cargarDatos()
-    }
-
     fun cargarDatos() {
         _uiState.value = ProyectosUiState.Loading
         viewModelScope.launch {
