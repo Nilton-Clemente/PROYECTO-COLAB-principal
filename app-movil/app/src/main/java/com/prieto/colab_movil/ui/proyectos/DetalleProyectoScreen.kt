@@ -214,7 +214,7 @@ private fun DetalleProyectoContenido(
 
         when (pestana) {
             Pestana.INFO -> InfoTab(problematica, objetivoGeneral, objetivosEspecificos, stack, requerimientos)
-            Pestana.EQUIPO -> EquipoTab(equipo)
+            Pestana.EQUIPO -> EquipoProyectoContent(equipoDto = equipoDto)
             Pestana.HITOS -> HitosTab(hitos)
         }
         Spacer(Modifier.height(16.dp))
