@@ -121,7 +121,18 @@ fun AppNavigation(
         }
 
         composable(Screen.Perfil.route) {
-            PerfilScreen()
+            PerfilScreen(
+                onProyectosClick = {
+                    navController.popBackStack(Screen.Proyectos.route, inclusive = false)
+                },
+                onInvitacionesClick = {
+                    Toast.makeText(context, "Sección de Invitaciones", Toast.LENGTH_SHORT).show()
+                },
+                onPerfilClick = {},
+                onNotificacionesClick = {
+                    Toast.makeText(context, "Notificaciones", Toast.LENGTH_SHORT).show()
+                }
+            )
         }
     }
 }

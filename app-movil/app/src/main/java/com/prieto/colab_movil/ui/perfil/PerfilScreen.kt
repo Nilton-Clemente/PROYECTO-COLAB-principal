@@ -16,6 +16,10 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Mail
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -62,14 +66,29 @@ private fun iniciales(nombre: String): String {
 
 @Composable
 fun PerfilScreen(
-    viewModel: PerfilViewModel = viewModel()
+    viewModel: PerfilViewModel = viewModel(),
+    onProyectosClick: () -> Unit = {},
+    onInvitacionesClick: () -> Unit = {},
+    onPerfilClick: () -> Unit = {},
+    onNotificacionesClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         containerColor = Fondo,
-        topBar = { EncabezadoColab() },
-        bottomBar = { BarraNavegacion() }
+        topBar = {
+            EncabezadoColab(
+                onNotificaciones = onNotificacionesClick,
+                onPerfil = onPerfilClick
+            )
+        },
+        bottomBar = {
+            BarraNavegacion(
+                onProyectosClick = onProyectosClick,
+                onInvitacionesClick = onInvitacionesClick,
+                onPerfilClick = onPerfilClick
+            )
+        }
     ) { paddingValues ->
         when (val state = uiState) {
             is PerfilUiState.Loading -> {
@@ -251,60 +270,41 @@ private fun ContenidoPerfil(
 // ---------------------------------------------------------
 
 @Composable
-fun EncabezadoColab() {
-    Surface(
-        color = Superficie,
-        shadowElevation = 2.dp
+fun EncabezadoColab(onNotificaciones: () -> Unit, onPerfil: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Fondo)
+            .padding(horizontal = 16.dp)
+            .height(64.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .height(64.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+        Text("Colab", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onNotificaciones) {
+                Icon(
+                    imageVector = Icons.Outlined.Notifications,
+                    contentDescription = "Notificaciones",
+                    tint = TextoSecundario
+                )
+            }
+            IconButton(onClick = onPerfil) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(PrimarioContainer),
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Primario),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "C",
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Column {
-                    Text(
-                        text = "Colab",
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextoPrincipal
-                    )
-                    Text(
-                        text = "TECSUP",
-                        fontSize = 11.sp,
-                        color = TextoSecundario
+                    Icon(
+                        imageVector = Icons.Outlined.Person,
+                        contentDescription = "Mi perfil",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
-
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = "Perfil de usuario",
-                tint = Primario,
-                modifier = Modifier.size(28.dp)
-            )
         }
     }
 }
@@ -727,38 +727,40 @@ fun MensajeVacio(mensaje: String) {
 // ---------------------------------------------------------
 
 @Composable
-fun BarraNavegacion() {
-    Surface(
-        color = Superficie,
-        shadowElevation = 8.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .height(64.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.padding(vertical = 5.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "●",
-                    fontSize = 23.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Primario
-                )
-
-                Text(
-                    text = "Mi Perfil",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Primario
-                )
-            }
-        }
+fun BarraNavegacion(
+    onProyectosClick: () -> Unit = {},
+    onInvitacionesClick: () -> Unit = {},
+    onPerfilClick: () -> Unit = {}
+) {
+    NavigationBar(containerColor = Superficie) {
+        val colores = NavigationBarItemDefaults.colors(
+            selectedIconColor = Primario,
+            selectedTextColor = Primario,
+            indicatorColor = Color.Transparent,
+            unselectedIconColor = TextoSecundario,
+            unselectedTextColor = TextoSecundario
+        )
+        NavigationBarItem(
+            selected = false,
+            onClick = onProyectosClick,
+            colors = colores,
+            icon = { Icon(Icons.Outlined.Folder, null) },
+            label = { Text("Proyectos", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+        )
+        NavigationBarItem(
+            selected = false,
+            onClick = onInvitacionesClick,
+            colors = colores,
+            icon = { Icon(Icons.Outlined.Mail, null) },
+            label = { Text("Invitaciones", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+        )
+        NavigationBarItem(
+            selected = true,
+            onClick = onPerfilClick,
+            colors = colores,
+            icon = { Icon(Icons.Outlined.Person, null) },
+            label = { Text("Mi Perfil", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+        )
     }
 }
 
