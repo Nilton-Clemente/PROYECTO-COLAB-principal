@@ -70,6 +70,7 @@ fun DetalleProyectoScreen(
     viewModel: DetalleProyectoViewModel = viewModel(),
     onBack: () -> Unit = {},
     onEditar: () -> Unit = {},
+    onGenerarPlanificacion: () -> Unit = {},
     onPerfil: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -120,7 +121,8 @@ fun DetalleProyectoScreen(
                     DetalleProyectoContenido(
                         proyectoDto = state.proyecto,
                         equipoDto = state.equipo,
-                        onEditar = onEditar
+                        onEditar = onEditar,
+                        onGenerarPlanificacion = onGenerarPlanificacion
                     )
                 }
             }
@@ -132,7 +134,8 @@ fun DetalleProyectoScreen(
 private fun DetalleProyectoContenido(
     proyectoDto: ProyectoResponseDto,
     equipoDto: List<IntegranteResponseDto>,
-    onEditar: () -> Unit
+    onEditar: () -> Unit,
+    onGenerarPlanificacion: () -> Unit
 ) {
     var pestana by remember { mutableStateOf(Pestana.INFO) }
 
@@ -208,7 +211,7 @@ private fun DetalleProyectoContenido(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Cabecera(codigo, titulo, descripcion, onEditar)
+        Cabecera(codigo, titulo, descripcion, onEditar, onGenerarPlanificacion)
         Tabs(pestana, equipo.size) { pestana = it }
         ResumenCard(hitoActual = 3, hitosTotal = 4, progreso = 0.75f, entregaFinal = proyectoDto.fechaEntrega ?: "15 Dic, 2024")
 
@@ -252,7 +255,7 @@ private fun DetalleTopBar(onBack: () -> Unit, onPerfil: () -> Unit) {
 
 /* ───────────── Cabecera, tabs y resumen ───────────── */
 @Composable
-private fun Cabecera(codigo: String, titulo: String, descripcion: String, onEditar: () -> Unit) {
+private fun Cabecera(codigo: String, titulo: String, descripcion: String, onEditar: () -> Unit, onGenerarPlanificacion: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -288,6 +291,16 @@ private fun Cabecera(codigo: String, titulo: String, descripcion: String, onEdit
         }
         Text(titulo, fontSize = 26.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold, color = OnSurface)
         Text(descripcion, fontSize = 13.sp, lineHeight = 19.sp, color = OnSurfaceVariant)
+        Button(
+            onClick = onGenerarPlanificacion,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Primary)
+        ) {
+            Icon(Icons.Outlined.AutoAwesome, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Generar planificación con IA", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 

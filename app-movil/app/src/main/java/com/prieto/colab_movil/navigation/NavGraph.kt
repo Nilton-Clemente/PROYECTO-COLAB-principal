@@ -118,7 +118,8 @@ fun AppNavigation(
                 proyectoId = proyectoId,
                 onBack = { navController.popBackStack() },
                 onPerfil = { navController.navigate(Screen.Perfil.route) },
-                onEditar = { Toast.makeText(context, "Editar proyecto", Toast.LENGTH_SHORT).show() }
+                onEditar = { Toast.makeText(context, "Editar proyecto", Toast.LENGTH_SHORT).show() },
+                onGenerarPlanificacion = { Toast.makeText(context, "Generar planificación con IA", Toast.LENGTH_SHORT).show() }
             )
         }
 
