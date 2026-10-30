@@ -49,6 +49,7 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
@@ -56,6 +57,8 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -296,35 +299,31 @@ fun ProyectosContent(
 }
 
 /* ───────────── Barras ───────────── */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ColabTopBar(onNotificaciones: () -> Unit, onPerfil: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Surface)
-            .padding(horizontal = 16.dp)
-            .height(64.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text("Colab", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = OnSurface)
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    TopAppBar(
+        title = {
+            Text("Colab", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = OnSurface)
+        },
+        actions = {
             IconButton(onClick = onNotificaciones) {
                 Icon(Icons.Outlined.Notifications, "Notificaciones", tint = OnSurfaceVariant)
             }
-            IconButton(onClick = onPerfil) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Outlined.Person, "Mi perfil", tint = Color.White, modifier = Modifier.size(18.dp))
-                }
+            Box(
+                modifier = Modifier
+                    .padding(end = 16.dp)
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(Primary)
+                    .clickable(onClick = onPerfil),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Outlined.Person, "Mi perfil", tint = Color.White, modifier = Modifier.size(18.dp))
             }
-        }
-    }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Surface)
+    )
 }
 
 @Composable
@@ -652,3 +651,7 @@ private fun PieChip(icono: ImageVector, texto: String, fondo: Color, fg: Color, 
         Text(texto, fontSize = 13.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.SemiBold, color = fg)
     }
 }
+
+
+
+

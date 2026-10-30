@@ -24,6 +24,12 @@ interface ProyectoApiService {
     @GET("api/invitaciones")
     suspend fun listarInvitaciones(): Response<List<InvitacionResponseDto>>
 
+    @POST("api/invitaciones/{id}/aceptar")
+    suspend fun aceptarInvitacion(@Path("id") id: Long): Response<Unit>
+
+    @POST("api/invitaciones/{id}/rechazar")
+    suspend fun rechazarInvitacion(@Path("id") id: Long): Response<Unit>
+
     @GET("api/tecnologias")
     suspend fun listarTecnologias(): Response<List<TecnologiaDto>>
 

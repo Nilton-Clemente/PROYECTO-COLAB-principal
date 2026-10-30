@@ -1,5 +1,6 @@
 package com.prieto.colab_movil.data.repository
 
+import com.prieto.colab_movil.BuildConfig
 import com.prieto.colab_movil.data.model.AuthResponseDto
 import com.prieto.colab_movil.data.model.LoginRequestDto
 import com.prieto.colab_movil.data.model.RegistroRequestDto
@@ -32,7 +33,7 @@ class AuthRepositoryImpl(
                     Result.failure(Exception(errorMsg))
                 }
             } catch (e: Exception) {
-                Result.failure(Exception("No se pudo conectar con el servidor backend (http://10.0.2.2:8081). Asegúrate de que esté en ejecución."))
+                Result.failure(Exception("No se pudo conectar con el servidor backend (${BuildConfig.BASE_URL}). Asegúrate de que esté en ejecución."))
             }
         }
     }
@@ -51,7 +52,7 @@ class AuthRepositoryImpl(
                     Result.failure(Exception(errorMsg))
                 }
             } catch (e: Exception) {
-                Result.failure(Exception("No se pudo conectar con el servidor backend. Verifica tu conexión."))
+                Result.failure(Exception("No se pudo conectar con el servidor backend (${BuildConfig.BASE_URL}). Verifica tu conexión."))
             }
         }
     }

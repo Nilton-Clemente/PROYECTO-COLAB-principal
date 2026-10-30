@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.prieto.colab_movil.data.session.SessionManager
+import com.prieto.colab_movil.ui.invitaciones.InvitacionesScreen
 import com.prieto.colab_movil.ui.login.LoginScreen
 import com.prieto.colab_movil.ui.perfil.PerfilScreen
 import com.prieto.colab_movil.ui.proyectos.CrearProyectoScreen
@@ -26,6 +27,7 @@ sealed class Screen(val route: String) {
         fun createRoute(proyectoId: Long) = "proyecto_detalle/$proyectoId"
     }
     object CrearProyecto : Screen("crear_proyecto")
+    object Invitaciones : Screen("invitaciones")
 }
 
 @Composable
@@ -84,7 +86,7 @@ fun AppNavigation(
                     navController.navigate(Screen.Perfil.route)
                 },
                 onInvitacionesClick = {
-                    Toast.makeText(context, "Sección de Invitaciones", Toast.LENGTH_SHORT).show()
+                    navController.navigate(Screen.Invitaciones.route) { launchSingleTop = true }
                 },
                 onCrearClick = {
                     navController.navigate(Screen.CrearProyecto.route)
@@ -126,9 +128,26 @@ fun AppNavigation(
                     navController.popBackStack(Screen.Proyectos.route, inclusive = false)
                 },
                 onInvitacionesClick = {
-                    Toast.makeText(context, "Sección de Invitaciones", Toast.LENGTH_SHORT).show()
+                    navController.navigate(Screen.Invitaciones.route) { launchSingleTop = true }
                 },
                 onPerfilClick = {},
+                onNotificacionesClick = {
+                    Toast.makeText(context, "Notificaciones", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+
+        composable(Screen.Invitaciones.route) {
+            InvitacionesScreen(
+                onProyectosClick = {
+                    navController.navigate(Screen.Proyectos.route) {
+                        popUpTo(Screen.Proyectos.route) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+                onPerfilClick = {
+                    navController.navigate(Screen.Perfil.route) { launchSingleTop = true }
+                },
                 onNotificacionesClick = {
                     Toast.makeText(context, "Notificaciones", Toast.LENGTH_SHORT).show()
                 }

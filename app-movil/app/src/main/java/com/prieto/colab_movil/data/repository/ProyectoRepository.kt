@@ -18,6 +18,8 @@ interface ProyectoRepository {
     suspend fun verProyecto(id: Long): Result<ProyectoResponseDto>
     suspend fun verEquipo(id: Long): Result<List<IntegranteResponseDto>>
     suspend fun listarInvitaciones(): Result<List<InvitacionResponseDto>>
+    suspend fun aceptarInvitacion(id: Long): Result<Unit>
+    suspend fun rechazarInvitacion(id: Long): Result<Unit>
     suspend fun listarTecnologias(): Result<List<TecnologiaDto>>
     suspend fun crearProyecto(request: ProyectoRequest): Result<ProyectoResponseDto>
 }
@@ -85,10 +87,10 @@ class ProyectoRepositoryImpl(
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.success(emptyList())
+                Result.failure(Exception("No se pudieron cargar las invitaciones (${response.code()})"))
             }
         } catch (e: Exception) {
-            Result.success(emptyList())
+            Result.failure(Exception("No se pudo conectar con el servidor backend. Verifica tu conexión."))
         }
     }
 
@@ -115,6 +117,32 @@ class ProyectoRepositoryImpl(
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    override suspend fun aceptarInvitacion(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val response = proyectoApiService.aceptarInvitacion(id)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("No se pudo aceptar la invitación (${response.code()})"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("No se pudo conectar con el servidor backend. Verifica tu conexión."))
+        }
+    }
+
+    override suspend fun rechazarInvitacion(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val response = proyectoApiService.rechazarInvitacion(id)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("No se pudo declinar la invitación (${response.code()})"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("No se pudo conectar con el servidor backend. Verifica tu conexión."))
         }
     }
 }

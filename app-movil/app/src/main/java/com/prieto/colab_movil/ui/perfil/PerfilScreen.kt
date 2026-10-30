@@ -1,6 +1,7 @@
 package com.prieto.colab_movil.ui.perfil
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -269,19 +270,14 @@ private fun ContenidoPerfil(
 // ENCABEZADO SUPERIOR
 // ---------------------------------------------------------
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EncabezadoColab(onNotificaciones: () -> Unit, onPerfil: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Fondo)
-            .padding(horizontal = 16.dp)
-            .height(64.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text("Colab", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal)
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    TopAppBar(
+        title = {
+            Text("Colab", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal)
+        },
+        actions = {
             IconButton(onClick = onNotificaciones) {
                 Icon(
                     imageVector = Icons.Outlined.Notifications,
@@ -289,24 +285,25 @@ fun EncabezadoColab(onNotificaciones: () -> Unit, onPerfil: () -> Unit) {
                     tint = TextoSecundario
                 )
             }
-            IconButton(onClick = onPerfil) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Primario),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Person,
-                        contentDescription = "Mi perfil",
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+            Box(
+                modifier = Modifier
+                    .padding(end = 16.dp)
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(Primario)
+                    .clickable(onClick = onPerfil),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Person,
+                    contentDescription = "Mi perfil",
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
             }
-        }
-    }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Fondo)
+    )
 }
 
 // ---------------------------------------------------------

@@ -221,35 +221,33 @@ private fun DetalleProyectoContenido(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DetalleTopBar(onBack: () -> Unit, onPerfil: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Surface)
-            .height(64.dp)
-            .padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    TopAppBar(
+        navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Regresar", tint = OnSurface)
             }
+        },
+        title = {
             Text("Detalle De Proyecto", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = OnSurface)
-        }
-        IconButton(onClick = onPerfil) {
+        },
+        actions = {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .padding(end = 16.dp)
+                    .size(34.dp)
                     .clip(CircleShape)
-                    .background(Primary),
+                    .background(Primary)
+                    .clickable(onClick = onPerfil),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Outlined.Person, "Mi perfil", tint = Color.White, modifier = Modifier.size(18.dp))
             }
-        }
-    }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Surface)
+    )
 }
 
 /* ───────────── Cabecera, tabs y resumen ───────────── */

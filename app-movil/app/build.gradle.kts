@@ -15,7 +15,7 @@ val localProperties = Properties().apply {
 }
 val baseUrl: String = localProperties.getProperty("base.url")
     ?: (project.findProperty("base.url") as String?)
-    ?: "http://10.0.2.2:8082/"
+    ?: "http://10.0.2.2:8081/"
 
 android {
     namespace = "com.prieto.colab_movil"
