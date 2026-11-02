@@ -1,0 +1,24 @@
+package com.prieto.colab_movil.ui.planificacion
+
+import com.prieto.colab_movil.data.model.IntegranteResponseDto
+import com.prieto.colab_movil.data.model.PlanificacionResponseDto
+import com.prieto.colab_movil.data.model.ProyectoResponseDto
+
+sealed interface PlanificacionUiState {
+    object Loading : PlanificacionUiState
+    object Generating : PlanificacionUiState
+
+    /** El proyecto aún no tiene una planificación generada. */
+    data class Empty(
+        val proyecto: ProyectoResponseDto?,
+        val equipo: List<IntegranteResponseDto>
+    ) : PlanificacionUiState
+
+    data class Success(
+        val planificacion: PlanificacionResponseDto,
+        val proyecto: ProyectoResponseDto?,
+        val equipo: List<IntegranteResponseDto>
+    ) : PlanificacionUiState
+
+    data class Error(val message: String, val fromGeneration: Boolean = false) : PlanificacionUiState
+}
