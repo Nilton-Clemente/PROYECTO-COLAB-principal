@@ -45,6 +45,20 @@ class CrearProyectoViewModel(
         }
     }
 
+    fun editarProyecto(id: Long, request: ProyectoRequest) {
+        if (_uiState.value is CrearProyectoUiState.Cargando) return
+        _uiState.value = CrearProyectoUiState.Cargando
+        viewModelScope.launch {
+            repository.editarProyecto(id, request)
+                .onSuccess { proyecto ->
+                    _uiState.value = CrearProyectoUiState.Exito(proyecto.id)
+                }
+                .onFailure { e ->
+                    _uiState.value = CrearProyectoUiState.Error(e.message ?: "Error al guardar los cambios")
+                }
+        }
+    }
+
     fun resetState() {
         _uiState.value = CrearProyectoUiState.Idle
     }

@@ -9,6 +9,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface ProyectoApiService {
@@ -35,4 +36,7 @@ interface ProyectoApiService {
 
     @POST("api/proyectos")
     suspend fun crearProyecto(@Body request: ProyectoRequest): Response<ProyectoResponseDto>
+
+    @PUT("api/proyectos/{id}")
+    suspend fun editarProyecto(@Path("id") id: Long, @Body request: ProyectoRequest): Response<ProyectoResponseDto>
 }

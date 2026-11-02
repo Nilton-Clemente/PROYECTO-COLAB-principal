@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.prieto.colab_movil.data.model.ProyectoRequest
+import com.prieto.colab_movil.data.model.ProyectoResponseDto
 import com.prieto.colab_movil.data.model.RequerimientoFuncionalDto
 
 private val Primary = Color(0xFF3525CD)
@@ -33,6 +34,8 @@ private val RedColor = Color(0xFFBC1D25)
 
 @Composable
 fun CrearProyectoScreen(
+    proyectoId: Long? = null,
+    proyectoInicial: ProyectoResponseDto? = null,
     viewModel: CrearProyectoViewModel = viewModel(),
     onGuardar: () -> Unit,
     onCancelar: () -> Unit
@@ -58,23 +61,42 @@ fun CrearProyectoScreen(
         )
     ) {
         var clave by remember { mutableStateOf("") }
-        var nombre by remember { mutableStateOf("") }
-        var descripcion by remember { mutableStateOf("") }
-        var problematica by remember { mutableStateOf("") }
-        var objetivoGeneral by remember { mutableStateOf("") }
-        var alcance by remember { mutableStateOf("") }
-        var restricciones by remember { mutableStateOf("") }
+        var nombre by remember(proyectoInicial) { mutableStateOf(proyectoInicial?.nombre ?: "") }
+        var descripcion by remember(proyectoInicial) { mutableStateOf(proyectoInicial?.descripcion ?: "") }
+        var problematica by remember(proyectoInicial) { mutableStateOf(proyectoInicial?.problematica ?: "") }
+        var objetivoGeneral by remember(proyectoInicial) { mutableStateOf(proyectoInicial?.objetivoGeneral ?: "") }
+        var alcance by remember(proyectoInicial) { mutableStateOf(proyectoInicial?.alcance ?: "") }
+        var restricciones by remember(proyectoInicial) { mutableStateOf(proyectoInicial?.restricciones ?: "") }
         var cantidadSprints by remember { mutableIntStateOf(1) }
-        var fechaEntrega by remember { mutableStateOf("") }
+        var fechaEntrega by remember(proyectoInicial) { mutableStateOf(formatearFechaParaEdicion(proyectoInicial?.fechaEntrega)) }
         var nuevoObjetivo by remember { mutableStateOf("") }
         var nuevaTecnologia by remember { mutableStateOf("") }
         var mostrarDialogoTecnologia by remember { mutableStateOf(false) }
         var mostrarConfirmacion by remember { mutableStateOf(false) }
         var mensajeError by remember { mutableStateOf<String?>(null) }
 
-        val objetivos = remember { mutableStateListOf<String>() }
-        val tecnologias = remember { mutableStateListOf<String>() }
-        val requerimientos = remember { mutableStateListOf<String>() }
+        val objetivos = remember(proyectoInicial) {
+            mutableStateListOf<String>().apply {
+                addAll(proyectoInicial?.objetivosEspecificos
+                    ?.split("\n")
+                    ?.map { it.trim() }
+                    ?.filter { it.isNotEmpty() }
+                    ?: emptyList())
+            }
+        }
+        val tecnologias = remember(proyectoInicial) {
+            mutableStateListOf<String>().apply {
+                addAll(proyectoInicial?.tecnologias?.map { it.nombre } ?: emptyList())
+            }
+        }
+        val requerimientos = remember(proyectoInicial) {
+            mutableStateListOf<String>().apply {
+                addAll(proyectoInicial?.requerimientosFuncionales?.map { rf ->
+                    val codigo = rf.codigo
+                    if (codigo.isNullOrBlank()) rf.descripcion else "$codigo: ${rf.descripcion}"
+                } ?: emptyList())
+            }
+        }
 
         val seccionesAbiertas = remember {
             mutableStateListOf(true, true, false, true, false, true)
@@ -148,7 +170,7 @@ fun CrearProyectoScreen(
                             Text("▣", fontSize = 18.sp)
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                "Guardar Proyecto",
+                                if (proyectoId != null) "Guardar Cambios" else "Guardar Proyecto",
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
@@ -171,7 +193,7 @@ fun CrearProyectoScreen(
                     Text(text = "‹", fontSize = 34.sp, color = TextColor)
                     Spacer(Modifier.width(18.dp))
                     Text(
-                        text = "Crear Proyecto",
+                        text = if (proyectoId != null) "Editar Proyecto" else "Crear Proyecto",
                         fontSize = 21.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextColor,
@@ -713,7 +735,7 @@ fun CrearProyectoScreen(
         if (mostrarConfirmacion) {
             AlertDialog(
                 onDismissRequest = { mostrarConfirmacion = false },
-                title = { Text("Guardar proyecto") },
+                title = { Text(if (proyectoId != null) "Guardar cambios" else "Guardar proyecto") },
                 text = {
                     Text(
                         "¿Deseas guardar \"$nombre\" con " +
@@ -750,7 +772,11 @@ fun CrearProyectoScreen(
                                     casosDeUso = null
                                 )
                                 mostrarConfirmacion = false
-                                viewModel.crearProyecto(request)
+                                if (proyectoId != null) {
+                                    viewModel.editarProyecto(proyectoId, request)
+                                } else {
+                                    viewModel.crearProyecto(request)
+                                }
                             }
                         }
                     ) {
@@ -807,6 +833,12 @@ fun CrearProyectoScreen(
             )
         }
     }
+}
+
+private fun formatearFechaParaEdicion(iso: String?): String {
+    if (iso.isNullOrBlank()) return ""
+    val partes = iso.split("-")
+    return if (partes.size == 3) "${partes[2]}/${partes[1]}/${partes[0]}" else iso
 }
 
 private fun convertirFecha(fecha: String): String? {

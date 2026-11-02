@@ -22,6 +22,7 @@ interface ProyectoRepository {
     suspend fun rechazarInvitacion(id: Long): Result<Unit>
     suspend fun listarTecnologias(): Result<List<TecnologiaDto>>
     suspend fun crearProyecto(request: ProyectoRequest): Result<ProyectoResponseDto>
+    suspend fun editarProyecto(id: Long, request: ProyectoRequest): Result<ProyectoResponseDto>
 }
 
 class ProyectoRepositoryImpl(
@@ -114,6 +115,19 @@ class ProyectoRepositoryImpl(
                 Result.success(response.body()!!)
             } else {
                 Result.failure(Exception("Error al guardar el proyecto (${response.code()})"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun editarProyecto(id: Long, request: ProyectoRequest): Result<ProyectoResponseDto> = withContext(Dispatchers.IO) {
+        try {
+            val response = proyectoApiService.editarProyecto(id, request)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Error al guardar los cambios (${response.code()})"))
             }
         } catch (e: Exception) {
             Result.failure(e)

@@ -13,8 +13,10 @@ import com.prieto.colab_movil.data.session.SessionManager
 import com.prieto.colab_movil.ui.invitaciones.InvitacionesScreen
 import com.prieto.colab_movil.ui.login.LoginScreen
 import com.prieto.colab_movil.ui.perfil.PerfilScreen
+import com.prieto.colab_movil.ui.planificacion.PlanificacionScreen
 import com.prieto.colab_movil.ui.proyectos.CrearProyectoScreen
 import com.prieto.colab_movil.ui.proyectos.DetalleProyectoScreen
+import com.prieto.colab_movil.ui.proyectos.EditarProyectoScreen
 import com.prieto.colab_movil.ui.proyectos.ProyectosScreen
 import com.prieto.colab_movil.ui.register.RegisterScreen
 
@@ -26,8 +28,14 @@ sealed class Screen(val route: String) {
     object DetalleProyecto : Screen("proyecto_detalle/{proyectoId}") {
         fun createRoute(proyectoId: Long) = "proyecto_detalle/$proyectoId"
     }
+    object EditarProyecto : Screen("proyecto_editar/{proyectoId}") {
+        fun createRoute(proyectoId: Long) = "proyecto_editar/$proyectoId"
+    }
     object CrearProyecto : Screen("crear_proyecto")
     object Invitaciones : Screen("invitaciones")
+    object Planificacion : Screen("planificacion/{proyectoId}") {
+        fun createRoute(proyectoId: Long) = "planificacion/$proyectoId"
+    }
 }
 
 @Composable
@@ -118,8 +126,32 @@ fun AppNavigation(
                 proyectoId = proyectoId,
                 onBack = { navController.popBackStack() },
                 onPerfil = { navController.navigate(Screen.Perfil.route) },
-                onEditar = { Toast.makeText(context, "Editar proyecto", Toast.LENGTH_SHORT).show() },
-                onGenerarPlanificacion = { Toast.makeText(context, "Generar planificación con IA", Toast.LENGTH_SHORT).show() }
+                onEditar = { navController.navigate(Screen.EditarProyecto.createRoute(proyectoId)) },
+                onGenerarPlanificacion = { navController.navigate(Screen.Planificacion.createRoute(proyectoId)) }
+            )
+        }
+
+        composable(
+            route = Screen.EditarProyecto.route,
+            arguments = listOf(navArgument("proyectoId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val editProyectoId = backStackEntry.arguments?.getLong("proyectoId") ?: 1L
+            EditarProyectoScreen(
+                proyectoId = editProyectoId,
+                onGuardado = { navController.popBackStack() },
+                onCancelar = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.Planificacion.route,
+            arguments = listOf(navArgument("proyectoId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val planProyectoId = backStackEntry.arguments?.getLong("proyectoId") ?: 1L
+            PlanificacionScreen(
+                proyectoId = planProyectoId,
+                onBack = { navController.popBackStack() },
+                onValidateRules = { Toast.makeText(context, "Validar reglas", Toast.LENGTH_SHORT).show() }
             )
         }
 
