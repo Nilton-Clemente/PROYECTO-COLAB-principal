@@ -1,7 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext.jsx';
+import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
 import Registro from './pages/Registro.jsx';
+import Proyectos from './pages/Proyectos.jsx';
+import ProyectoDetalle from './pages/ProyectoDetalle.jsx';
+import Invitaciones from './pages/Invitaciones.jsx';
 import Perfil from './pages/Perfil.jsx';
 
 function Privada({ children }) {
@@ -11,7 +15,7 @@ function Privada({ children }) {
 
 function SoloInvitados({ children }) {
   const { token } = useAuth();
-  return token ? <Navigate to="/perfil" replace /> : children;
+  return token ? <Navigate to="/proyectos" replace /> : children;
 }
 
 export default function App() {
@@ -19,8 +23,13 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<SoloInvitados><Login /></SoloInvitados>} />
       <Route path="/registro" element={<SoloInvitados><Registro /></SoloInvitados>} />
-      <Route path="/perfil" element={<Privada><Perfil /></Privada>} />
-      <Route path="*" element={<Navigate to="/perfil" replace />} />
+      <Route element={<Privada><Layout /></Privada>}>
+        <Route path="/proyectos" element={<Proyectos />} />
+        <Route path="/proyectos/:id/:tab?" element={<ProyectoDetalle />} />
+        <Route path="/invitaciones" element={<Invitaciones />} />
+        <Route path="/perfil" element={<Perfil />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/proyectos" replace />} />
     </Routes>
   );
 }

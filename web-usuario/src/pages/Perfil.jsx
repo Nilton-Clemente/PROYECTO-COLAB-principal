@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import * as api from '../api/colab.js';
 import { IconPlus, IconSearch, IconTrash } from '../components/Icons.jsx';
@@ -27,7 +28,8 @@ function TarjetaHabilidad({ habilidad, accion, ocupada, onAccion }) {
 }
 
 export default function Perfil() {
-  const { token, cerrarSesion } = useAuth();
+  const { token } = useAuth();
+  const { avisar } = useOutletContext();
   const [estado, setEstado] = useState('cargando'); // cargando | ok | error
   const [errorCarga, setErrorCarga] = useState('');
   const [perfil, setPerfil] = useState(null);
@@ -35,7 +37,6 @@ export default function Perfil() {
   const [ocupadas, setOcupadas] = useState(() => new Set());
   const [area, setArea] = useState('Todas');
   const [busqueda, setBusqueda] = useState('');
-  const [aviso, setAviso] = useState(null);
 
   const cargar = useCallback(async () => {
     setEstado('cargando');
@@ -54,12 +55,6 @@ export default function Perfil() {
     cargar();
   }, [cargar]);
 
-  useEffect(() => {
-    if (!aviso) return undefined;
-    const t = setTimeout(() => setAviso(null), 4500);
-    return () => clearTimeout(t);
-  }, [aviso]);
-
   const marcar = (id, activa) =>
     setOcupadas((prev) => {
       const sig = new Set(prev);
@@ -74,7 +69,7 @@ export default function Perfil() {
       await api.agregarHabilidad(token, h.id);
       setPerfil((p) => ({ ...p, habilidades: [...p.habilidades, h] }));
     } catch (err) {
-      setAviso(`No se pudo agregar ${etiqueta(h.nombre)}. ${err.message}`);
+      avisar(`No se pudo agregar ${etiqueta(h.nombre)}. ${err.message}`);
     } finally {
       marcar(h.id, false);
     }
@@ -86,7 +81,7 @@ export default function Perfil() {
       await api.eliminarHabilidad(token, h.id);
       setPerfil((p) => ({ ...p, habilidades: p.habilidades.filter((x) => x.id !== h.id) }));
     } catch (err) {
-      setAviso(`No se pudo eliminar ${etiqueta(h.nombre)}. ${err.message}`);
+      avisar(`No se pudo eliminar ${etiqueta(h.nombre)}. ${err.message}`);
     } finally {
       marcar(h.id, false);
     }
@@ -109,31 +104,7 @@ export default function Perfil() {
   const totalDisponibles = perfil ? catalogo.length - perfil.habilidades.length : 0;
 
   return (
-    <div className="app">
-      <header className="barra">
-        <div className="barra__interior">
-          <span className="logo">Colab</span>
-          <nav aria-label="Principal">
-            <span className="nav__activo" aria-current="page">Mi perfil</span>
-          </nav>
-          <div className="barra__usuario">
-            {perfil && (
-              <div className="barra__datos">
-                <span className="avatar avatar--chico" aria-hidden="true">{iniciales(perfil.nombre)}</span>
-                <div>
-                  <strong>{perfil.nombre}</strong>
-                  <small>{perfil.email}</small>
-                </div>
-              </div>
-            )}
-            <button type="button" className="enlace-peligro" onClick={cerrarSesion}>
-              Cerrar sesión
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="contenido">
+    <>
         {estado === 'cargando' && <p className="estado">Cargando tu perfil…</p>}
 
         {estado === 'error' && (
@@ -225,13 +196,7 @@ export default function Perfil() {
             </section>
           </>
         )}
-      </main>
-
-      <footer className="pie">
-        <span><strong className="logo logo--chico">Colab</strong> © {new Date().getFullYear()} Departamento de Tecnología Digital TECSUP.</span>
-      </footer>
-
-      {aviso && <div className="toast" role="alert">{aviso}</div>}
-    </div>
+      
+    </>
   );
 }
