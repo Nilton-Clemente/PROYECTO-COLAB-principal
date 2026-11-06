@@ -4,9 +4,9 @@ spring:
 
   # Base de datos PostgreSQL (esquema `usuario`, gestionado por Spring Boot)
   datasource:
-    url: jdbc:postgresql://localhost:5433/colab
+    url: jdbc:postgresql://localhost:5432/colab
     username: ${DB_USERNAME:postgres}
-    password: alexispro18
+    password: 12349876
 
   jpa:
     open-in-view: false

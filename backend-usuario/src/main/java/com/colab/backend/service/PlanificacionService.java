@@ -282,9 +282,9 @@ public class PlanificacionService {
         long conHabilidades = equipo.stream()
                 .filter(i -> i.getUsuario().getHabilidades() != null && !i.getUsuario().getHabilidades().isEmpty())
                 .count();
-        if (conHabilidades < 2) {
+        if (conHabilidades < 1) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Se requieren al menos dos integrantes con perfil de habilidades (RN-18)");
+                    "Se requiere al menos un integrante con perfil de habilidades (RN-18)");
         }
     }
 

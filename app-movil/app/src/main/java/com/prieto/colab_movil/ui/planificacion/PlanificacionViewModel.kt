@@ -29,10 +29,8 @@ class PlanificacionViewModel(
             val plan = planRes.getOrNull()
             when {
                 planRes.isSuccess && plan == null -> {
-                    _uiState.value = PlanificacionUiState.Empty(
-                        proyecto = proyectoRes.getOrNull(),
-                        equipo = equipoRes.getOrNull() ?: emptyList()
-                    )
+                    // No hay planificación todavía: se genera automáticamente.
+                    generar(proyectoId)
                 }
                 planRes.isSuccess && plan != null -> {
                     _uiState.value = PlanificacionUiState.Success(

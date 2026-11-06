@@ -290,9 +290,6 @@ fun PlanificacionScreen(
                         )
                     }
                 }
-                is PlanificacionUiState.Empty -> {
-                    EmptyPlanificacion(onGenerar = { viewModel.generar(proyectoId) })
-                }
                 is PlanificacionUiState.Error -> {
                     ErrorPlanificacion(
                         message = state.message,
@@ -314,39 +311,6 @@ fun PlanificacionScreen(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun EmptyPlanificacion(onGenerar: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            "Aún no hay planificación para este proyecto.",
-            color = OnSurface,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "Genera una propuesta de planificación con IA a partir de la información registrada.",
-            color = OnSurfaceVariant,
-            fontSize = 13.sp,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(20.dp))
-        Button(
-            onClick = onGenerar,
-            colors = ButtonDefaults.buttonColors(containerColor = Primary)
-        ) {
-            Text("Generar planificación con IA")
         }
     }
 }

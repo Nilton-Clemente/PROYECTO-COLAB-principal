@@ -8,12 +8,6 @@ sealed interface PlanificacionUiState {
     object Loading : PlanificacionUiState
     object Generating : PlanificacionUiState
 
-    /** El proyecto aún no tiene una planificación generada. */
-    data class Empty(
-        val proyecto: ProyectoResponseDto?,
-        val equipo: List<IntegranteResponseDto>
-    ) : PlanificacionUiState
-
     data class Success(
         val planificacion: PlanificacionResponseDto,
         val proyecto: ProyectoResponseDto?,
