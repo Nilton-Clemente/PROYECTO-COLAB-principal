@@ -30,8 +30,5 @@ public class RequerimientoFuncional {
     @JoinColumn(name = "proyecto_id", nullable = false)
     private Proyecto proyecto;
 
-    /** Codigo de negocio, p. ej. "RF-01". */
-    private String codigo;
-
     private String descripcion;
 }

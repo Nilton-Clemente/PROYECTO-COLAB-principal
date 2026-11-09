@@ -30,9 +30,6 @@ public class RequerimientoNoFuncional {
     @JoinColumn(name = "proyecto_id", nullable = false)
     private Proyecto proyecto;
 
-    /** Codigo de negocio, p. ej. "RNF-01". */
-    private String codigo;
-
     /** rendimiento, seguridad, usabilidad, etc. */
     private String categoria;
 

@@ -354,6 +354,11 @@ public class PlanificacionService {
                 - "dependencias" referencia los "id" de las tareas predecesoras (finish-to-start).
                 - "duracionDias" debe ser un entero mayor que 0.
                 - "prioridad" solo puede ser ALTA, MEDIA o BAJA.
+                - Usa los actores y reglas de negocio de los casos de uso para planificar permisos y validaciones.
+                - Usa las precondiciones, el disparador y los flujos para identificar pasos y dependencias.
+                - Incluye tareas de implementación y pruebas para flujos alternativos, excepciones y postcondiciones.
+                - Los detalles de los casos de uso son opcionales: no inventes reglas faltantes ni amplíes el alcance.
+                - Si falta información o hay contradicciones, incluye tareas de aclaración sin asumir una solución.
                 No inventes correos; usa únicamente los integrantes provistos.
                 """;
     }
@@ -377,8 +382,7 @@ public class PlanificacionService {
             sb.append("- (sin requerimientos funcionales)\n");
         } else {
             for (var rf : p.getRequerimientosFuncionales()) {
-                sb.append("- ").append(rf.getCodigo() == null ? "" : rf.getCodigo() + " ")
-                        .append(nvl(rf.getDescripcion())).append("\n");
+                sb.append("- ").append(nvl(rf.getDescripcion())).append("\n");
             }
         }
         sb.append("\nREQUERIMIENTOS NO FUNCIONALES:\n");
@@ -386,7 +390,7 @@ public class PlanificacionService {
             sb.append("- (sin requerimientos no funcionales)\n");
         } else {
             for (var rnf : p.getRequerimientosNoFuncionales()) {
-                sb.append("- ").append(rnf.getCodigo() == null ? "" : rnf.getCodigo() + " ")
+                sb.append("- ")
                         .append(rnf.getCategoria() == null ? "" : "(" + rnf.getCategoria() + ") ")
                         .append(nvl(rnf.getDescripcion())).append("\n");
             }
@@ -396,9 +400,16 @@ public class PlanificacionService {
             sb.append("- (sin casos de uso)\n");
         } else {
             for (var cu : p.getCasosDeUso()) {
-                sb.append("- ").append(cu.getCodigo() == null ? "" : cu.getCodigo() + " ")
-                        .append(nvl(cu.getNombre()))
+                sb.append("- ").append(nvl(cu.getNombre()))
                         .append(": ").append(nvl(cu.getDescripcion())).append("\n");
+                agregarDetalleCasoUso(sb, "Actores", cu.getActores());
+                agregarDetalleCasoUso(sb, "Precondiciones", cu.getPrecondiciones());
+                agregarDetalleCasoUso(sb, "Disparador", cu.getDisparador());
+                agregarDetalleCasoUso(sb, "Flujo principal", cu.getFlujoPrincipal());
+                agregarDetalleCasoUso(sb, "Flujos alternativos", cu.getFlujosAlternativos());
+                agregarDetalleCasoUso(sb, "Excepciones", cu.getExcepciones());
+                agregarDetalleCasoUso(sb, "Postcondiciones", cu.getPostcondiciones());
+                agregarDetalleCasoUso(sb, "Reglas de negocio", cu.getReglasDeNegocio());
             }
         }
         sb.append("\nEQUIPO (correo — nombre | habilidades):\n");
@@ -412,6 +423,12 @@ public class PlanificacionService {
                     .append(" — habilidades: ").append(habilidades).append("\n");
         }
         return sb.toString();
+    }
+
+    private void agregarDetalleCasoUso(StringBuilder sb, String etiqueta, String valor) {
+        if (!isBlank(valor)) {
+            sb.append("  ").append(etiqueta).append(": ").append(valor).append("\n");
+        }
     }
 
     private String limpiarJson(String json) {
