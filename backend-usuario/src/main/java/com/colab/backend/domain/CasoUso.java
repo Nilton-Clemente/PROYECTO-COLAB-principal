@@ -1,5 +1,6 @@
 package com.colab.backend.domain;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -30,10 +31,31 @@ public class CasoUso {
     @JoinColumn(name = "proyecto_id", nullable = false)
     private Proyecto proyecto;
 
-    /** Codigo de negocio, p. ej. "CU-01". */
-    private String codigo;
-
     private String nombre;
 
     private String descripcion;
+
+    @Column(columnDefinition = "text")
+    private String actores;
+
+    @Column(columnDefinition = "text")
+    private String precondiciones;
+
+    @Column(columnDefinition = "text")
+    private String disparador;
+
+    @Column(name = "flujo_principal", columnDefinition = "text")
+    private String flujoPrincipal;
+
+    @Column(name = "flujos_alternativos", columnDefinition = "text")
+    private String flujosAlternativos;
+
+    @Column(columnDefinition = "text")
+    private String excepciones;
+
+    @Column(columnDefinition = "text")
+    private String postcondiciones;
+
+    @Column(name = "reglas_de_negocio", columnDefinition = "text")
+    private String reglasDeNegocio;
 }
