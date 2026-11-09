@@ -222,7 +222,6 @@ public class ProyectoService {
             for (RequerimientoFuncionalDto dto : request.requerimientosFuncionales()) {
                 RequerimientoFuncional rf = new RequerimientoFuncional();
                 rf.setProyecto(p);
-                rf.setCodigo(dto.codigo());
                 rf.setDescripcion(dto.descripcion());
                 p.getRequerimientosFuncionales().add(rf);
             }
@@ -234,7 +233,6 @@ public class ProyectoService {
             for (RequerimientoNoFuncionalDto dto : request.requerimientosNoFuncionales()) {
                 RequerimientoNoFuncional rnf = new RequerimientoNoFuncional();
                 rnf.setProyecto(p);
-                rnf.setCodigo(dto.codigo());
                 rnf.setCategoria(dto.categoria());
                 rnf.setDescripcion(dto.descripcion());
                 p.getRequerimientosNoFuncionales().add(rnf);
@@ -247,9 +245,16 @@ public class ProyectoService {
             for (CasoUsoDto dto : request.casosDeUso()) {
                 CasoUso cu = new CasoUso();
                 cu.setProyecto(p);
-                cu.setCodigo(dto.codigo());
                 cu.setNombre(dto.nombre());
                 cu.setDescripcion(dto.descripcion());
+                cu.setActores(dto.actores());
+                cu.setPrecondiciones(dto.precondiciones());
+                cu.setDisparador(dto.disparador());
+                cu.setFlujoPrincipal(dto.flujoPrincipal());
+                cu.setFlujosAlternativos(dto.flujosAlternativos());
+                cu.setExcepciones(dto.excepciones());
+                cu.setPostcondiciones(dto.postcondiciones());
+                cu.setReglasDeNegocio(dto.reglasDeNegocio());
                 p.getCasosDeUso().add(cu);
             }
         }
@@ -272,13 +277,16 @@ public class ProyectoService {
                         .map(t -> new TecnologiaDto(t.getId(), t.getNombre()))
                         .toList(),
                 p.getRequerimientosFuncionales().stream()
-                        .map(rf -> new RequerimientoFuncionalDto(rf.getDescripcion(), rf.getCodigo()))
+                        .map(rf -> new RequerimientoFuncionalDto(rf.getDescripcion()))
                         .toList(),
                 p.getRequerimientosNoFuncionales().stream()
-                        .map(rnf -> new RequerimientoNoFuncionalDto(rnf.getDescripcion(), rnf.getCodigo(), rnf.getCategoria()))
+                        .map(rnf -> new RequerimientoNoFuncionalDto(rnf.getDescripcion(), rnf.getCategoria()))
                         .toList(),
                 p.getCasosDeUso().stream()
-                        .map(cu -> new CasoUsoDto(cu.getNombre(), cu.getCodigo(), cu.getDescripcion()))
+                        .map(cu -> new CasoUsoDto(cu.getNombre(), cu.getDescripcion(),
+                                cu.getActores(), cu.getPrecondiciones(), cu.getDisparador(),
+                                cu.getFlujoPrincipal(), cu.getFlujosAlternativos(), cu.getExcepciones(),
+                                cu.getPostcondiciones(), cu.getReglasDeNegocio()))
                         .toList());
     }
 
