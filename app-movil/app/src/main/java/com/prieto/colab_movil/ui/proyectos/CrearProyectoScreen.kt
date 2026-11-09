@@ -20,6 +20,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.prieto.colab_movil.data.model.ProyectoRequest
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
 import com.prieto.colab_movil.data.model.RequerimientoFuncionalDto
+import com.prieto.colab_movil.data.model.RequerimientoNoFuncionalDto
 
 private val Primary = Color(0xFF3525CD)
 private val PrimaryContainer = Color(0xFFE5E2FF)
@@ -60,18 +61,15 @@ fun CrearProyectoScreen(
             secondary = GreenColor
         )
     ) {
-        var clave by remember { mutableStateOf("") }
         var nombre by remember(proyectoInicial) { mutableStateOf(proyectoInicial?.nombre ?: "") }
         var descripcion by remember(proyectoInicial) { mutableStateOf(proyectoInicial?.descripcion ?: "") }
         var problematica by remember(proyectoInicial) { mutableStateOf(proyectoInicial?.problematica ?: "") }
         var objetivoGeneral by remember(proyectoInicial) { mutableStateOf(proyectoInicial?.objetivoGeneral ?: "") }
         var alcance by remember(proyectoInicial) { mutableStateOf(proyectoInicial?.alcance ?: "") }
         var restricciones by remember(proyectoInicial) { mutableStateOf(proyectoInicial?.restricciones ?: "") }
-        var cantidadSprints by remember { mutableIntStateOf(1) }
         var fechaEntrega by remember(proyectoInicial) { mutableStateOf(formatearFechaParaEdicion(proyectoInicial?.fechaEntrega)) }
         var nuevoObjetivo by remember { mutableStateOf("") }
-        var nuevaTecnologia by remember { mutableStateOf("") }
-        var mostrarDialogoTecnologia by remember { mutableStateOf(false) }
+        var nuevoRnfDescripcion by remember { mutableStateOf("") }
         var mostrarConfirmacion by remember { mutableStateOf(false) }
         var mensajeError by remember { mutableStateOf<String?>(null) }
 
@@ -97,9 +95,14 @@ fun CrearProyectoScreen(
                 } ?: emptyList())
             }
         }
+        val requerimientosNoFuncionales = remember(proyectoInicial) {
+            mutableStateListOf<RequerimientoNoFuncionalDto>().apply {
+                addAll(proyectoInicial?.requerimientosNoFuncionales ?: emptyList())
+            }
+        }
 
         val seccionesAbiertas = remember {
-            mutableStateListOf(true, true, false, true, false, true)
+            mutableStateListOf(true, true, false, true, false, false, true)
         }
 
         val secciones = listOf(
@@ -108,6 +111,7 @@ fun CrearProyectoScreen(
             "Alcance y Restricciones",
             "Stack Tecnológico",
             "Requerimientos Funcionales",
+            "Requerimientos No Funcionales",
             "Plan y Entrega"
         )
 
@@ -117,16 +121,17 @@ fun CrearProyectoScreen(
             "Fronteras técnicas y dependencias externas",
             "Arquitectura de lenguajes, frameworks y nube",
             "Casos de uso clave y roles de usuario",
-            "Sprints programados y fecha final del ciclo"
+            "Calidad, seguridad, rendimiento y usabilidad",
+            "Fecha final del proyecto"
         )
 
-        val iconos = listOf("▣", "◎", "⌗", "◇", "☑", "▦")
+        val iconos = listOf("▣", "◎", "⌗", "◇", "☑", "⚙", "▦")
 
         val sugerencias = tecnologiasCatalogo.map { it.nombre }
 
-        val progreso = listOf(clave, nombre, descripcion, objetivoGeneral)
+        val progreso = listOf(nombre, descripcion, objetivoGeneral)
             .count { it.isNotBlank() }
-        val porcentaje = (progreso * 100 / 4).coerceIn(0, 100)
+        val porcentaje = (progreso * 100 / 3).coerceIn(0, 100)
 
         Scaffold(
             containerColor = BackgroundColor,
@@ -233,7 +238,7 @@ fun CrearProyectoScreen(
                                 Box(Modifier.size(9.dp).background(Primary, CircleShape))
                                 Spacer(Modifier.width(6.dp))
                                 Text(
-                                    "Paso 1 de 6",
+                                    "Datos esenciales",
                                     color = Primary,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.weight(1f)
@@ -266,34 +271,17 @@ fun CrearProyectoScreen(
                         abierta = seccionesAbiertas[0],
                         onToggle = { seccionesAbiertas[0] = !seccionesAbiertas[0] }
                     ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Column(modifier = Modifier.width(105.dp)) {
-                                EtiquetaCampo("Clave")
-                                OutlinedTextField(
-                                    value = clave,
-                                    onValueChange = { clave = it.take(4) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = coloresCampo()
-                                )
-                                Text("COL-", color = Primary, fontSize = 10.sp)
-                            }
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                EtiquetaCampo("Nombre del Proyecto *")
-                                OutlinedTextField(
-                                    value = nombre,
-                                    onValueChange = { nombre = it.take(60) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    placeholder = { Text("Nombre del proyecto") },
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = coloresCampo()
-                                )
-                                Contador(nombre.length, 60)
-                            }
-                        }
+                        EtiquetaCampo("Nombre del Proyecto *")
+                        OutlinedTextField(
+                            value = nombre,
+                            onValueChange = { nombre = it.take(60) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            placeholder = { Text("Nombre del proyecto") },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = coloresCampo()
+                        )
+                        Contador(nombre.length, 60)
 
                         CampoTexto(
                             titulo = "Descripción Breve",
@@ -541,13 +529,6 @@ fun CrearProyectoScreen(
                             }
                         }
 
-                        OutlinedButton(
-                            onClick = { mostrarDialogoTecnologia = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("+ Agregar otra tecnología")
-                        }
                     }
 
                     // 5. Requerimientos funcionales
@@ -624,112 +605,98 @@ fun CrearProyectoScreen(
                         }
                     }
 
-                    // 6. Plan y entrega
+                    // 6. Requerimientos no funcionales
                     Seccion(
                         titulo = secciones[5],
                         descripcion = descripciones[5],
                         icono = iconos[5],
                         abierta = seccionesAbiertas[5],
                         onToggle = { seccionesAbiertas[5] = !seccionesAbiertas[5] },
-                        colorIcono = Color(0xFFFFDAD6)
+                        colorIcono = GreenContainer
                     ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                EtiquetaCampo("Cantidad de Sprints")
+                        Text(
+                            "Define atributos de calidad como seguridad, rendimiento, usabilidad o disponibilidad.",
+                            fontSize = 13.sp,
+                            color = SecondaryText
+                        )
 
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(FieldColor, RoundedCornerShape(12.dp))
-                                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
+                        requerimientosNoFuncionales.forEachIndexed { index, requerimiento ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(FieldColor, RoundedCornerShape(12.dp))
+                                    .padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        "$cantidadSprints Sprints",
+                                        "Requerimiento no funcional",
+                                        modifier = Modifier.weight(1f),
                                         fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
                                         color = TextColor
                                     )
-                                    Column {
-                                        TextButton(
-                                            onClick = {
-                                                if (cantidadSprints < 12) cantidadSprints++
-                                            },
-                                            contentPadding = PaddingValues(0.dp)
-                                        ) {
-                                            Text("⌃", color = TextColor)
-                                        }
-                                        TextButton(
-                                            onClick = {
-                                                if (cantidadSprints > 1) cantidadSprints--
-                                            },
-                                            contentPadding = PaddingValues(0.dp)
-                                        ) {
-                                            Text("⌄", color = TextColor)
-                                        }
+                                    TextButton(
+                                        onClick = { requerimientosNoFuncionales.removeAt(index) },
+                                        contentPadding = PaddingValues(4.dp)
+                                    ) {
+                                        Text("×", color = RedColor)
                                     }
                                 }
-                            }
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                EtiquetaCampo("Entrega Final")
-
-                                OutlinedTextField(
-                                    value = fechaEntrega,
-                                    onValueChange = { fechaEntrega = it.take(10) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    placeholder = { Text("DD/MM/AAAA") },
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = coloresCampo()
-                                )
+                                Text(requerimiento.descripcion, fontSize = 12.sp, color = SecondaryText)
                             }
                         }
 
-                        Text(
-                            "Duración estimada: ${cantidadSprints * 2} semanas",
-                            fontSize = 12.sp,
-                            color = SecondaryText
+                        CampoTexto(
+                            titulo = "Descripción del requerimiento no funcional *",
+                            valor = nuevoRnfDescripcion,
+                            onValorCambiado = { nuevoRnfDescripcion = it },
+                            lineas = 2
+                        )
+
+                        Button(
+                            onClick = {
+                                val descripcionRnf = nuevoRnfDescripcion.trim()
+                                if (descripcionRnf.isNotEmpty()) {
+                                    requerimientosNoFuncionales.add(
+                                        RequerimientoNoFuncionalDto(
+                                            codigo = null,
+                                            categoria = null,
+                                            descripcion = descripcionRnf
+                                        )
+                                    )
+                                    nuevoRnfDescripcion = ""
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("+ Añadir requerimiento no funcional")
+                        }
+                    }
+
+                    // 7. Plan y entrega
+                    Seccion(
+                        titulo = secciones[6],
+                        descripcion = descripciones[6],
+                        icono = iconos[6],
+                        abierta = seccionesAbiertas[6],
+                        onToggle = { seccionesAbiertas[6] = !seccionesAbiertas[6] },
+                        colorIcono = Color(0xFFFFDAD6)
+                    ) {
+                        EtiquetaCampo("Entrega Final")
+                        OutlinedTextField(
+                            value = fechaEntrega,
+                            onValueChange = { fechaEntrega = it.take(10) },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("DD/MM/AAAA") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = coloresCampo()
                         )
                     }
                 }
             }
-        }
-
-        if (mostrarDialogoTecnologia) {
-            AlertDialog(
-                onDismissRequest = { mostrarDialogoTecnologia = false },
-                title = { Text("Agregar tecnología") },
-                text = {
-                    OutlinedTextField(
-                        value = nuevaTecnologia,
-                        onValueChange = { nuevaTecnologia = it },
-                        label = { Text("Nombre de la tecnología") },
-                        singleLine = true
-                    )
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            val tecnologia = nuevaTecnologia.trim()
-                            if (tecnologia.isNotEmpty() && tecnologia !in tecnologias) {
-                                tecnologias.add(tecnologia)
-                            }
-                            nuevaTecnologia = ""
-                            mostrarDialogoTecnologia = false
-                        }
-                    ) {
-                        Text("Agregar")
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { mostrarDialogoTecnologia = false }
-                    ) {
-                        Text("Cancelar")
-                    }
-                }
-            )
         }
 
         if (mostrarConfirmacion) {
@@ -741,7 +708,8 @@ fun CrearProyectoScreen(
                         "¿Deseas guardar \"$nombre\" con " +
                             "${objetivos.size} objetivos, " +
                             "${tecnologias.size} tecnologías y " +
-                            "${requerimientos.size} requerimientos?"
+                            "${requerimientos.size} requerimientos funcionales y " +
+                            "${requerimientosNoFuncionales.size} no funcionales?"
                     )
                 },
                 confirmButton = {
@@ -768,7 +736,7 @@ fun CrearProyectoScreen(
                                     requerimientosFuncionales = requerimientos.map {
                                         parsearRequerimiento(it)
                                     },
-                                    requerimientosNoFuncionales = null,
+                                    requerimientosNoFuncionales = requerimientosNoFuncionales.toList(),
                                     casosDeUso = null
                                 )
                                 mostrarConfirmacion = false
