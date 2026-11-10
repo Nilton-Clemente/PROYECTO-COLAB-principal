@@ -14,6 +14,7 @@ import com.prieto.colab_movil.ui.invitaciones.InvitacionesScreen
 import com.prieto.colab_movil.ui.login.LoginScreen
 import com.prieto.colab_movil.ui.perfil.PerfilScreen
 import com.prieto.colab_movil.ui.planificacion.PlanificacionScreen
+import com.prieto.colab_movil.ui.planificacion.EditarPlanificacionScreen
 import com.prieto.colab_movil.ui.proyectos.CrearProyectoScreen
 import com.prieto.colab_movil.ui.proyectos.DetalleProyectoScreen
 import com.prieto.colab_movil.ui.proyectos.EditarProyectoScreen
@@ -35,6 +36,9 @@ sealed class Screen(val route: String) {
     object Invitaciones : Screen("invitaciones")
     object Planificacion : Screen("planificacion/{proyectoId}") {
         fun createRoute(proyectoId: Long) = "planificacion/$proyectoId"
+    }
+    object EditarPlanificacion : Screen("planificacion_editar/{proyectoId}") {
+        fun createRoute(proyectoId: Long) = "planificacion_editar/$proyectoId"
     }
 }
 
@@ -151,7 +155,23 @@ fun AppNavigation(
             PlanificacionScreen(
                 proyectoId = planProyectoId,
                 onBack = { navController.popBackStack() },
-                onValidateRules = { Toast.makeText(context, "Validar reglas", Toast.LENGTH_SHORT).show() }
+                onValidateRules = { Toast.makeText(context, "Validar reglas", Toast.LENGTH_SHORT).show() },
+                onEditar = { navController.navigate(Screen.EditarPlanificacion.createRoute(planProyectoId)) }
+            )
+        }
+
+        composable(
+            route = Screen.EditarPlanificacion.route,
+            arguments = listOf(navArgument("proyectoId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val planProyectoId = backStackEntry.arguments?.getLong("proyectoId") ?: 1L
+            EditarPlanificacionScreen(
+                proyectoId = planProyectoId,
+                onBack = { navController.popBackStack() },
+                onGuardado = {
+                    Toast.makeText(context, "Planificación actualizada correctamente", Toast.LENGTH_SHORT).show()
+                    navController.popBackStack()
+                }
             )
         }
 

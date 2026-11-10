@@ -1,7 +1,12 @@
 package com.prieto.colab_movil.data.repository
 
 import com.google.gson.JsonParser
+import com.prieto.colab_movil.data.model.DependenciaRequestDto
+import com.prieto.colab_movil.data.model.EtapaRequestDto
+import com.prieto.colab_movil.data.model.EtapaResponseDto
 import com.prieto.colab_movil.data.model.PlanificacionResponseDto
+import com.prieto.colab_movil.data.model.TareaRequestDto
+import com.prieto.colab_movil.data.model.TareaResponseDto
 import com.prieto.colab_movil.data.remote.PlanificacionApiService
 import com.prieto.colab_movil.data.remote.RetrofitClient
 import kotlinx.coroutines.Dispatchers
@@ -12,6 +17,14 @@ interface PlanificacionRepository {
     /** Devuelve la planificación o `null` cuando el proyecto aún no la tiene (HTTP 404). */
     suspend fun verPlanificacion(proyectoId: Long): Result<PlanificacionResponseDto?>
     suspend fun generarPlanificacion(proyectoId: Long): Result<PlanificacionResponseDto>
+    suspend fun crearEtapa(proyectoId: Long, request: EtapaRequestDto): Result<EtapaResponseDto>
+    suspend fun editarEtapa(proyectoId: Long, etapaId: Long, request: EtapaRequestDto): Result<EtapaResponseDto>
+    suspend fun eliminarEtapa(proyectoId: Long, etapaId: Long): Result<Unit>
+    suspend fun crearTarea(proyectoId: Long, request: TareaRequestDto): Result<TareaResponseDto>
+    suspend fun editarTarea(proyectoId: Long, tareaId: Long, request: TareaRequestDto): Result<TareaResponseDto>
+    suspend fun eliminarTarea(proyectoId: Long, tareaId: Long): Result<Unit>
+    suspend fun agregarDependencia(proyectoId: Long, tareaId: Long, predecesoraId: Long): Result<Unit>
+    suspend fun quitarDependencia(proyectoId: Long, tareaId: Long, predecesoraId: Long): Result<Unit>
 }
 
 class PlanificacionRepositoryImpl(
@@ -45,6 +58,52 @@ class PlanificacionRepositoryImpl(
                 Result.failure(Exception("No se pudo conectar con el servidor backend. Verifica tu conexión."))
             }
         }
+
+    override suspend fun crearEtapa(proyectoId: Long, request: EtapaRequestDto): Result<EtapaResponseDto> =
+        ejecutar { apiService.crearEtapa(proyectoId, request) }
+
+    override suspend fun editarEtapa(proyectoId: Long, etapaId: Long, request: EtapaRequestDto): Result<EtapaResponseDto> =
+        ejecutar { apiService.editarEtapa(proyectoId, etapaId, request) }
+
+    override suspend fun eliminarEtapa(proyectoId: Long, etapaId: Long): Result<Unit> =
+        ejecutarSinCuerpo { apiService.eliminarEtapa(proyectoId, etapaId) }
+
+    override suspend fun crearTarea(proyectoId: Long, request: TareaRequestDto): Result<TareaResponseDto> =
+        ejecutar { apiService.crearTarea(proyectoId, request) }
+
+    override suspend fun editarTarea(proyectoId: Long, tareaId: Long, request: TareaRequestDto): Result<TareaResponseDto> =
+        ejecutar { apiService.editarTarea(proyectoId, tareaId, request) }
+
+    override suspend fun eliminarTarea(proyectoId: Long, tareaId: Long): Result<Unit> =
+        ejecutarSinCuerpo { apiService.eliminarTarea(proyectoId, tareaId) }
+
+    override suspend fun agregarDependencia(proyectoId: Long, tareaId: Long, predecesoraId: Long): Result<Unit> =
+        ejecutar { apiService.agregarDependencia(proyectoId, tareaId, DependenciaRequestDto(predecesoraId)) }
+            .map { Unit }
+
+    override suspend fun quitarDependencia(proyectoId: Long, tareaId: Long, predecesoraId: Long): Result<Unit> =
+        ejecutar { apiService.quitarDependencia(proyectoId, tareaId, predecesoraId) }
+            .map { Unit }
+}
+
+private suspend fun <T> ejecutar(llamada: suspend () -> Response<T>): Result<T> = withContext(Dispatchers.IO) {
+    try {
+        val response = llamada()
+        if (response.isSuccessful && response.body() != null) Result.success(response.body()!!)
+        else Result.failure(Exception(mensajeErrorDe(response)))
+    } catch (e: Exception) {
+        Result.failure(Exception("No se pudo conectar con el servidor backend. Verifica tu conexión."))
+    }
+}
+
+private suspend fun ejecutarSinCuerpo(llamada: suspend () -> Response<Unit>): Result<Unit> = withContext(Dispatchers.IO) {
+    try {
+        val response = llamada()
+        if (response.isSuccessful) Result.success(Unit)
+        else Result.failure(Exception(mensajeErrorDe(response)))
+    } catch (e: Exception) {
+        Result.failure(Exception("No se pudo conectar con el servidor backend. Verifica tu conexión."))
+    }
 }
 
 /**

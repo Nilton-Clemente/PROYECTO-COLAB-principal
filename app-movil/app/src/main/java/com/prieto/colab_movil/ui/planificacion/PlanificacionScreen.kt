@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Rule
 import androidx.compose.material.icons.filled.Timer
@@ -38,6 +39,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -219,7 +221,8 @@ fun PlanificacionScreen(
     proyectoId: Long,
     viewModel: PlanificacionViewModel = viewModel(),
     onBack: () -> Unit = {},
-    onValidateRules: () -> Unit = {}
+    onValidateRules: () -> Unit = {},
+    onEditar: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -249,6 +252,13 @@ fun PlanificacionScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onEditar) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Editar planificación",
+                            tint = Primary
+                        )
+                    }
                     Box(
                         modifier = Modifier
                             .padding(end = 16.dp)
