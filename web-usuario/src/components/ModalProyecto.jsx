@@ -4,10 +4,10 @@ import * as api from '../api/colab.js';
 import Modal from './Modal.jsx';
 import Alerta from './Alerta.jsx';
 import { IconPlus, IconTrash } from './Icons.jsx';
+import { casoUsoFormulario, casoUsoSinNombre, datosProyecto, DETALLES_CASO_USO } from '../proyecto.js';
 
 const CATEGORIAS = ['Seguridad', 'Rendimiento', 'Usabilidad', 'Disponibilidad', 'Mantenibilidad', 'Compatibilidad'];
-const cod = (prefijo, i) => `${prefijo}-${String(i + 1).padStart(2, '0')}`;
-const vacio = { rf: () => ({ descripcion: '' }), rnf: () => ({ categoria: '', descripcion: '' }), cu: () => ({ nombre: '', descripcion: '' }) };
+const vacio = { rf: () => ({ descripcion: '' }), rnf: () => ({ categoria: '', descripcion: '' }), cu: casoUsoFormulario };
 
 function Area({ id, label, ayuda, valor, onChange, filas = 3 }) {
   return (
@@ -19,17 +19,17 @@ function Area({ id, label, ayuda, valor, onChange, filas = 3 }) {
   );
 }
 
-// Lista editable de filas (requerimientos, casos de uso).
-function Filas({ titulo, prefijo, filas, onChange, nueva, children }) {
+// Lista editable de filas (requerimientos y casos de uso).
+function Filas({ titulo, filas, onChange, nueva, claseCampos = '', children }) {
   const cambiar = (i, parcial) => onChange(filas.map((f, k) => (k === i ? { ...f, ...parcial } : f)));
   return (
     <fieldset className="campo filas">
       <legend>{titulo}</legend>
       {filas.map((f, i) => (
         <div className="fila" key={i}>
-          <code>{cod(prefijo, i)}</code>
-          <div className="fila__campos">{children(f, (parcial) => cambiar(i, parcial), i)}</div>
-          <button type="button" className="icono-btn" aria-label={`Quitar ${cod(prefijo, i)}`} onClick={() => onChange(filas.filter((_, k) => k !== i))}>
+          <span className="fila__numero" aria-hidden="true">{i + 1}</span>
+          <div className={`fila__campos ${claseCampos}`.trim()}>{children(f, (parcial) => cambiar(i, parcial), i)}</div>
+          <button type="button" className="icono-btn" aria-label={`Quitar elemento ${i + 1}`} onClick={() => onChange(filas.filter((_, k) => k !== i))}>
             <IconTrash />
           </button>
         </div>
@@ -56,10 +56,11 @@ export default function ModalProyecto({ proyecto, onCerrar, onGuardado }) {
   }));
   const [rf, setRf] = useState(() => (proyecto?.requerimientosFuncionales ?? []).map((r) => ({ descripcion: r.descripcion })));
   const [rnf, setRnf] = useState(() => (proyecto?.requerimientosNoFuncionales ?? []).map((r) => ({ categoria: r.categoria ?? '', descripcion: r.descripcion })));
-  const [cu, setCu] = useState(() => (proyecto?.casosDeUso ?? []).map((c) => ({ nombre: c.nombre, descripcion: c.descripcion ?? '' })));
+  const [cu, setCu] = useState(() => (proyecto?.casosDeUso ?? []).map(casoUsoFormulario));
   const [tecnologias, setTecnologias] = useState([]);
   const [seleccion, setSeleccion] = useState(() => new Set((proyecto?.tecnologias ?? []).map((t) => t.id)));
   const [errorNombre, setErrorNombre] = useState(null);
+  const [errorCasoUso, setErrorCasoUso] = useState(null);
   const [errorServidor, setErrorServidor] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -75,28 +76,19 @@ export default function ModalProyecto({ proyecto, onCerrar, onGuardado }) {
       else sig.add(id);
       return sig;
     });
-  const texto = (v) => v.trim() || null;
-
   async function enviar(e) {
     e.preventDefault();
     if (!d.nombre.trim()) return setErrorNombre('Ingresa el nombre del proyecto.');
+    const casoSinNombre = casoUsoSinNombre(cu);
+    if (casoSinNombre >= 0) {
+      setErrorCasoUso(`El caso de uso ${casoSinNombre + 1} tiene información, pero no tiene nombre.`);
+      return;
+    }
     setErrorNombre(null);
+    setErrorCasoUso(null);
     setErrorServidor(null);
     setEnviando(true);
-    const datos = {
-      nombre: d.nombre.trim(),
-      descripcion: texto(d.descripcion),
-      problematica: texto(d.problematica),
-      objetivoGeneral: texto(d.objetivoGeneral),
-      objetivosEspecificos: texto(d.objetivosEspecificos),
-      alcance: texto(d.alcance),
-      restricciones: texto(d.restricciones),
-      fechaEntrega: d.fecha || null,
-      tecnologiasIds: [...seleccion],
-      requerimientosFuncionales: rf.filter((r) => r.descripcion.trim()).map((r, i) => ({ codigo: cod('RF', i), descripcion: r.descripcion.trim() })),
-      requerimientosNoFuncionales: rnf.filter((r) => r.descripcion.trim()).map((r, i) => ({ codigo: cod('RNF', i), categoria: texto(r.categoria), descripcion: r.descripcion.trim() })),
-      casosDeUso: cu.filter((c) => c.nombre.trim()).map((c, i) => ({ codigo: cod('CU', i), nombre: c.nombre.trim(), descripcion: texto(c.descripcion) })),
-    };
+    const datos = datosProyecto({ datos: d, rf, rnf, cu, seleccion });
     try {
       const guardado = editando ? await api.editarProyecto(token, proyecto.id, datos) : await api.crearProyecto(token, datos);
       onGuardado(guardado);
@@ -146,28 +138,43 @@ export default function ModalProyecto({ proyecto, onCerrar, onGuardado }) {
           </fieldset>
         )}
 
-        <Filas titulo="Requerimientos funcionales" prefijo="RF" filas={rf} onChange={setRf} nueva={vacio.rf}>
-          {(f, set, i) => <input aria-label={`Descripción RF-${i + 1}`} placeholder="Descripción" value={f.descripcion} onChange={(e) => set({ descripcion: e.target.value })} />}
+        <Filas titulo="Requerimientos funcionales" filas={rf} onChange={setRf} nueva={vacio.rf}>
+          {(f, set, i) => <input aria-label={`Descripción del requerimiento funcional ${i + 1}`} placeholder="Descripción" value={f.descripcion} onChange={(e) => set({ descripcion: e.target.value })} />}
         </Filas>
 
-        <Filas titulo="Requerimientos no funcionales" prefijo="RNF" filas={rnf} onChange={setRnf} nueva={vacio.rnf}>
+        <Filas titulo="Requerimientos no funcionales" filas={rnf} onChange={setRnf} nueva={vacio.rnf}>
           {(f, set, i) => (
             <>
-              <input aria-label={`Categoría RNF-${i + 1}`} list="categorias-rnf" placeholder="Categoría" value={f.categoria} onChange={(e) => set({ categoria: e.target.value })} />
-              <input aria-label={`Descripción RNF-${i + 1}`} placeholder="Descripción" value={f.descripcion} onChange={(e) => set({ descripcion: e.target.value })} />
+              <input aria-label={`Categoría del requerimiento no funcional ${i + 1}`} list="categorias-rnf" placeholder="Categoría" value={f.categoria} onChange={(e) => set({ categoria: e.target.value })} />
+              <input aria-label={`Descripción del requerimiento no funcional ${i + 1}`} placeholder="Descripción" value={f.descripcion} onChange={(e) => set({ descripcion: e.target.value })} />
             </>
           )}
         </Filas>
         <datalist id="categorias-rnf">{CATEGORIAS.map((c) => <option key={c} value={c} />)}</datalist>
 
-        <Filas titulo="Casos de uso clave" prefijo="CU" filas={cu} onChange={setCu} nueva={vacio.cu}>
+        <Filas titulo="Casos de uso clave" filas={cu} onChange={(filas) => { setCu(filas); setErrorCasoUso(null); }} nueva={vacio.cu} claseCampos="fila__campos--caso">
           {(f, set, i) => (
-            <>
-              <input aria-label={`Nombre CU-${i + 1}`} placeholder="Nombre" value={f.nombre} onChange={(e) => set({ nombre: e.target.value })} />
-              <input aria-label={`Descripción CU-${i + 1}`} placeholder="Descripción" value={f.descripcion} onChange={(e) => set({ descripcion: e.target.value })} />
-            </>
+            <div className="caso-uso__campos">
+              <div className="caso-uso__resumen">
+                <input aria-label={`Nombre del caso de uso ${i + 1}`} placeholder="Nombre" value={f.nombre} onChange={(e) => set({ nombre: e.target.value })} />
+                <input aria-label={`Descripción del caso de uso ${i + 1}`} placeholder="Descripción" value={f.descripcion} onChange={(e) => set({ descripcion: e.target.value })} />
+              </div>
+              <details className="caso-uso-detalles">
+                <summary>Agregar detalles para la IA (opcionales)</summary>
+                <div className="caso-uso__detalles">
+                  {DETALLES_CASO_USO.map(({ campo, etiqueta, ayuda, filas = 2 }) => (
+                    <div className="campo" key={campo}>
+                      <label htmlFor={`cu-${i}-${campo}`}>{etiqueta}</label>
+                      <textarea id={`cu-${i}-${campo}`} rows={filas} value={f[campo]} onChange={(e) => set({ [campo]: e.target.value })} />
+                      <small className="campo__nota">{ayuda}</small>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            </div>
           )}
         </Filas>
+        {errorCasoUso && <p className="campo__error" role="alert">{errorCasoUso}</p>}
 
         <div className="modal__pie">
           <button type="button" className="btn btn--ghost" onClick={onCerrar}>Cancelar</button>

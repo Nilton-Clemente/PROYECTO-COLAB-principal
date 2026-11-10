@@ -362,6 +362,7 @@ fieldset.campo legend { font-size: 12.5px; font-weight: 600; padding: 0; margin-
 .proy-cab__fila { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
 .proy-cab__desc { color: var(--apagado); max-width: 70ch; margin-top: 6px; }
 .proy-cab__acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.proyectos__acciones { display: flex; gap: 8px; flex-wrap: wrap; }
 .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 18px 0 14px; }
 .meta > div { background: var(--fondo); border-radius: 10px; padding: 10px 12px; }
 .meta dt { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--apagado); }
@@ -477,11 +478,20 @@ fieldset.campo legend { font-size: 12.5px; font-weight: 600; padding: 0; margin-
 .rol-opcion em { font-style: normal; margin-left: 6px; }
 .rol-opcion input { margin-top: 3px; accent-color: var(--indigo); }
 .filas .fila { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
-.filas code { font-family: var(--mono); font-size: 11.5px; color: var(--indigo); padding-top: 11px; min-width: 52px; }
+.fila__numero { display: grid; place-items: center; flex: none; width: 24px; height: 24px; margin-top: 7px; border-radius: 50%; background: var(--indigo-suave); color: var(--indigo); font-family: var(--mono); font-size: 11.5px; font-weight: 700; }
 .fila__campos { flex: 1; display: flex; gap: 8px; min-width: 0; }
 .fila__campos input { flex: 1; min-width: 0; height: 38px; padding: 0 10px; background: #f7f7fd; border: 1px solid var(--linea); border-radius: 8px; }
 .fila__campos input:focus { outline: 0; border-color: var(--indigo); background: #fff; }
 .fila__campos input:first-child:nth-last-child(2) { flex: 0 0 34%; }
+.fila__campos--caso { display: block; }
+.caso-uso__campos { display: flex; flex-direction: column; gap: 8px; }
+.caso-uso__resumen { display: flex; gap: 8px; }
+.caso-uso__resumen input:first-child { flex: 0 0 34%; }
+.caso-uso-detalles { border: 1px solid var(--linea); border-radius: 8px; background: #fafaff; }
+.caso-uso-detalles summary { padding: 8px 10px; color: var(--indigo); font-size: 12px; font-weight: 600; cursor: pointer; }
+.caso-uso__detalles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 2px 10px 10px; }
+.caso-uso__detalles .campo { gap: 4px; }
+.caso-uso__detalles textarea { min-height: 64px; resize: vertical; }
 .icono-btn { border: 0; background: none; color: var(--apagado); cursor: pointer; padding: 10px 6px; display: grid; }
 .icono-btn:hover { color: var(--rojo); }
 
@@ -489,4 +499,10 @@ fieldset.campo legend { font-size: 12.5px; font-weight: 600; padding: 0; margin-
   .detalle { grid-template-columns: 1fr; }
   .detalle__lateral { position: static; }
   .modal__dos { grid-template-columns: 1fr; }
+  .caso-uso__detalles { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .caso-uso__resumen { flex-direction: column; }
+  .caso-uso__resumen input:first-child { flex-basis: auto; }
 }
