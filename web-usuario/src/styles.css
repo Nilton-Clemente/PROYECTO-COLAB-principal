@@ -434,8 +434,28 @@ fieldset.campo legend { font-size: 12.5px; font-weight: 600; padding: 0; margin-
 .resumen-plan dd { margin: 2px 0 0; font-size: 20px; font-weight: 700; }
 .resumen-plan small { display: block; font-size: 11px; font-weight: 400; color: var(--apagado); }
 
-.etapas { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
-.etapa { background: #fff; border: 1px solid var(--linea); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.etapas {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(320px, 420px);
+  gap: 16px;
+  align-items: start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 2px 14px;
+  scroll-snap-type: x proximity;
+  scrollbar-color: var(--indigo-suave) transparent;
+}
+.etapa {
+  background: #fff;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-snap-align: start;
+}
 .etapa__cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .etapa__cab h3 { font-size: 14.5px; }
 .etapa__cab small { color: var(--apagado); font-size: 11.5px; }
@@ -503,6 +523,7 @@ fieldset.campo legend { font-size: 12.5px; font-weight: 600; padding: 0; margin-
 }
 
 @media (max-width: 600px) {
+  .etapas { grid-auto-columns: minmax(280px, 86vw); }
   .caso-uso__resumen { flex-direction: column; }
   .caso-uso__resumen input:first-child { flex-basis: auto; }
 }
