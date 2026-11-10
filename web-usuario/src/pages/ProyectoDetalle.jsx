@@ -142,13 +142,16 @@ export default function ProyectoDetalle() {
             <h1 className="titulo">{proyecto.nombre}</h1>
             {proyecto.descripcion && <p className="proy-cab__desc">{proyecto.descripcion}</p>}
           </div>
-          {soyCreador && (
-            <div className="proy-cab__acciones">
+          <div className="proy-cab__acciones">
+            {plan && <Link className="btn btn--ghost" to={`/proyectos/${id}/mis-tareas`}>Mis tareas</Link>}
+            {soyCreador && (
+              <>
               {!plan && <button type="button" className="btn btn--primario" disabled={generando} onClick={generar}>{generando ? 'Generando…' : 'Generar planificación con IA'}</button>}
               <button type="button" className="btn btn--ghost" onClick={() => setInvitando(true)}><IconPlus /> Invitar integrante</button>
               <button type="button" className="btn btn--ghost" onClick={() => setEditando(true)}>Editar proyecto</button>
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </div>
 
         <dl className="meta">

@@ -55,5 +55,14 @@ export const agregarDependencia = (token, proyectoId, tareaId, tareaPredecesoraI
   request(`/api/proyectos/${proyectoId}/tareas/${tareaId}/dependencias`, { method: 'POST', token, body: { tareaPredecesoraId } });
 export const quitarDependencia = (token, proyectoId, tareaId, tareaPredecesoraId) =>
   request(`/api/proyectos/${proyectoId}/tareas/${tareaId}/dependencias/${tareaPredecesoraId}`, { method: 'DELETE', token });
+
+// Tareas y confirmación individual de la planificación.
+export const misTareas = (token, proyectoId) => request(`/api/proyectos/${proyectoId}/tareas/mis-tareas`, { token });
+export const confirmarPlanificacion = (token, proyectoId) =>
+  request(`/api/proyectos/${proyectoId}/planificacion/confirmar`, { method: 'POST', token });
+export const solicitarCambiosPlanificacion = (token, proyectoId, comentario) =>
+  request(`/api/proyectos/${proyectoId}/planificacion/solicitar-cambios`, { method: 'POST', token, body: { comentario } });
+export const listarConfirmaciones = (token, proyectoId) => request(`/api/proyectos/${proyectoId}/planificacion/confirmaciones`, { token });
+export const historialAvances = (token, proyectoId, tareaId) => request(`/api/proyectos/${proyectoId}/tareas/${tareaId}/avances`, { token });
 export const editarProyecto = (token, id, datos) =>
   request(`/api/proyectos/${id}`, { method: 'PUT', token, body: datos });
