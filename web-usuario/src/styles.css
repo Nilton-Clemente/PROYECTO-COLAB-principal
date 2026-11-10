@@ -484,6 +484,67 @@ fieldset.campo legend { font-size: 12.5px; font-weight: 600; padding: 0; margin-
 .estado-tarea--COMPLETADA { background: var(--verde-suave); color: var(--verde); }
 .estado-tarea--BLOQUEADA { background: var(--rojo-suave); color: var(--rojo); }
 
+/* ---------- Edición de planificación ---------- */
+.plan-cab__titulo { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; }
+.editor-plan { display: flex; flex-direction: column; gap: 18px; }
+.editor-plan__cabecera { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.editor-plan__cabecera h1 { margin: 8px 0 4px; font-size: 24px; letter-spacing: -0.02em; }
+.editor-plan__cabecera p { color: var(--apagado); max-width: 700px; }
+.editor-plan__acciones { display: flex; flex: none; gap: 8px; }
+.editor-plan__fases { display: flex; align-items: center; gap: 10px; padding: 7px; overflow: hidden; background: #edeeff; border: 1px solid #e1e3f5; border-radius: 13px; }
+.editor-plan__lista-fases { display: flex; flex: 1; gap: 5px; min-width: 0; overflow-x: auto; }
+.editor-plan__pestana { display: flex; flex: 0 0 240px; align-items: flex-start; gap: 9px; padding: 10px 11px; color: var(--apagado); text-align: left; background: transparent; border: 0; border-radius: 9px; cursor: pointer; }
+.editor-plan__pestana:hover { background: rgb(255 255 255 / 55%); }
+.editor-plan__pestana--activa { color: var(--tinta); background: #fff; box-shadow: 0 1px 3px rgb(21 26 51 / 10%); }
+.editor-plan__punto { width: 8px; height: 8px; margin-top: 5px; flex: none; border-radius: 50%; background: #afb2c9; }
+.editor-plan__pestana--activa .editor-plan__punto { background: var(--indigo); }
+.editor-plan__pestana strong { display: block; font-size: 12px; line-height: 1.35; }
+.editor-plan__pestana small { display: block; margin-top: 3px; color: var(--apagado); font-size: 10.5px; }
+.editor-plan__etapa { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 19px 20px; }
+.editor-plan__etapa-datos { min-width: 0; flex: 1; }
+.editor-plan__codigo { display: inline-block; margin-bottom: 8px; padding: 3px 7px; color: var(--indigo); background: var(--indigo-suave); border-radius: 5px; font-family: var(--mono); font-size: 11px; font-weight: 700; }
+.editor-plan__nombre-etapa { display: block; max-width: 680px; }
+.editor-plan__nombre-etapa > span { display: block; margin-bottom: 4px; color: var(--apagado); font-size: 10.5px; font-weight: 700; }
+.editor-plan__nombre-etapa input { width: 100%; padding: 4px 0; color: var(--tinta); background: transparent; border: 0; border-bottom: 1px solid transparent; font-size: 19px; font-weight: 700; }
+.editor-plan__nombre-etapa input:hover { border-bottom-color: var(--linea); }
+.editor-plan__nombre-etapa input:focus { outline: 0; border-bottom-color: var(--indigo); }
+.editor-plan__etapa-datos p { margin-top: 9px; color: var(--apagado); font-size: 12px; }
+.editor-plan__metas { display: flex; align-items: center; gap: 14px; margin: 0; padding: 12px 14px; background: var(--fondo); border-radius: 10px; }
+.editor-plan__metas div { min-width: 76px; }
+.editor-plan__metas dt { color: var(--apagado); font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.editor-plan__metas dd { margin: 3px 0 0; font-size: 12px; font-weight: 700; }
+.editor-plan__contenido { display: grid; grid-template-columns: minmax(0, 1fr) 255px; align-items: start; gap: 18px; }
+.editor-plan__tareas { display: flex; flex-direction: column; gap: 12px; }
+.editor-plan__seccion-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.editor-plan__seccion-cab h2, .editor-plan__resumen h2, .editor-plan__equipo h2 { font-size: 16px; }
+.editor-plan__seccion-cab p { margin-top: 2px; color: var(--apagado); font-size: 11.5px; }
+.editor-plan__tarea { display: flex; flex-direction: column; gap: 13px; padding: 15px; }
+.editor-plan__tarea-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.editor-plan__tarea-cab > div { display: flex; align-items: center; gap: 7px; }
+.editor-plan__tarea-cab code { padding: 3px 6px; color: var(--indigo); background: var(--indigo-suave); border-radius: 5px; font-family: var(--mono); font-size: 11px; font-weight: 700; }
+.editor-plan__campo { display: flex; min-width: 0; flex-direction: column; gap: 5px; }
+.editor-plan__campo > span { color: var(--apagado); font-size: 10.5px; font-weight: 700; }
+.editor-plan__campo input, .editor-plan__campo select, .editor-plan__campo textarea { width: 100%; padding: 9px 10px; color: var(--tinta); background: #f8f8ff; border: 1px solid var(--linea); border-radius: 8px; font-size: 12.5px; }
+.editor-plan__campo textarea { min-height: 64px; resize: vertical; }
+.editor-plan__campo select[multiple] { min-height: 96px; }
+.editor-plan__campo input:focus, .editor-plan__campo select:focus, .editor-plan__campo textarea:focus { outline: 0; border-color: var(--indigo); background: #fff; }
+.editor-plan__grilla { display: grid; grid-template-columns: 1.3fr 1fr .72fr 1.25fr; gap: 10px; }
+.editor-plan__agregar { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 13px; color: var(--indigo); background: #fff; border: 1px dashed #bdb9f4; border-radius: 11px; font-weight: 700; cursor: pointer; }
+.editor-plan__agregar:hover:not(:disabled) { background: var(--indigo-suave); }
+.editor-plan__lateral { position: sticky; top: 84px; display: flex; flex-direction: column; gap: 12px; }
+.editor-plan__resumen, .editor-plan__equipo { padding: 15px; }
+.editor-plan__resumen { display: flex; flex-direction: column; gap: 12px; }
+.editor-plan__resumen dl { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+.editor-plan__resumen dl div { display: flex; justify-content: space-between; gap: 10px; color: var(--apagado); font-size: 12px; }
+.editor-plan__resumen dd { margin: 0; color: var(--tinta); font-weight: 700; }
+.editor-plan__resumen p { padding-top: 9px; color: var(--verde); border-top: 1px solid var(--linea); font-size: 11px; }
+.editor-plan__equipo { display: flex; flex-direction: column; gap: 10px; }
+.editor-plan__equipo > div { display: flex; align-items: center; gap: 8px; }
+.editor-plan__equipo p { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.editor-plan__equipo strong { font-size: 11.5px; }
+.editor-plan__equipo small { color: var(--apagado); font-size: 10px; }
+.editor-plan__nota { margin: 0; padding: 10px 11px; color: #2a3f9e; background: var(--azul-suave); border-radius: 9px; font-size: 11px; }
+
 /* ======== Formularios y modales ampliados ======== */
 .modal--ancho { width: min(760px, calc(100vw - 32px)); max-height: 92vh; }
 .modal__sub { font-size: 12.5px; color: var(--apagado); margin-top: 2px; }
@@ -520,10 +581,26 @@ fieldset.campo legend { font-size: 12.5px; font-weight: 600; padding: 0; margin-
   .detalle__lateral { position: static; }
   .modal__dos { grid-template-columns: 1fr; }
   .caso-uso__detalles { grid-template-columns: 1fr; }
+  .editor-plan__cabecera, .editor-plan__etapa { align-items: flex-start; flex-direction: column; }
+  .editor-plan__acciones { width: 100%; }
+  .editor-plan__contenido { grid-template-columns: 1fr; }
+  .editor-plan__lateral { position: static; display: grid; grid-template-columns: 1fr 1fr; }
+  .editor-plan__nota { grid-column: 1 / -1; }
 }
 
 @media (max-width: 600px) {
   .etapas { grid-auto-columns: minmax(280px, 86vw); }
   .caso-uso__resumen { flex-direction: column; }
   .caso-uso__resumen input:first-child { flex-basis: auto; }
+  .plan-cab__titulo { align-items: flex-start; flex-direction: column; }
+  .editor-plan__cabecera h1 { font-size: 21px; }
+  .editor-plan__acciones, .editor-plan__metas { flex-wrap: wrap; }
+  .editor-plan__acciones .btn { flex: 1; }
+  .editor-plan__fases { align-items: flex-start; flex-direction: column; overflow: visible; }
+  .editor-plan__lista-fases { width: 100%; }
+  .editor-plan__fases > .btn { width: 100%; }
+  .editor-plan__etapa { padding: 15px; }
+  .editor-plan__metas { width: 100%; }
+  .editor-plan__grilla, .editor-plan__lateral { grid-template-columns: 1fr; }
+  .editor-plan__nota { grid-column: auto; }
 }

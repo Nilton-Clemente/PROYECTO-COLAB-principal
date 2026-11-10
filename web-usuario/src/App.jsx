@@ -5,6 +5,7 @@ import Login from './pages/Login.jsx';
 import Registro from './pages/Registro.jsx';
 import Proyectos from './pages/Proyectos.jsx';
 import ProyectoDetalle from './pages/ProyectoDetalle.jsx';
+import EditarPlanificacion from './pages/EditarPlanificacion.jsx';
 import Invitaciones from './pages/Invitaciones.jsx';
 import Perfil from './pages/Perfil.jsx';
 
@@ -25,6 +26,7 @@ export default function App() {
       <Route path="/registro" element={<SoloInvitados><Registro /></SoloInvitados>} />
       <Route element={<Privada><Layout /></Privada>}>
         <Route path="/proyectos" element={<Proyectos />} />
+        <Route path="/proyectos/:id/planificacion/editar" element={<EditarPlanificacion />} />
         <Route path="/proyectos/:id/:tab?" element={<ProyectoDetalle />} />
         <Route path="/invitaciones" element={<Invitaciones />} />
         <Route path="/perfil" element={<Perfil />} />
