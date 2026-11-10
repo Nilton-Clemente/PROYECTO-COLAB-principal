@@ -20,6 +20,7 @@ import com.prieto.colab_movil.ui.proyectos.DetalleProyectoScreen
 import com.prieto.colab_movil.ui.proyectos.EditarProyectoScreen
 import com.prieto.colab_movil.ui.proyectos.ProyectosScreen
 import com.prieto.colab_movil.ui.register.RegisterScreen
+import com.prieto.colab_movil.ui.tareas.MisTareasScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -39,6 +40,9 @@ sealed class Screen(val route: String) {
     }
     object EditarPlanificacion : Screen("planificacion_editar/{proyectoId}") {
         fun createRoute(proyectoId: Long) = "planificacion_editar/$proyectoId"
+    }
+    object MisTareas : Screen("mis_tareas/{proyectoId}") {
+        fun createRoute(proyectoId: Long) = "mis_tareas/$proyectoId"
     }
 }
 
@@ -131,7 +135,8 @@ fun AppNavigation(
                 onBack = { navController.popBackStack() },
                 onPerfil = { navController.navigate(Screen.Perfil.route) },
                 onEditar = { navController.navigate(Screen.EditarProyecto.createRoute(proyectoId)) },
-                onGenerarPlanificacion = { navController.navigate(Screen.Planificacion.createRoute(proyectoId)) }
+                onGenerarPlanificacion = { navController.navigate(Screen.Planificacion.createRoute(proyectoId)) },
+                onMisTareas = { navController.navigate(Screen.MisTareas.createRoute(proyectoId)) }
             )
         }
 
@@ -172,6 +177,18 @@ fun AppNavigation(
                     Toast.makeText(context, "Planificación actualizada correctamente", Toast.LENGTH_SHORT).show()
                     navController.popBackStack()
                 }
+            )
+        }
+
+        composable(
+            route = Screen.MisTareas.route,
+            arguments = listOf(navArgument("proyectoId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val proyectoId = requireNotNull(backStackEntry.arguments).getLong("proyectoId")
+            MisTareasScreen(
+                proyectoId = proyectoId,
+                onBack = { navController.popBackStack() },
+                onPerfil = { navController.navigate(Screen.Perfil.route) }
             )
         }
 

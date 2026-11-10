@@ -56,4 +56,8 @@ object RetrofitClient {
     val planificacionApiService: PlanificacionApiService by lazy {
         retrofit.create(PlanificacionApiService::class.java)
     }
+
+    val misTareasApiService: MisTareasApiService by lazy {
+        retrofit.create(MisTareasApiService::class.java)
+    }
 }
