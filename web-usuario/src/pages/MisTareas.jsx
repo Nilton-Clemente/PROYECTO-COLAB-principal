@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useOutletContext, useParams } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import * as api from '../api/colab.js';
 import Modal from '../components/Modal.jsx';
-import Alerta from '../components/Alerta.jsx';
 import { codigoTarea, ESTADO_TAREA, fechaCorta, PRIORIDAD } from '../utils.js';
 import { puedeRegistrarAvance } from '../tareas.js';
 
@@ -69,6 +68,7 @@ function TarjetaTarea({ tarea, minutos, puedeRegistrar, onRegistrar }) {
 
 export default function MisTareas() {
   const { id: proyectoId } = useParams();
+  const navigate = useNavigate();
   const { token } = useAuth();
   const { usuario, avisar } = useOutletContext();
   const [estado, setEstado] = useState('cargando');
@@ -82,7 +82,6 @@ export default function MisTareas() {
   const [busqueda, setBusqueda] = useState('');
   const [confirmando, setConfirmando] = useState(false);
   const [solicitando, setSolicitando] = useState(false);
-  const [registroPendiente, setRegistroPendiente] = useState(null);
   const [cambios, setCambios] = useState(false);
   const [comentario, setComentario] = useState('');
 
@@ -154,7 +153,7 @@ export default function MisTareas() {
 
   function registrarAvance(tarea) {
     if (!puedeRegistrarAvance(plan?.estado, tarea)) return;
-    setRegistroPendiente(tarea);
+    navigate(`/proyectos/${proyectoId}/tareas/${tarea.id}/avances/registrar`);
   }
 
   if (estado === 'cargando') return <p className="estado">Cargando tus tareas…</p>;
@@ -210,12 +209,6 @@ export default function MisTareas() {
         </form>
       </Modal>}
 
-      {registroPendiente && puedeRegistrarAvance(plan.estado, registroPendiente) && <Modal titulo="Registro de avance" subtitulo={`${codigoTarea(registroPendiente.id)} · ${registroPendiente.nombre}`} onCerrar={() => setRegistroPendiente(null)}>
-        <div className="modal__form">
-          <Alerta titulo="Próxima pantalla">El formulario para registrar horas y notas de avance se implementará en la siguiente pantalla. Por ahora puedes consultar el total registrado: <strong>{minutosTexto(minutosPorTarea[registroPendiente.id])}</strong>.</Alerta>
-          <div className="modal__pie"><button type="button" className="btn btn--primario" onClick={() => setRegistroPendiente(null)}>Entendido</button></div>
-        </div>
-      </Modal>}
     </section>
   );
 }

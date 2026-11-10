@@ -581,6 +581,74 @@ fieldset.campo legend { font-size: 12.5px; font-weight: 600; padding: 0; margin-
 .mis-tareas__tarjeta-pie small { color: var(--apagado); font-size: 11px; }
 .mis-tareas__acciones-tarea { gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 
+/* ======== Registro de avance ======== */
+.registro-avance { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.registro-avance__volver { align-self: flex-start; border: 0; background: none; cursor: pointer; padding: 0; font: inherit; }
+.registro-avance__cabecera { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px; }
+.registro-avance__cabecera > div { min-width: 0; }
+.registro-avance__chips { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.registro-avance__chips code { font: 600 12px var(--mono); color: var(--indigo); background: var(--indigo-suave); border-radius: 5px; padding: 4px 7px; }
+.registro-avance__cabecera h1 { font-size: 24px; margin-top: 12px; letter-spacing: -0.02em; }
+.registro-avance__cabecera h2 { font-size: 17px; margin-top: 4px; overflow-wrap: anywhere; }
+.registro-avance__cabecera p { font-size: 12px; color: var(--apagado); margin-top: 6px; }
+.registro-avance__resumen { padding: 18px; }
+.registro-avance__metricas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.registro-avance__metrica { display: flex; flex-direction: column; justify-content: space-between; gap: 6px; border-radius: 10px; background: var(--fondo); padding: 15px; }
+.registro-avance__metrica > span { font-size: 11px; color: var(--apagado); font-weight: 600; }
+.registro-avance__metrica > strong { font-size: 27px; overflow-wrap: anywhere; }
+.registro-avance__metrica small { font-size: 12px; font-weight: 500; }
+.registro-avance__metrica p { font-size: 10.5px; color: var(--apagado); }
+.registro-avance__metrica--verde > strong { color: var(--verde); }
+.registro-avance__metrica--principal { background: var(--indigo); color: #fff; }
+.registro-avance__metrica--principal > span, .registro-avance__metrica--principal p { color: #eeecff; }
+.registro-avance__ayuda { font-size: 11.5px; line-height: 1.6; color: var(--apagado); margin-top: 10px; }
+.registro-avance__grilla { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; gap: 20px; }
+.registro-avance__columna { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.registro-avance__panel { padding: 20px; }
+.registro-avance__panel h2, .registro-avance__titulo-campo { font-size: 14px; font-weight: 700; }
+.registro-avance__estados, .registro-avance__tiempo { margin: 14px 0 0; padding: 0; border: 0; min-width: 0; }
+.registro-avance__estados { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.registro-avance__estado { display: flex; align-items: flex-start; gap: 8px; background: var(--fondo); border: 1px solid transparent; border-radius: 9px; padding: 12px 9px; cursor: pointer; }
+.registro-avance__estado input { margin: 3px 0 0; accent-color: var(--indigo); }
+.registro-avance__estado strong { display: block; font-size: 12px; }
+.registro-avance__estado small { display: block; font-size: 10px; line-height: 1.4; color: var(--apagado); margin-top: 4px; }
+.registro-avance__estado--seleccionado { background: var(--indigo-suave); border-color: var(--indigo); }
+.registro-avance__estado:has(input:disabled) { opacity: 0.55; cursor: not-allowed; }
+.registro-avance__estado--seleccionado:has(input:disabled) { opacity: 0.85; }
+.registro-avance__nota { font-size: 11.5px; padding: 12px; margin-top: 12px; border-radius: 8px; background: var(--verde-suave); color: var(--verde); }
+.registro-avance__nota--bloqueada { background: var(--rojo-suave); color: var(--rojo); }
+.registro-avance__tiempo { background: var(--fondo); border-radius: 10px; padding: 16px 10px; }
+.registro-avance__contador { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.registro-avance__contador > button { flex: none; width: 40px; height: 42px; background: #fff; border: 1px solid var(--linea); border-radius: 9px; cursor: pointer; font-size: 24px; }
+.registro-avance__contador > button:disabled { opacity: 0.5; cursor: not-allowed; }
+.registro-avance__contador label { text-align: center; min-width: 0; }
+.registro-avance__contador input { width: 100%; max-width: 108px; text-align: center; border: 1px solid var(--linea); border-radius: 8px; padding: 4px; background: #fff; font-size: 30px; font-weight: 700; }
+.registro-avance__contador small { display: block; font-size: 12px; color: var(--indigo); }
+.registro-avance__rapidos { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 7px; margin-top: 16px; font-size: 11px; color: var(--apagado); }
+.registro-avance__rapidos button { padding: 5px 8px; background: #fff; border: 1px solid var(--linea); border-radius: 5px; font: 11px var(--mono); cursor: pointer; }
+.registro-avance__rapidos button[aria-pressed="true"] { background: var(--indigo); color: #fff; }
+.registro-avance__autor { display: flex; align-items: center; gap: 12px; padding: 18px; }
+.registro-avance__autor > div { min-width: 0; overflow-wrap: anywhere; }
+.registro-avance__autor strong { display: block; font-size: 13px; }
+.registro-avance__autor small, .registro-avance__autor p { display: block; font-size: 11px; color: var(--apagado); }
+.registro-avance__autor p { color: var(--indigo); margin-top: 5px; }
+.registro-avance__descripcion-pie { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 9px; font-size: 10.5px; color: var(--apagado); }
+.registro-avance__historial-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.registro-avance__historial-cab > span { font-size: 11px; color: var(--apagado); white-space: nowrap; }
+.registro-avance__historial { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 14px; max-height: 480px; overflow-y: auto; }
+.registro-avance__historial li { display: flex; align-items: flex-start; gap: 10px; }
+.registro-avance__historial-icono { width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--indigo); color: #fff; }
+.registro-avance__historial li > div { flex: 1; min-width: 0; background: var(--fondo); padding: 12px; border-radius: 9px; }
+.registro-avance__historial strong { font-size: 12px; }
+.registro-avance__historial time, .registro-avance__historial small { display: block; font-size: 10.5px; color: var(--apagado); margin-top: 2px; }
+.registro-avance__historial p { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--apagado); font-size: 12px; margin-top: 8px; }
+.registro-avance__acciones { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 18px; }
+.registro-avance__acciones > div, .registro-avance__recuperar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.registro-avance__acciones p { text-align: right; font-size: 10px; color: var(--apagado); }
+.registro-avance__acciones strong { display: block; font-size: 13px; color: var(--verde); }
+.registro-avance__exito { border: 1px solid #9fd7bf; border-radius: 10px; background: var(--verde-suave); color: var(--verde); padding: 14px; font-size: 13px; }
+.registro-avance .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
 /* ======== Formularios y modales ampliados ======== */
 .modal--ancho { width: min(760px, calc(100vw - 32px)); max-height: 92vh; }
 .modal__sub { font-size: 12.5px; color: var(--apagado); margin-top: 2px; }
@@ -624,6 +692,8 @@ fieldset.campo legend { font-size: 12.5px; font-weight: 600; padding: 0; margin-
   .editor-plan__nota { grid-column: 1 / -1; }
   .mis-tareas__portada, .mis-tareas__aviso { align-items: flex-start; flex-direction: column; }
   .mis-tareas__portada dl { width: 100%; }
+  .registro-avance__grilla { grid-template-columns: 1fr; }
+  .registro-avance__metricas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 600px) {
@@ -647,4 +717,13 @@ fieldset.campo legend { font-size: 12.5px; font-weight: 600; padding: 0; margin-
   .mis-tareas__portada dl { grid-template-columns: repeat(3, 1fr); min-width: 0; }
   .mis-tareas__aviso-acciones, .mis-tareas__acciones-tarea { width: 100%; }
   .mis-tareas__aviso-acciones .btn, .mis-tareas__acciones-tarea .btn { flex: 1; }
+  .registro-avance__cabecera { flex-direction: column; align-items: flex-start; padding: 16px; }
+  .registro-avance__cabecera h1 { font-size: 21px; }
+  .registro-avance__panel, .registro-avance__resumen { padding: 15px; }
+  .registro-avance__metricas { gap: 8px; }
+  .registro-avance__metrica { padding: 12px; }
+  .registro-avance__metrica > strong { font-size: 24px; }
+  .registro-avance__acciones > div { width: 100%; }
+  .registro-avance__acciones .btn { flex: 1; }
+  .registro-avance__acciones p { width: 100%; text-align: left; }
 }

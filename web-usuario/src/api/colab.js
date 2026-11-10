@@ -64,5 +64,9 @@ export const solicitarCambiosPlanificacion = (token, proyectoId, comentario) =>
   request(`/api/proyectos/${proyectoId}/planificacion/solicitar-cambios`, { method: 'POST', token, body: { comentario } });
 export const listarConfirmaciones = (token, proyectoId) => request(`/api/proyectos/${proyectoId}/planificacion/confirmaciones`, { token });
 export const historialAvances = (token, proyectoId, tareaId) => request(`/api/proyectos/${proyectoId}/tareas/${tareaId}/avances`, { token });
+export const registrarAvance = (token, proyectoId, tareaId, datos) =>
+  request(`/api/proyectos/${proyectoId}/tareas/${tareaId}/avances`, { method: 'POST', token, body: datos });
+export const cambiarEstadoTarea = (token, proyectoId, tareaId, nuevoEstado) =>
+  request(`/api/proyectos/${proyectoId}/tareas/${tareaId}/estado`, { method: 'PUT', token, body: { nuevoEstado } });
 export const editarProyecto = (token, id, datos) =>
   request(`/api/proyectos/${id}`, { method: 'PUT', token, body: datos });
