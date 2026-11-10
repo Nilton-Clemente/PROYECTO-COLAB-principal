@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.prieto.colab_movil.data.model.CasoUsoDto
 import com.prieto.colab_movil.data.model.ProyectoRequest
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
 import com.prieto.colab_movil.data.model.RequerimientoFuncionalDto
@@ -69,8 +70,11 @@ fun CrearProyectoScreen(
         var restricciones by remember(proyectoInicial) { mutableStateOf(proyectoInicial?.restricciones ?: "") }
         var fechaEntrega by remember(proyectoInicial) { mutableStateOf(formatearFechaParaEdicion(proyectoInicial?.fechaEntrega)) }
         var nuevoObjetivo by remember { mutableStateOf("") }
+        var nuevoRequerimiento by remember { mutableStateOf("") }
         var nuevoRnfDescripcion by remember { mutableStateOf("") }
         var mostrarConfirmacion by remember { mutableStateOf(false) }
+        var mostrarImportacion by remember { mutableStateOf(false) }
+        var mensajeImportacion by remember { mutableStateOf<String?>(null) }
         var mensajeError by remember { mutableStateOf<String?>(null) }
 
         val objetivos = remember(proyectoInicial) {
@@ -88,11 +92,8 @@ fun CrearProyectoScreen(
             }
         }
         val requerimientos = remember(proyectoInicial) {
-            mutableStateListOf<String>().apply {
-                addAll(proyectoInicial?.requerimientosFuncionales?.map { rf ->
-                    val codigo = rf.codigo
-                    if (codigo.isNullOrBlank()) rf.descripcion else "$codigo: ${rf.descripcion}"
-                } ?: emptyList())
+            mutableStateListOf<RequerimientoFuncionalDto>().apply {
+                addAll(proyectoInicial?.requerimientosFuncionales.orEmpty())
             }
         }
         val requerimientosNoFuncionales = remember(proyectoInicial) {
@@ -101,8 +102,14 @@ fun CrearProyectoScreen(
             }
         }
 
+        val casosDeUso = remember(proyectoInicial) {
+            mutableStateListOf<CasoUsoDto>().apply {
+                addAll(proyectoInicial?.casosDeUso.orEmpty())
+            }
+        }
+
         val seccionesAbiertas = remember {
-            mutableStateListOf(true, true, false, true, false, false, true)
+            mutableStateListOf(true, true, false, true, false, false, false, true)
         }
 
         val secciones = listOf(
@@ -112,6 +119,7 @@ fun CrearProyectoScreen(
             "Stack Tecnológico",
             "Requerimientos Funcionales",
             "Requerimientos No Funcionales",
+            "Casos de Uso",
             "Plan y Entrega"
         )
 
@@ -120,12 +128,13 @@ fun CrearProyectoScreen(
             "Hitos de valor técnico y alcance funcional",
             "Fronteras técnicas y dependencias externas",
             "Arquitectura de lenguajes, frameworks y nube",
-            "Casos de uso clave y roles de usuario",
+            "Funciones y comportamientos del sistema",
             "Calidad, seguridad, rendimiento y usabilidad",
+            "Actores, condiciones y flujos de interacción",
             "Fecha final del proyecto"
         )
 
-        val iconos = listOf("▣", "◎", "⌗", "◇", "☑", "⚙", "▦")
+        val iconos = listOf("▣", "◎", "⌗", "◇", "☑", "⚙", "◎", "▦")
 
         val sugerencias = tecnologiasCatalogo.map { it.nombre }
 
@@ -223,6 +232,18 @@ fun CrearProyectoScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
 
+                    if (proyectoId == null) {
+                        OutlinedButton(
+                            onClick = { mostrarImportacion = true },
+                            enabled = !guardando,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp)
+                        ) { Text("Importar JSON") }
+                        mensajeImportacion?.let {
+                            Text(it, color = GreenColor, fontSize = 13.sp)
+                        }
+                    }
+
                     // Progreso del formulario
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -262,7 +283,6 @@ fun CrearProyectoScreen(
 
                         }
                     }
-
                     // 1. Datos generales
                     Seccion(
                         titulo = secciones[0],
@@ -562,7 +582,8 @@ fun CrearProyectoScreen(
                                     onCheckedChange = { marcado = it }
                                 )
                                 Text(
-                                    requerimiento,
+                                    requerimiento.codigo?.takeIf { it.isNotBlank() }
+                                        ?.let { "$it: ${requerimiento.descripcion}" } ?: requerimiento.descripcion,
                                     modifier = Modifier.weight(1f),
                                     fontSize = 12.sp,
                                     color = TextColor
@@ -573,10 +594,6 @@ fun CrearProyectoScreen(
                                     Text("×", color = RedColor)
                                 }
                             }
-                        }
-
-                        var nuevoRequerimiento by remember {
-                            mutableStateOf("")
                         }
 
                         OutlinedTextField(
@@ -594,7 +611,7 @@ fun CrearProyectoScreen(
                         Button(
                             onClick = {
                                 if (nuevoRequerimiento.isNotBlank()) {
-                                    requerimientos.add(nuevoRequerimiento.trim())
+                                    requerimientos.add(parsearRequerimiento(nuevoRequerimiento.trim()))
                                     nuevoRequerimiento = ""
                                 }
                             },
@@ -675,13 +692,29 @@ fun CrearProyectoScreen(
                         }
                     }
 
-                    // 7. Plan y entrega
+                    // 7. Casos de uso
                     Seccion(
                         titulo = secciones[6],
                         descripcion = descripciones[6],
                         icono = iconos[6],
                         abierta = seccionesAbiertas[6],
-                        onToggle = { seccionesAbiertas[6] = !seccionesAbiertas[6] },
+                        onToggle = { seccionesAbiertas[6] = !seccionesAbiertas[6] }
+                    ) {
+                        CasosDeUsoFormulario(
+                            casosDeUso = casosDeUso,
+                            onAgregar = { casosDeUso.add(CasoUsoDto(nombre = "")) },
+                            onCambiar = { index, caso -> casosDeUso[index] = caso },
+                            onEliminar = { index -> casosDeUso.removeAt(index) }
+                        )
+                    }
+
+                    // 8. Plan y entrega
+                    Seccion(
+                        titulo = secciones[7],
+                        descripcion = descripciones[7],
+                        icono = iconos[7],
+                        abierta = seccionesAbiertas[7],
+                        onToggle = { seccionesAbiertas[7] = !seccionesAbiertas[7] },
                         colorIcono = Color(0xFFFFDAD6)
                     ) {
                         EtiquetaCampo("Entrega Final")
@@ -699,6 +732,41 @@ fun CrearProyectoScreen(
             }
         }
 
+        if (mostrarImportacion && proyectoId == null) {
+            ImportarProyectoJsonDialog(
+                catalogo = tecnologiasCatalogo,
+                onRecargarCatalogo = { viewModel.cargarTecnologias() },
+                onCerrar = { mostrarImportacion = false },
+                onImportar = { importado ->
+                    val datos = importado.request
+                    nombre = datos.nombre
+                    descripcion = datos.descripcion.orEmpty()
+                    problematica = datos.problematica.orEmpty()
+                    objetivoGeneral = datos.objetivoGeneral.orEmpty()
+                    alcance = datos.alcance.orEmpty()
+                    restricciones = datos.restricciones.orEmpty()
+                    fechaEntrega = formatearFechaParaEdicion(datos.fechaEntrega)
+                    objetivos.clear()
+                    objetivos.addAll(datos.objetivosEspecificos.orEmpty().lines().map { it.trim() }.filter { it.isNotEmpty() })
+                    tecnologias.clear()
+                    tecnologias.addAll(importado.tecnologias)
+                    requerimientos.clear()
+                    requerimientos.addAll(datos.requerimientosFuncionales.orEmpty())
+                    requerimientosNoFuncionales.clear()
+                    requerimientosNoFuncionales.addAll(datos.requerimientosNoFuncionales.orEmpty())
+                    casosDeUso.clear()
+                    casosDeUso.addAll(datos.casosDeUso.orEmpty())
+                    nuevoObjetivo = ""
+                    nuevoRequerimiento = ""
+                    nuevoRnfDescripcion = ""
+                    mensajeError = null
+                    viewModel.resetState()
+                    mostrarImportacion = false
+                    mensajeImportacion = "Datos importados. Revisa el formulario y pulsa Guardar Proyecto para registrarlo."
+                }
+            )
+        }
+
         if (mostrarConfirmacion) {
             AlertDialog(
                 onDismissRequest = { mostrarConfirmacion = false },
@@ -709,7 +777,8 @@ fun CrearProyectoScreen(
                             "${objetivos.size} objetivos, " +
                             "${tecnologias.size} tecnologías y " +
                             "${requerimientos.size} requerimientos funcionales y " +
-                            "${requerimientosNoFuncionales.size} no funcionales?"
+                            "${requerimientosNoFuncionales.size} no funcionales, y " +
+                            "${casosDeUso.size} casos de uso?"
                     )
                 },
                 confirmButton = {
@@ -718,6 +787,10 @@ fun CrearProyectoScreen(
                             if (nombre.isBlank()) {
                                 mostrarConfirmacion = false
                                 mensajeError = "El nombre del proyecto es obligatorio."
+                            } else if (casosDeUso.any { it.nombre.isBlank() }) {
+                                mostrarConfirmacion = false
+                                seccionesAbiertas[6] = true
+                                mensajeError = "El nombre de cada caso de uso es obligatorio. Completa o elimina los casos vacíos."
                             } else {
                                 val request = ProyectoRequest(
                                     nombre = nombre.trim(),
@@ -733,11 +806,9 @@ fun CrearProyectoScreen(
                                             it.nombre.equals(nombreTec.trim(), ignoreCase = true)
                                         }?.id
                                     },
-                                    requerimientosFuncionales = requerimientos.map {
-                                        parsearRequerimiento(it)
-                                    },
+                                    requerimientosFuncionales = requerimientos.toList(),
                                     requerimientosNoFuncionales = requerimientosNoFuncionales.toList(),
-                                    casosDeUso = null
+                                    casosDeUso = casosDeUso.map { it.normalizado() }
                                 )
                                 mostrarConfirmacion = false
                                 if (proyectoId != null) {

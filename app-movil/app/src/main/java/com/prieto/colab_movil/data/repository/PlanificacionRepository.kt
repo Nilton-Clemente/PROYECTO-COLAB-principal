@@ -9,9 +9,18 @@ import com.prieto.colab_movil.data.model.TareaRequestDto
 import com.prieto.colab_movil.data.model.TareaResponseDto
 import com.prieto.colab_movil.data.remote.PlanificacionApiService
 import com.prieto.colab_movil.data.remote.RetrofitClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.Response
+import java.io.IOException
+
+class PlanificacionHttpException(val codigo: Int, message: String) : Exception(message)
+
+class GeneracionPlanificacionInciertaException(cause: Throwable) : Exception(
+    "No se recibió la confirmación de la generación. El servidor podría seguir procesando la planificación.",
+    cause
+)
 
 interface PlanificacionRepository {
     /** Devuelve la planificación o `null` cuando el proyecto aún no la tiene (HTTP 404). */
@@ -28,7 +37,8 @@ interface PlanificacionRepository {
 }
 
 class PlanificacionRepositoryImpl(
-    private val apiService: PlanificacionApiService = RetrofitClient.planificacionApiService
+    private val apiService: PlanificacionApiService = RetrofitClient.planificacionApiService,
+    private val generacionApiService: PlanificacionApiService = RetrofitClient.generacionPlanificacionApiService
 ) : PlanificacionRepository {
 
     override suspend fun verPlanificacion(proyectoId: Long): Result<PlanificacionResponseDto?> =
@@ -38,24 +48,34 @@ class PlanificacionRepositoryImpl(
                 when {
                     response.code() == 404 -> Result.success(null)
                     response.isSuccessful && response.body() != null -> Result.success(response.body())
-                    else -> Result.failure(Exception(mensajeErrorDe(response)))
+                    else -> Result.failure(PlanificacionHttpException(response.code(), mensajeErrorDe(response)))
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                Result.failure(Exception("No se pudo conectar con el servidor backend. Verifica tu conexión."))
+                Result.failure(IOException("No se pudo consultar la planificación. Verifica tu conexión.", e))
             }
         }
 
     override suspend fun generarPlanificacion(proyectoId: Long): Result<PlanificacionResponseDto> =
         withContext(Dispatchers.IO) {
             try {
-                val response = apiService.generarPlanificacion(proyectoId)
+                val response = generacionApiService.generarPlanificacion(proyectoId)
                 if (response.isSuccessful && response.body() != null) {
                     Result.success(response.body()!!)
                 } else {
-                    Result.failure(Exception(mensajeErrorDe(response)))
+                    val error = PlanificacionHttpException(response.code(), mensajeErrorDe(response))
+                    if (response.code() in setOf(408, 409, 500, 503, 504) || response.isSuccessful) {
+                        Result.failure(GeneracionPlanificacionInciertaException(error))
+                    } else {
+                        Result.failure(error)
+                    }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                Result.failure(Exception("No se pudo conectar con el servidor backend. Verifica tu conexión."))
+                // Incluye respuestas ilegibles: el proyecto pudo guardarse antes de perder la respuesta.
+                Result.failure(GeneracionPlanificacionInciertaException(e))
             }
         }
 

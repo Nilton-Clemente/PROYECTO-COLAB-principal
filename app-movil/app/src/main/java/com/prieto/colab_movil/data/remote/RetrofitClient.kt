@@ -57,6 +57,13 @@ object RetrofitClient {
         retrofit.create(PlanificacionApiService::class.java)
     }
 
+    val generacionPlanificacionApiService: PlanificacionApiService by lazy {
+        retrofit.newBuilder()
+            .client(clienteGeneracionPlanificacion(okHttpClient))
+            .build()
+            .create(PlanificacionApiService::class.java)
+    }
+
     val misTareasApiService: MisTareasApiService by lazy {
         retrofit.create(MisTareasApiService::class.java)
     }
@@ -69,3 +76,11 @@ object RetrofitClient {
             .create(AvanceApiService::class.java)
     }
 }
+
+/** La IA no transmite datos mientras genera; no debe usar la espera corta del resto de la API. */
+internal fun clienteGeneracionPlanificacion(base: OkHttpClient): OkHttpClient = base.newBuilder()
+    .readTimeout(180, TimeUnit.SECONDS)
+    .callTimeout(210, TimeUnit.SECONDS)
+    // Un POST puede seguir ejecutándose en el servidor aunque se pierda la respuesta.
+    .retryOnConnectionFailure(false)
+    .build()

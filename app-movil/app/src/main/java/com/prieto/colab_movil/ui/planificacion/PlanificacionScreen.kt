@@ -252,7 +252,7 @@ fun PlanificacionScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onEditar) {
+                    IconButton(onClick = onEditar, enabled = uiState is PlanificacionUiState.Success) {
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "Editar planificación",
@@ -286,7 +286,7 @@ fun PlanificacionScreen(
                         color = Primary
                     )
                 }
-                is PlanificacionUiState.Generating -> {
+                is PlanificacionUiState.Generating, is PlanificacionUiState.CheckingGeneration -> {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -294,10 +294,33 @@ fun PlanificacionScreen(
                         CircularProgressIndicator(color = Primary)
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            "Generando planificación con IA…",
+                            if (state is PlanificacionUiState.Generating) "Generando planificación con IA…"
+                            else "Comprobando el resultado de la generación…",
                             color = OnSurfaceVariant,
                             fontSize = 14.sp
                         )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "La IA puede tardar unos minutos. No necesitas volver a generar.",
+                            modifier = Modifier.padding(horizontal = 24.dp),
+                            color = OnSurfaceVariant,
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                is PlanificacionUiState.PendingGeneration -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text("Generación pendiente de confirmar", color = OnSurface, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(12.dp))
+                        Text(state.message, color = OnSurfaceVariant, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(16.dp))
+                        Button(onClick = { viewModel.consultarResultado(proyectoId) }) { Text("Consultar resultado") }
+                        TextButton(onClick = onBack) { Text("Volver al proyecto") }
                     }
                 }
                 is PlanificacionUiState.Error -> {

@@ -7,6 +7,8 @@ import com.prieto.colab_movil.data.model.ProyectoResponseDto
 sealed interface PlanificacionUiState {
     object Loading : PlanificacionUiState
     object Generating : PlanificacionUiState
+    object CheckingGeneration : PlanificacionUiState
+    data class PendingGeneration(val message: String) : PlanificacionUiState
 
     data class Success(
         val planificacion: PlanificacionResponseDto,
