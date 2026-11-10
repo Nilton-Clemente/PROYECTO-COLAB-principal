@@ -60,4 +60,12 @@ object RetrofitClient {
     val misTareasApiService: MisTareasApiService by lazy {
         retrofit.create(MisTareasApiService::class.java)
     }
+
+    val avanceApiService: AvanceApiService by lazy {
+        // Un POST de avance no es idempotente. Evitar reintentos de conexión automáticos.
+        retrofit.newBuilder()
+            .client(okHttpClient.newBuilder().retryOnConnectionFailure(false).build())
+            .build()
+            .create(AvanceApiService::class.java)
+    }
 }

@@ -21,6 +21,7 @@ import com.prieto.colab_movil.ui.proyectos.EditarProyectoScreen
 import com.prieto.colab_movil.ui.proyectos.ProyectosScreen
 import com.prieto.colab_movil.ui.register.RegisterScreen
 import com.prieto.colab_movil.ui.tareas.MisTareasScreen
+import com.prieto.colab_movil.ui.tareas.RegistrarAvanceScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -43,6 +44,9 @@ sealed class Screen(val route: String) {
     }
     object MisTareas : Screen("mis_tareas/{proyectoId}") {
         fun createRoute(proyectoId: Long) = "mis_tareas/$proyectoId"
+    }
+    object RegistrarAvance : Screen("registrar_avance/{proyectoId}/{tareaId}") {
+        fun createRoute(proyectoId: Long, tareaId: Long) = "registrar_avance/$proyectoId/$tareaId"
     }
 }
 
@@ -187,6 +191,25 @@ fun AppNavigation(
             val proyectoId = requireNotNull(backStackEntry.arguments).getLong("proyectoId")
             MisTareasScreen(
                 proyectoId = proyectoId,
+                onBack = { navController.popBackStack() },
+                onPerfil = { navController.navigate(Screen.Perfil.route) },
+                onRegistrarAvance = { tareaId ->
+                    navController.navigate(Screen.RegistrarAvance.createRoute(proyectoId, tareaId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.RegistrarAvance.route,
+            arguments = listOf(
+                navArgument("proyectoId") { type = NavType.LongType },
+                navArgument("tareaId") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val arguments = requireNotNull(backStackEntry.arguments)
+            RegistrarAvanceScreen(
+                proyectoId = arguments.getLong("proyectoId"),
+                tareaId = arguments.getLong("tareaId"),
                 onBack = { navController.popBackStack() },
                 onPerfil = { navController.navigate(Screen.Perfil.route) }
             )

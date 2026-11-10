@@ -31,10 +31,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.prieto.colab_movil.data.model.TareaDetalleResponseDto
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 private val Indigo = Color(0xFF3525CD)
 private val SurfaceBg = Color(0xFFFAF8FF)
@@ -52,7 +55,8 @@ fun MisTareasScreen(
     proyectoId: Long,
     onBack: () -> Unit,
     onPerfil: () -> Unit,
-    viewModel: MisTareasViewModel = viewModel()
+    viewModel: MisTareasViewModel = viewModel(),
+    onRegistrarAvance: (Long) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val estado = uiState as? MisTareasUiState.Success
@@ -60,6 +64,7 @@ fun MisTareasScreen(
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val snackbar = remember { SnackbarHostState() }
     var confirmarTodas by rememberSaveable(proyectoId) { mutableStateOf(false) }
+    var seleccionarTarea by rememberSaveable(proyectoId) { mutableStateOf(false) }
 
     DisposableEffect(lifecycle, proyectoId, viewModel) {
         val observer = LifecycleEventObserver { _, evento ->
@@ -67,6 +72,18 @@ fun MisTareasScreen(
         }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
+    }
+    // Detectar la confirmación del último compañero sin exigir salir de la pantalla.
+    LaunchedEffect(lifecycle, proyectoId, viewModel) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (isActive) {
+                delay(30_000)
+                val actual = viewModel.uiState.value as? MisTareasUiState.Success
+                if (actual?.datos?.planificacion?.estado == "PROPUESTA" && !actual.ocupado) {
+                    viewModel.cargar(proyectoId)
+                }
+            }
+        }
     }
     LaunchedEffect(estado?.mensaje) {
         estado?.mensaje?.let {
@@ -103,20 +120,24 @@ fun MisTareasScreen(
                 Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)) {
                     if (estado != null && estado.datos.tareas.isNotEmpty()) {
                         Text(
-                            "${if (estado.confirmadas) estado.datos.tareas.size else 0} de ${estado.datos.tareas.size} confirmadas",
+                            if (estado.activa) "Planificación activa · ${estado.datos.tareas.size} tareas asignadas"
+                            else if (estado.confirmadas) "Esperando confirmaciones del equipo"
+                            else "0 de ${estado.datos.tareas.size} confirmadas",
                             color = Muted, fontSize = 12.sp
                         )
                     }
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                         TextButton(onClick = onBack, enabled = !ocupado) { Text("Volver al proyecto") }
                         Button(
-                            onClick = { confirmarTodas = true },
-                            enabled = estado?.puedeConfirmar == true,
+                            onClick = {
+                                if (estado?.activa == true) seleccionarTarea = true else confirmarTodas = true
+                            },
+                            enabled = if (estado?.activa == true) estado.puedeRegistrarAvance else estado?.puedeConfirmar == true,
                             colors = ButtonDefaults.buttonColors(containerColor = Indigo)
                         ) {
                             Icon(Icons.Default.Checklist, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Confirmar todas", fontSize = 12.sp)
+                            Text(if (estado?.activa == true) "Registrar avance" else "Confirmar todas", fontSize = 12.sp)
                         }
                     }
                 }
@@ -141,12 +162,29 @@ fun MisTareasScreen(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 onSolicitarCambios = { tareaId, comentario, onEnviado ->
                     viewModel.solicitarCambios(proyectoId, tareaId, comentario, onEnviado)
-                }
+                },
+                onRegistrarAvance = onRegistrarAvance
             )
         }
     }
 
-    if (confirmarTodas && estado != null) {
+    if (seleccionarTarea && estado?.activa == true) {
+        AlertDialog(
+            onDismissRequest = { seleccionarTarea = false },
+            title = { Text("Selecciona una tarea") },
+            text = {
+                LazyColumn(Modifier.heightIn(max = 350.dp)) {
+                    items(estado.datos.tareas, key = { it.id }) { tarea ->
+                        TextButton(onClick = { seleccionarTarea = false; onRegistrarAvance(tarea.id) }, enabled = estado.puedeRegistrarAvance) {
+                            Text("TK-${tarea.id} · ${tarea.nombre}")
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { seleccionarTarea = false }) { Text("Cerrar") } }
+        )
+    }
+    if (confirmarTodas && estado != null && !estado.activa) {
         AlertDialog(
             onDismissRequest = { confirmarTodas = false },
             title = { Text("Confirmar tus tareas") },
@@ -166,7 +204,8 @@ fun MisTareasScreen(
 private fun MisTareasContenido(
     state: MisTareasUiState.Success,
     modifier: Modifier,
-    onSolicitarCambios: (Long, String, () -> Unit) -> Unit
+    onSolicitarCambios: (Long, String, () -> Unit) -> Unit,
+    onRegistrarAvance: (Long) -> Unit
 ) {
     val datos = state.datos
     var filtroNombre by rememberSaveable(datos.proyecto.id) { mutableStateOf(FiltroTareas.TODAS.name) }
@@ -193,9 +232,10 @@ private fun MisTareasContenido(
                     Text(datos.proyecto.nombre, color = Indigo, fontWeight = FontWeight.SemiBold)
                 }
                 Text("Hola, ${datos.perfil.nombre}", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Text("Revisa la estimación y el alcance de tus ${datos.tareas.size} tareas asignadas.", color = Muted, fontSize = 13.sp)
+                Text(if (state.activa) "Registra el trabajo realizado en tus ${datos.tareas.size} tareas asignadas."
+                else "Revisa la estimación y el alcance de tus ${datos.tareas.size} tareas asignadas.", color = Muted, fontSize = 13.sp)
                 Text("Planificación: ${datos.planificacion?.estado ?: "Sin generar"}", color = Muted, fontSize = 12.sp)
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                if (!state.activa) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     FiltroTareas.entries.forEach { opcion ->
                         FilterChip(
                             selected = filtro == opcion,
@@ -214,11 +254,12 @@ private fun MisTareasContenido(
                 state.datosDesactualizados -> "No se pudo verificar el estado actual. Actualiza los datos antes de confirmar o solicitar cambios."
                 datos.planificacion == null -> "El proyecto aún no tiene una planificación. Las tareas aparecerán cuando se genere y se te asigne trabajo."
                 datos.tareas.isEmpty() -> "No tienes tareas asignadas en este proyecto."
+                state.activa -> "El equipo confirmó la planificación. Ya puedes registrar sesiones de trabajo y actualizar el estado de cada tarea."
                 datos.planificacion.estado != "PROPUESTA" -> "La planificación no está en estado PROPUESTA. Puedes consultar tus tareas, pero no confirmar ni solicitar cambios."
                 else -> "La confirmación abarca todas tus tareas. Solicitar cambios notifica al creador y reinicia las confirmaciones del resto del equipo."
             })
         }
-        datos.confirmacion?.let { confirmacion ->
+        datos.confirmacion?.takeUnless { state.activa }?.let { confirmacion ->
             item {
                 AvisoTareas(
                     when (confirmacion.estado) {
@@ -229,10 +270,10 @@ private fun MisTareasContenido(
                 )
             }
         }
-        if (datos.tareas.isNotEmpty() && state.tareasVisibles(filtro).isEmpty()) {
+        if (!state.activa && datos.tareas.isNotEmpty() && state.tareasVisibles(filtro).isEmpty()) {
             item { Text("No hay tareas en esta categoría.", color = Muted) }
         }
-        items(state.tareasVisibles(filtro), key = { it.id }) { tarea ->
+        items(if (state.activa) datos.tareas else state.tareasVisibles(filtro), key = { it.id }) { tarea ->
             TareaAsignadaCard(
                 tarea = tarea,
                 confirmada = state.confirmadas,
@@ -241,13 +282,16 @@ private fun MisTareasContenido(
                 }.ifBlank { "Sin dependencias previas" },
                 puedeSolicitarCambios = state.puedeSolicitarCambios,
                 onAjustes = { tareaSolicitudId = tarea.id; borrador = "" },
-                onDetalles = { detallesId = tarea.id }
+                onDetalles = { detallesId = tarea.id },
+                activa = state.activa,
+                puedeRegistrarAvance = state.puedeRegistrarAvance,
+                onRegistrarAvance = { onRegistrarAvance(tarea.id) }
             )
         }
     }
 
     val tareaSolicitud = datos.tareas.firstOrNull { it.id == tareaSolicitudId }
-    if (tareaSolicitud != null) {
+    if (tareaSolicitud != null && !state.activa) {
         fun cerrarSolicitud() {
             if (state.ocupado) return
             if (borrador.isBlank()) tareaSolicitudId = null else descartarSolicitud = true
@@ -330,7 +374,10 @@ private fun TareaAsignadaCard(
     dependencias: String,
     puedeSolicitarCambios: Boolean,
     onAjustes: () -> Unit,
-    onDetalles: () -> Unit
+    onDetalles: () -> Unit,
+    activa: Boolean,
+    puedeRegistrarAvance: Boolean,
+    onRegistrarAvance: () -> Unit
 ) {
     Column(
         Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp)).padding(15.dp),
@@ -370,6 +417,14 @@ private fun TareaAsignadaCard(
                 Icon(Icons.Default.EditNote, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(5.dp))
                 Text("Solicitar ajuste")
+            }
+        }
+        if (activa) {
+            Button(onClick = onRegistrarAvance, enabled = puedeRegistrarAvance, modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Indigo)) {
+                Icon(Icons.Default.EditNote, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(5.dp))
+                Text("Registrar avance de esta tarea")
             }
         }
     }

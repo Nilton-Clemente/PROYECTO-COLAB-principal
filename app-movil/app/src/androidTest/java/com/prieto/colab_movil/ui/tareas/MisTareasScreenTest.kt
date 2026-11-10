@@ -54,7 +54,7 @@ class MisTareasScreenTest {
         compose.onNodeWithText("Confirmar tus tareas").assertIsDisplayed()
         compose.runOnIdle { assertEquals(0, repository.confirmaciones) }
         compose.onAllNodesWithText("Confirmar todas").onLast().performClick()
-        compose.onNodeWithText("1 de 1 confirmadas").assertIsDisplayed()
+        compose.onNodeWithText("Esperando confirmaciones del equipo").assertIsDisplayed()
         compose.onNodeWithText("Confirmar todas").assertIsNotEnabled()
         compose.onNodeWithText("ALTA").assertExists()
         compose.runOnIdle {
@@ -120,6 +120,38 @@ class MisTareasScreenTest {
         compose.runOnIdle { assertTrue(repository.cargas >= 2) }
     }
 
+    @Test
+    fun planificacionActivaSustituyeConfirmacionYAbreLaTareaSeleccionada() {
+        val repository = RepositorioPrueba()
+        repository.datos = repository.datos.copy(planificacion = repository.datos.planificacion!!.copy(estado = "ACTIVA"))
+        val vm = MisTareasViewModel(repository)
+        var seleccionada: Long? = null
+        compose.setContent {
+            MaterialTheme {
+                MisTareasScreen(7, {}, {}, vm, onRegistrarAvance = { seleccionada = it })
+            }
+        }
+        compose.onNodeWithText("Confirmar todas").assertDoesNotExist()
+        compose.onNodeWithText("Registrar avance").assertIsEnabled().performClick()
+        compose.onNodeWithText("Selecciona una tarea").assertIsDisplayed()
+        compose.onNodeWithText("TK-21 · API de matrícula").performClick()
+        compose.runOnIdle { assertEquals(21L, seleccionada); assertEquals(0, repository.confirmaciones) }
+    }
+
+    @Test
+    fun recargarDetectaActivacionDelEquipoYCambiaElBoton() {
+        val repository = RepositorioPrueba()
+        mostrar(repository)
+        compose.onNodeWithText("Confirmar todas").assertExists()
+        compose.runOnIdle {
+            repository.datos = repository.datos.copy(planificacion = repository.datos.planificacion!!.copy(estado = "ACTIVA"))
+        }
+        compose.onNodeWithContentDescription("Actualizar tareas").performClick()
+        compose.onNodeWithText("Confirmar todas").assertDoesNotExist()
+        compose.onNodeWithText("Registrar avance").assertIsEnabled()
+        compose.onNodeWithText("Por confirmar (1)").assertDoesNotExist()
+    }
+
     private class RepositorioPrueba : MisTareasRepository {
         var cargas = 0
         var confirmaciones = 0
@@ -127,7 +159,7 @@ class MisTareasScreenTest {
         var fallarCarga = false
         var respuestaPendiente: CompletableDeferred<Result<ConfirmacionResponseDto>>? = null
         private val gson = Gson()
-        private var datos = MisTareasDatos(
+        var datos = MisTareasDatos(
             proyecto = gson.fromJson("""{"id":7,"nombre":"Proyecto de prueba"}""", ProyectoResponseDto::class.java),
             perfil = PerfilResponseDto("alexis@ejemplo.com", "Alexis", emptyList()),
             planificacion = PlanificacionResponseDto(3, 7, "PROPUESTA", emptyList()),

@@ -25,8 +25,10 @@ sealed interface MisTareasUiState {
         val datosDesactualizados: Boolean = false,
         val mensaje: String? = null
     ) : MisTareasUiState {
-        val confirmadas: Boolean get() = datos.confirmacion?.estado == "ACEPTADA"
+        val activa: Boolean get() = datos.planificacion?.estado == "ACTIVA"
+        val confirmadas: Boolean get() = activa || datos.confirmacion?.estado == "ACEPTADA"
         val ocupado: Boolean get() = isSaving || isRefreshing
+        val puedeRegistrarAvance: Boolean get() = activa && !ocupado && !datosDesactualizados && datos.tareas.isNotEmpty()
         val puedeConfirmar: Boolean get() = puedeSolicitarCambios && !confirmadas
         val puedeSolicitarCambios: Boolean get() = !ocupado && !datosDesactualizados &&
             datos.planificacion?.estado == "PROPUESTA" && datos.tareas.isNotEmpty()
