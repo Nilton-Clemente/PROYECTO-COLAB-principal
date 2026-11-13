@@ -34,6 +34,7 @@ class ProyectoServiceTest {
         when(usuarios.findByEmail("ana@example.com")).thenReturn(Optional.of(usuario));
         proyecto.setId(2L);
         when(proyectos.findById(2L)).thenReturn(Optional.of(proyecto));
+        when(proyectos.findByIdForUpdate(2L)).thenReturn(Optional.of(proyecto));
         Integrante creador = new Integrante();
         creador.setRol("CREADOR");
         when(integrantes.findByUsuarioIdAndProyectoId(1L, 2L)).thenReturn(Optional.of(creador));
@@ -68,21 +69,52 @@ class ProyectoServiceTest {
     }
 
     @Test
-    void crearYEditarRequerimientosSinCodigos() {
+    void crearYEditarRequerimientosConCodigos() {
         RequerimientoFuncionalDto rf = new RequerimientoFuncionalDto("Permitir crear proyectos");
         RequerimientoNoFuncionalDto rnf = new RequerimientoNoFuncionalDto("Proteger los datos", "Seguridad");
         ProyectoRequest request = new ProyectoRequest("ColabTask", null, null, null, null, null, null, null,
                 null, List.of(rf), List.of(rnf), null);
 
         ProyectoResponse creado = service.crearProyecto(request);
-        assertThat(creado.requerimientosFuncionales()).containsExactly(rf);
-        assertThat(creado.requerimientosNoFuncionales()).containsExactly(rnf);
+        assertThat(creado.requerimientosFuncionales()).containsExactly(new RequerimientoFuncionalDto("RF-01", rf.descripcion()));
+        assertThat(creado.requerimientosNoFuncionales()).containsExactly(new RequerimientoNoFuncionalDto("RNF-01", rnf.descripcion(), rnf.categoria()));
 
         ProyectoResponse editado = service.editarProyecto(2L, request);
-        assertThat(editado.requerimientosFuncionales()).containsExactly(rf);
-        assertThat(editado.requerimientosNoFuncionales()).containsExactly(rnf);
+        assertThat(editado.requerimientosFuncionales()).containsExactly(new RequerimientoFuncionalDto("RF-01", rf.descripcion()));
+        assertThat(editado.requerimientosNoFuncionales()).containsExactly(new RequerimientoNoFuncionalDto("RNF-01", rnf.descripcion(), rnf.categoria()));
         assertThat(proyecto.getRequerimientosFuncionales().getFirst().getDescripcion()).isEqualTo(rf.descripcion());
         assertThat(proyecto.getRequerimientosNoFuncionales().getFirst().getCategoria()).isEqualTo("Seguridad");
+    }
+
+    @Test
+    void conservaCodigosAlEditarYNoReutilizaLosEliminados() {
+        ProyectoRequest primero = requerimientos(List.of(new RequerimientoFuncionalDto("Uno"), new RequerimientoFuncionalDto("Dos")),
+                List.of(new RequerimientoNoFuncionalDto("Seguro", "Seguridad"), new RequerimientoNoFuncionalDto("Rápido", "Rendimiento")));
+        service.editarProyecto(2L, primero);
+        var rfOriginal = proyecto.getRequerimientosFuncionales().get(1);
+        var rnfOriginal = proyecto.getRequerimientosNoFuncionales().get(1);
+        ProyectoResponse editado = service.editarProyecto(2L, requerimientos(
+                List.of(new RequerimientoFuncionalDto("RF-02", "Dos modificado"), new RequerimientoFuncionalDto("Tres")),
+                List.of(new RequerimientoNoFuncionalDto("RNF-02", "Más rápido", "Rendimiento"), new RequerimientoNoFuncionalDto("Disponible", "Disponibilidad"))));
+        assertThat(editado.requerimientosFuncionales()).extracting(RequerimientoFuncionalDto::codigo).containsExactly("RF-02", "RF-03");
+        assertThat(editado.requerimientosNoFuncionales()).extracting(RequerimientoNoFuncionalDto::codigo).containsExactly("RNF-02", "RNF-03");
+        assertThat(proyecto.getRequerimientosFuncionales().getFirst()).isSameAs(rfOriginal);
+        assertThat(proyecto.getRequerimientosNoFuncionales().getFirst()).isSameAs(rnfOriginal);
+    }
+
+    @Test
+    void rechazaCodigosAjenosYDuplicados() {
+        service.editarProyecto(2L, requerimientos(List.of(new RequerimientoFuncionalDto("Uno")), List.of()));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.editarProyecto(2L, requerimientos(
+                List.of(new RequerimientoFuncionalDto("RF-99", "Ajeno")), List.of())))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.editarProyecto(2L, requerimientos(
+                List.of(new RequerimientoFuncionalDto("RF-01", "Uno"), new RequerimientoFuncionalDto("RF-01", "Dos")), List.of())))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+    }
+
+    private ProyectoRequest requerimientos(List<RequerimientoFuncionalDto> rf, List<RequerimientoNoFuncionalDto> rnf) {
+        return new ProyectoRequest("ColabTask", null, null, null, null, null, null, null, null, rf, rnf, null);
     }
 
     @Test

@@ -27,7 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class ProyectoService {
@@ -70,7 +75,7 @@ public class ProyectoService {
     @Transactional
     public ProyectoResponse editarProyecto(Long id, ProyectoRequest request) {
         Usuario u = usuarioActual();
-        Proyecto p = proyectoRepository.findById(id)
+        Proyecto p = proyectoRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
         verificarCreador(u, id);
 
@@ -216,27 +221,60 @@ public class ProyectoService {
             p.getTecnologias().clear();
         }
 
-        // Requerimientos funcionales (1:N)
-        p.getRequerimientosFuncionales().clear();
+        // Los códigos recibidos identifican registros existentes; el servidor asigna los nuevos.
         if (request.requerimientosFuncionales() != null) {
+            Map<String, RequerimientoFuncional> existentes = new HashMap<>();
+            p.getRequerimientosFuncionales().forEach(r -> existentes.put(r.getCodigo(), r));
+            Set<String> usados = new HashSet<>();
+            List<RequerimientoFuncional> nuevos = new ArrayList<>();
             for (RequerimientoFuncionalDto dto : request.requerimientosFuncionales()) {
-                RequerimientoFuncional rf = new RequerimientoFuncional();
-                rf.setProyecto(p);
+                RequerimientoFuncional rf;
+                if (dto.codigo() == null || dto.codigo().isBlank()) {
+                    rf = new RequerimientoFuncional();
+                    rf.setProyecto(p);
+                    rf.setCodigo(String.format("RF-%02d", p.getSiguienteRf()));
+                    p.setSiguienteRf(p.getSiguienteRf() + 1);
+                    nuevos.add(rf);
+                } else {
+                    rf = existentes.get(dto.codigo());
+                    if (rf == null || !usados.add(dto.codigo())) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Código de requerimiento funcional desconocido o repetido: " + dto.codigo());
+                    }
+                }
                 rf.setDescripcion(dto.descripcion());
-                p.getRequerimientosFuncionales().add(rf);
             }
+            p.getRequerimientosFuncionales().removeIf(r -> !usados.contains(r.getCodigo()));
+            p.getRequerimientosFuncionales().addAll(nuevos);
+        } else {
+            p.getRequerimientosFuncionales().clear();
         }
 
-        // Requerimientos no funcionales (1:N)
-        p.getRequerimientosNoFuncionales().clear();
         if (request.requerimientosNoFuncionales() != null) {
+            Map<String, RequerimientoNoFuncional> existentes = new HashMap<>();
+            p.getRequerimientosNoFuncionales().forEach(r -> existentes.put(r.getCodigo(), r));
+            Set<String> usados = new HashSet<>();
+            List<RequerimientoNoFuncional> nuevos = new ArrayList<>();
             for (RequerimientoNoFuncionalDto dto : request.requerimientosNoFuncionales()) {
-                RequerimientoNoFuncional rnf = new RequerimientoNoFuncional();
-                rnf.setProyecto(p);
+                RequerimientoNoFuncional rnf;
+                if (dto.codigo() == null || dto.codigo().isBlank()) {
+                    rnf = new RequerimientoNoFuncional();
+                    rnf.setProyecto(p);
+                    rnf.setCodigo(String.format("RNF-%02d", p.getSiguienteRnf()));
+                    p.setSiguienteRnf(p.getSiguienteRnf() + 1);
+                    nuevos.add(rnf);
+                } else {
+                    rnf = existentes.get(dto.codigo());
+                    if (rnf == null || !usados.add(dto.codigo())) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Código de requerimiento no funcional desconocido o repetido: " + dto.codigo());
+                    }
+                }
                 rnf.setCategoria(dto.categoria());
                 rnf.setDescripcion(dto.descripcion());
-                p.getRequerimientosNoFuncionales().add(rnf);
             }
+            p.getRequerimientosNoFuncionales().removeIf(r -> !usados.contains(r.getCodigo()));
+            p.getRequerimientosNoFuncionales().addAll(nuevos);
+        } else {
+            p.getRequerimientosNoFuncionales().clear();
         }
 
         // Casos de uso (1:N)
@@ -277,10 +315,10 @@ public class ProyectoService {
                         .map(t -> new TecnologiaDto(t.getId(), t.getNombre()))
                         .toList(),
                 p.getRequerimientosFuncionales().stream()
-                        .map(rf -> new RequerimientoFuncionalDto(rf.getDescripcion()))
+                        .map(rf -> new RequerimientoFuncionalDto(rf.getCodigo(), rf.getDescripcion()))
                         .toList(),
                 p.getRequerimientosNoFuncionales().stream()
-                        .map(rnf -> new RequerimientoNoFuncionalDto(rnf.getDescripcion(), rnf.getCategoria()))
+                        .map(rnf -> new RequerimientoNoFuncionalDto(rnf.getCodigo(), rnf.getDescripcion(), rnf.getCategoria()))
                         .toList(),
                 p.getCasosDeUso().stream()
                         .map(cu -> new CasoUsoDto(cu.getNombre(), cu.getDescripcion(),

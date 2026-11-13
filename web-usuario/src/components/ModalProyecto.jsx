@@ -54,8 +54,8 @@ export default function ModalProyecto({ proyecto, onCerrar, onGuardado }) {
     restricciones: proyecto?.restricciones ?? '',
     fecha: proyecto?.fechaEntrega ?? '',
   }));
-  const [rf, setRf] = useState(() => (proyecto?.requerimientosFuncionales ?? []).map((r) => ({ descripcion: r.descripcion })));
-  const [rnf, setRnf] = useState(() => (proyecto?.requerimientosNoFuncionales ?? []).map((r) => ({ categoria: r.categoria ?? '', descripcion: r.descripcion })));
+  const [rf, setRf] = useState(() => (proyecto?.requerimientosFuncionales ?? []).map((r) => ({ codigo: r.codigo, descripcion: r.descripcion })));
+  const [rnf, setRnf] = useState(() => (proyecto?.requerimientosNoFuncionales ?? []).map((r) => ({ codigo: r.codigo, categoria: r.categoria ?? '', descripcion: r.descripcion })));
   const [cu, setCu] = useState(() => (proyecto?.casosDeUso ?? []).map(casoUsoFormulario));
   const [tecnologias, setTecnologias] = useState([]);
   const [seleccion, setSeleccion] = useState(() => new Set((proyecto?.tecnologias ?? []).map((t) => t.id)));
@@ -139,12 +139,13 @@ export default function ModalProyecto({ proyecto, onCerrar, onGuardado }) {
         )}
 
         <Filas titulo="Requerimientos funcionales" filas={rf} onChange={setRf} nueva={vacio.rf}>
-          {(f, set, i) => <input aria-label={`Descripción del requerimiento funcional ${i + 1}`} placeholder="Descripción" value={f.descripcion} onChange={(e) => set({ descripcion: e.target.value })} />}
+          {(f, set, i) => <>{f.codigo && <code>{f.codigo}</code>}<input aria-label={`Descripción del requerimiento funcional ${i + 1}`} placeholder="Descripción" value={f.descripcion} onChange={(e) => set({ descripcion: e.target.value })} /></>}
         </Filas>
 
         <Filas titulo="Requerimientos no funcionales" filas={rnf} onChange={setRnf} nueva={vacio.rnf}>
           {(f, set, i) => (
             <>
+              {f.codigo && <code>{f.codigo}</code>}
               <input aria-label={`Categoría del requerimiento no funcional ${i + 1}`} list="categorias-rnf" placeholder="Categoría" value={f.categoria} onChange={(e) => set({ categoria: e.target.value })} />
               <input aria-label={`Descripción del requerimiento no funcional ${i + 1}`} placeholder="Descripción" value={f.descripcion} onChange={(e) => set({ descripcion: e.target.value })} />
             </>

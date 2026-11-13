@@ -35,9 +35,9 @@ export function datosProyecto({ datos, rf, rnf, cu, seleccion }) {
     fechaEntrega: datos.fecha || null,
     tecnologiasIds: [...seleccion],
     requerimientosFuncionales: rf.filter((r) => texto(r.descripcion))
-      .map((r) => ({ descripcion: texto(r.descripcion) })),
+      .map((r) => ({ ...(r.codigo ? { codigo: r.codigo } : {}), descripcion: texto(r.descripcion) })),
     requerimientosNoFuncionales: rnf.filter((r) => texto(r.descripcion))
-      .map((r) => ({ categoria: texto(r.categoria), descripcion: texto(r.descripcion) })),
+      .map((r) => ({ ...(r.codigo ? { codigo: r.codigo } : {}), categoria: texto(r.categoria), descripcion: texto(r.descripcion) })),
     casosDeUso: cu.filter((c) => texto(c.nombre))
       .map((c) => Object.fromEntries(CAMPOS_CASO_USO.map((campo) => [campo, texto(c[campo])]))),
   };
