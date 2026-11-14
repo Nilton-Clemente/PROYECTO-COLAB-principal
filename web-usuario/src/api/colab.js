@@ -37,6 +37,10 @@ export const obtenerPlanificacion = (token, id) => request(`/api/proyectos/${id}
 export const generarPlanificacion = (token, id) =>
   request(`/api/proyectos/${id}/planificacion`, { method: 'POST', token });
 
+// Guardado atómico de la planificación editada (CU-09).
+export const guardarPlanificacion = (token, proyectoId, datos) =>
+  request(`/api/proyectos/${proyectoId}/planificacion`, { method: 'PUT', token, body: datos });
+
 // Edición manual de etapas, tareas y dependencias de una planificación.
 export const listarTareas = (token, proyectoId) => request(`/api/proyectos/${proyectoId}/tareas`, { token });
 export const crearEtapa = (token, proyectoId, datos) =>

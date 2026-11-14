@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -69,10 +70,18 @@ public class Proyecto {
             inverseJoinColumns = @JoinColumn(name = "tecnologia_id"))
     private Set<Tecnologia> tecnologias = new HashSet<>();
 
+    @Column(name = "siguiente_rf", nullable = false)
+    private long siguienteRf = 1;
+
+    @Column(name = "siguiente_rnf", nullable = false)
+    private long siguienteRnf = 1;
+
     @OneToMany(mappedBy = "proyecto", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC")
     private List<RequerimientoFuncional> requerimientosFuncionales = new ArrayList<>();
 
     @OneToMany(mappedBy = "proyecto", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC")
     private List<RequerimientoNoFuncional> requerimientosNoFuncionales = new ArrayList<>();
 
     @OneToMany(mappedBy = "proyecto", cascade = CascadeType.ALL, orphanRemoval = true)

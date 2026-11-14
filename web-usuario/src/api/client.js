@@ -54,7 +54,16 @@ export async function request(path, { method = 'GET', body, token } = {}) {
     );
   }
 
-  if (!res.ok) throw new ApiError(res.status, 'No se pudo completar la solicitud.');
+  if (!res.ok) {
+    let mensaje = 'No se pudo completar la solicitud.';
+    try {
+      const datos = await res.json();
+      mensaje = datos?.message || datos?.detail || mensaje;
+    } catch {
+      // Respuesta sin cuerpo JSON: se conserva el mensaje genérico.
+    }
+    throw new ApiError(res.status, mensaje);
+  }
 
   const texto = await res.text();
   return texto ? JSON.parse(texto) : null;

@@ -806,7 +806,7 @@ fun CrearProyectoScreen(
                                             it.nombre.equals(nombreTec.trim(), ignoreCase = true)
                                         }?.id
                                     },
-                                    requerimientosFuncionales = requerimientos.toList(),
+requerimientosFuncionales = requerimientos.toList(),
                                     requerimientosNoFuncionales = requerimientosNoFuncionales.toList(),
                                     casosDeUso = casosDeUso.map { it.normalizado() }
                                 )
@@ -895,7 +895,7 @@ private fun convertirFecha(fecha: String): String? {
 
 private fun parsearRequerimiento(texto: String): RequerimientoFuncionalDto {
     val idx = texto.indexOf(':')
-    return if (idx > 0) {
+    return if (idx > 0 && texto.substring(0, idx).trim().matches(Regex("RF-[0-9]+"))) {
         RequerimientoFuncionalDto(
             codigo = texto.substring(0, idx).trim(),
             descripcion = texto.substring(idx + 1).trim()

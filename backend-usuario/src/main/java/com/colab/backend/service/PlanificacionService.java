@@ -10,11 +10,13 @@ import com.colab.backend.domain.Tarea;
 import com.colab.backend.domain.Usuario;
 import com.colab.backend.dto.EtapaResponse;
 import com.colab.backend.dto.PlanificacionResponse;
+import com.colab.backend.dto.PlanificacionUpdateRequest;
 import com.colab.backend.dto.TareaResponse;
 import com.colab.backend.ia.PlanIAClient;
 import com.colab.backend.ia.dto.EtapaIA;
 import com.colab.backend.ia.dto.PlanificacionIAResponse;
 import com.colab.backend.ia.dto.TareaIA;
+import com.colab.backend.repository.ConfirmacionRepository;
 import com.colab.backend.repository.DependenciaTareaRepository;
 import com.colab.backend.repository.IntegranteRepository;
 import com.colab.backend.repository.PlanificacionRepository;
@@ -54,6 +56,7 @@ public class PlanificacionService {
     private final UsuarioRepository usuarioRepository;
     private final PlanificacionRepository planificacionRepository;
     private final DependenciaTareaRepository dependenciaTareaRepository;
+    private final ConfirmacionRepository confirmacionRepository;
     private final PlanIAClient planIAClient;
     private final ObjectMapper objectMapper;
 
@@ -62,6 +65,7 @@ public class PlanificacionService {
                                 UsuarioRepository usuarioRepository,
                                 PlanificacionRepository planificacionRepository,
                                 DependenciaTareaRepository dependenciaTareaRepository,
+                                ConfirmacionRepository confirmacionRepository,
                                 PlanIAClient planIAClient,
                                 ObjectMapper objectMapper) {
         this.proyectoRepository = proyectoRepository;
@@ -69,6 +73,7 @@ public class PlanificacionService {
         this.usuarioRepository = usuarioRepository;
         this.planificacionRepository = planificacionRepository;
         this.dependenciaTareaRepository = dependenciaTareaRepository;
+        this.confirmacionRepository = confirmacionRepository;
         this.planIAClient = planIAClient;
         this.objectMapper = objectMapper;
     }
@@ -140,6 +145,163 @@ public class PlanificacionService {
 
         return aResponse(plan);
     }
+
+    /**
+     * CU-09 — Guarda una versión editada de la planificación (solo Creador).
+     *
+     * <p>Valida la estructura completa, recalcula las fechas (RN-20), reinicia
+     * las confirmaciones (RN-04) y persiste todo de forma atómica. Si hay
+     * errores, responde 422 con la lista de inconsistencias y no guarda nada.</p>
+     */
+    @Transactional
+    public PlanificacionResponse actualizar(Long proyectoId, PlanificacionUpdateRequest request) {
+        Usuario u = usuarioActual();
+        verificarCreador(u, proyectoId);
+        Proyecto p = proyectoRepository.findById(proyectoId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El proyecto no existe"));
+        Planificacion plan = planificacionRepository.findByProyectoId(proyectoId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El proyecto no tiene planificación"));
+
+        if (!"PROPUESTA".equals(plan.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Solo se puede editar una planificación en estado PROPUESTA");
+        }
+
+        Map<Long, Integrante> activosPorId = integranteRepository.findByProyectoId(proyectoId).stream()
+                .filter(i -> "ACTIVO".equals(i.getEstado()))
+                .filter(i -> i.getId() != null)
+                .collect(Collectors.toMap(Integrante::getId, i -> i, (a, b) -> a));
+
+        List<Etapa> nuevasEtapas = new ArrayList<>();
+        Map<String, Tarea> porKey = new LinkedHashMap<>();
+        Map<String, List<String>> dependencias = new LinkedHashMap<>();
+        List<String> errores = new ArrayList<>();
+
+        if (request == null || request.etapas() == null || request.etapas().isEmpty()) {
+            errores.add("La planificación debe tener al menos una etapa.");
+        }
+
+        int idxEtapa = 0;
+        if (request != null && request.etapas() != null) {
+            for (PlanificacionUpdateRequest.EtapaUpdate eu : request.etapas()) {
+                Etapa etapa = new Etapa();
+                etapa.setPlanificacion(plan);
+                etapa.setNombre(eu.nombre() == null ? "" : eu.nombre().trim());
+                etapa.setOrden(eu.orden() != null ? eu.orden() : ++idxEtapa);
+                if (isBlank(etapa.getNombre())) {
+                    errores.add("Hay una etapa sin nombre.");
+                }
+
+                int ordenTarea = 0;
+                if (eu.tareas() != null) {
+                    for (PlanificacionUpdateRequest.TareaUpdate tu : eu.tareas()) {
+                        String key = !isBlank(tu.key()) ? tu.key().trim()
+                                : (tu.id() != null ? String.valueOf(tu.id()) : null);
+                        String etiqueta = !isBlank(tu.nombre()) ? tu.nombre().trim()
+                                : (!isBlank(key) ? key : "sin nombre");
+
+                        if (isBlank(key)) {
+                            errores.add("Hay una tarea sin identificador en la petición.");
+                        } else if (porKey.containsKey(key)) {
+                            errores.add("La clave de tarea '" + key + "' está repetida.");
+                        }
+
+                        Tarea tarea = new Tarea();
+                        tarea.setEtapa(etapa);
+                        tarea.setNombre(tu.nombre() == null ? "" : tu.nombre().trim());
+                        tarea.setDescripcion(tu.descripcion());
+                        tarea.setDuracionDias(tu.duracionDias());
+                        tarea.setEstado("PENDIENTE");
+                        tarea.setOrden(++ordenTarea);
+
+                        String prioridad = tu.prioridad() == null ? "" : tu.prioridad().trim().toUpperCase();
+                        tarea.setPrioridad(prioridad);
+                        if (!Set.of("ALTA", "MEDIA", "BAJA").contains(prioridad)) {
+                            errores.add("La tarea '" + etiqueta + "' tiene una prioridad inválida: " + tu.prioridad());
+                        }
+                        if (tu.duracionDias() == null || tu.duracionDias() <= 0) {
+                            errores.add("La tarea '" + etiqueta + "' debe tener una duración positiva.");
+                        }
+                        if (isBlank(tarea.getNombre())) {
+                            errores.add("Hay una tarea sin nombre (clave: " + key + ").");
+                        }
+                        if (tu.responsableId() != null) {
+                            Integrante resp = activosPorId.get(tu.responsableId());
+                            if (resp == null) {
+                                errores.add("El responsable de la tarea '" + etiqueta
+                                        + "' no es un integrante activo del proyecto.");
+                            } else {
+                                tarea.setResponsable(resp);
+                            }
+                        }
+
+                        if (!isBlank(key)) {
+                            porKey.put(key, tarea);
+                            dependencias.put(key, tu.dependencias() == null ? List.of() : tu.dependencias());
+                        }
+                        etapa.getTareas().add(tarea);
+                    }
+                }
+                nuevasEtapas.add(etapa);
+            }
+        }
+
+        // Dependencias rotas o autoreferentes.
+        for (Map.Entry<String, List<String>> e : dependencias.entrySet()) {
+            for (String dep : e.getValue()) {
+                if (dep == null || !porKey.containsKey(dep)) {
+                    errores.add("La tarea '" + e.getKey() + "' depende de una tarea inexistente: " + dep);
+                } else if (e.getKey().equals(dep)) {
+                    errores.add("La tarea '" + e.getKey() + "' no puede depender de sí misma.");
+                }
+            }
+        }
+
+        // Prevención de ciclos (RN-11).
+        if (errores.isEmpty()) {
+            try {
+                ordenTopologico(porKey, dependencias);
+            } catch (ResponseStatusException ex) {
+                errores.add(ex.getReason());
+            }
+        }
+
+        if (!errores.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, String.join("\n", errores));
+        }
+
+        // Recalcular fechas sobre la nueva estructura (RN-20).
+        List<String> orden = ordenTopologico(porKey, dependencias);
+        calcularFechas(orden, porKey, dependencias, p.getFechaEntrega());
+
+        // Reiniciar confirmaciones (RN-04) y quitar dependencias previas.
+        confirmacionRepository.deleteAll(confirmacionRepository.findByPlanificacionId(plan.getId()));
+        dependenciaTareaRepository.deleteAll(dependenciaTareaRepository.findByPlanificacionId(plan.getId()));
+
+        // Reemplazar etapas de forma atómica (cascade + orphanRemoval).
+        plan.getEtapas().clear();
+        plan.getEtapas().addAll(nuevasEtapas);
+        planificacionRepository.saveAndFlush(plan);
+
+        // Persistir las dependencias nuevas.
+        List<DependenciaTarea> nuevasDeps = new ArrayList<>();
+        for (Map.Entry<String, Tarea> e : porKey.entrySet()) {
+            for (String depKey : dependencias.getOrDefault(e.getKey(), List.of())) {
+                Tarea tarea = e.getValue();
+                Tarea predecesora = porKey.get(depKey);
+                DependenciaTarea d = new DependenciaTarea();
+                d.setId(new DependenciaTareaId(tarea.getId(), predecesora.getId()));
+                d.setTarea(tarea);
+                d.setTareaPredecesora(predecesora);
+                nuevasDeps.add(d);
+            }
+        }
+        dependenciaTareaRepository.saveAll(nuevasDeps);
+        dependenciaTareaRepository.flush();
+
+        return aResponse(plan);
+    }
+
     private record PlanConstruido(
             Planificacion planificacion,
             Map<String, Tarea> tareaPorId,

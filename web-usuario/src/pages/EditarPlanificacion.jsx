@@ -3,6 +3,7 @@ import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom
 import { useAuth } from '../auth/AuthContext.jsx';
 import * as api from '../api/colab.js';
 import { codigoTarea, diasEntre, fechaCorta, iniciales, parseFecha, PRIORIDAD } from '../utils.js';
+import { validarEditor } from '../planificacion.js';
 import { IconPlus, IconTrash } from '../components/Icons.jsx';
 
 let siguienteTemporal = 0;
@@ -49,8 +50,8 @@ function EntradaEtapa({ etapa, activa, cantidadDias, onSeleccionar }) {
   );
 }
 
-function CampoTarea({ etiqueta, children }) {
-  return <label className="editor-plan__campo"><span>{etiqueta}</span>{children}</label>;
+function CampoTarea({ etiqueta, error, children }) {
+  return <label className="editor-plan__campo"><span>{etiqueta}</span>{children}{error && <small className="campo__error">{error}</small>}</label>;
 }
 
 export default function EditarPlanificacion() {
@@ -66,6 +67,7 @@ export default function EditarPlanificacion() {
   const [original, setOriginal] = useState([]);
   const [etapaActivaId, setEtapaActivaId] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  const [erroresServidor, setErroresServidor] = useState([]);
 
   const cargar = useCallback(async () => {
     setEstado('cargando');
@@ -80,6 +82,11 @@ export default function EditarPlanificacion() {
       const creador = e.find((integrante) => integrante.rol === 'CREADOR');
       if (creador?.email !== usuario.email) {
         setError('Solo el creador del proyecto puede editar la planificación.');
+        setEstado('sin-permiso');
+        return;
+      }
+      if (plan.estado !== 'PROPUESTA') {
+        setError('La planificación ya no está en propuesta y no se puede editar.');
         setEstado('sin-permiso');
         return;
       }
@@ -103,6 +110,11 @@ export default function EditarPlanificacion() {
   const diasActivos = etapaActiva ? etapaActiva.tareas.reduce((total, tarea) => total + Number(tarea.duracionDias || 0), 0) : 0;
   const rangoActivo = etapaActiva ? rango(etapaActiva.tareas) : null;
   const responsables = new Set(etapaActiva?.tareas.map((tarea) => tarea.responsableId).filter(Boolean));
+  const validacion = useMemo(() => validarEditor(etapas), [etapas]);
+  const erroresPorCampo = useMemo(() => Object.fromEntries(
+    validacion.errores.filter((e) => e.clave !== 'global').map((e) => [e.clave, e.mensaje]),
+  ), [validacion]);
+  const erroresGlobales = validacion.errores.filter((e) => e.clave === 'global');
 
   function actualizarEtapa(etapaId, cambios) {
     setEtapas((actual) => actual.map((etapa) => etapa.id === etapaId ? { ...etapa, ...cambios } : etapa));
@@ -187,90 +199,36 @@ export default function EditarPlanificacion() {
     setEtapaActivaId(restaurado[0]?.id ?? null);
   }
 
-  function validar() {
-    if (!etapas.length) return 'Agrega al menos una etapa.';
-    for (const etapa of etapas) {
-      if (!etapa.nombre.trim()) return 'Cada etapa debe tener un nombre.';
-      for (const tarea of etapa.tareas) {
-        if (!tarea.nombre.trim()) return 'Cada tarea debe tener un título.';
-        if (!Number.isInteger(Number(tarea.duracionDias)) || Number(tarea.duracionDias) < 1) return `La duración de “${tarea.nombre}” debe ser al menos un día.`;
-        if (!tarea.prioridad) return `Selecciona una prioridad para “${tarea.nombre}”.`;
-        if (tarea.dependencias.includes(tarea.id)) return `“${tarea.nombre}” no puede depender de sí misma.`;
-      }
-    }
-    return null;
-  }
-
   async function guardar() {
-    const mensaje = validar();
-    if (mensaje) return avisar(mensaje);
+    if (validacion.errores.length) {
+      avisar('Corrige los errores marcados antes de guardar.');
+      return;
+    }
     setGuardando(true);
+    setErroresServidor([]);
     try {
-      const originalesPorId = new Map(original.map((etapa) => [etapa.id, etapa]));
-      const tareasOriginales = original.flatMap((etapa) => etapa.tareas);
-      const tareasActuales = etapas.flatMap((etapa) => etapa.tareas);
-      const idsEtapasEliminadas = original.filter((etapa) => !etapas.some((actual) => actual.id === etapa.id)).map((etapa) => etapa.id);
-      const idsTareasActuales = new Set(tareasActuales.filter((tarea) => esPersistido(tarea.id)).map((tarea) => tarea.id));
-      const idsTareasEnEtapasEliminadas = new Set(original.filter((etapa) => idsEtapasEliminadas.includes(etapa.id)).flatMap((etapa) => etapa.tareas.map((tarea) => tarea.id)));
-
-      // Primero quitar relaciones existentes de las tareas que se conservarán.
-      await Promise.all(tareasOriginales
-        .filter((tarea) => idsTareasActuales.has(tarea.id) && !idsTareasEnEtapasEliminadas.has(tarea.id))
-        .flatMap((tarea) => tarea.dependencias.map((predecesoraId) => api.quitarDependencia(token, proyectoId, tarea.id, predecesoraId))));
-
-      // Las tareas fuera de etapas eliminadas se borran explícitamente; las demás se eliminan en cascada con su etapa.
-      await Promise.all(tareasOriginales
-        .filter((tarea) => !idsTareasActuales.has(tarea.id) && !idsTareasEnEtapasEliminadas.has(tarea.id))
-        .map((tarea) => api.eliminarTarea(token, proyectoId, tarea.id)));
-      await Promise.all(idsEtapasEliminadas.map((etapaId) => api.eliminarEtapa(token, proyectoId, etapaId)));
-
-      const idsEtapa = new Map();
-      for (const [indice, etapa] of etapas.entries()) {
-        const datos = { nombre: etapa.nombre.trim(), orden: indice + 1 };
-        if (esPersistido(etapa.id)) {
-          await api.editarEtapa(token, proyectoId, etapa.id, datos);
-          idsEtapa.set(etapa.id, etapa.id);
-        } else {
-          const creada = await api.crearEtapa(token, proyectoId, datos);
-          idsEtapa.set(etapa.id, creada.id);
-        }
-      }
-
-      const idsTarea = new Map();
-      for (const etapa of etapas) {
-        const etapaId = idsEtapa.get(etapa.id);
-        for (const [indice, tarea] of etapa.tareas.entries()) {
-          const datos = {
+      const payload = {
+        etapas: etapas.map((etapa) => ({
+          id: esPersistido(etapa.id) ? etapa.id : null,
+          nombre: etapa.nombre.trim(),
+          orden: etapa.orden,
+          tareas: etapa.tareas.map((tarea) => ({
+            id: esPersistido(tarea.id) ? tarea.id : null,
+            key: String(tarea.id),
             nombre: tarea.nombre.trim(),
             descripcion: tarea.descripcion.trim() || null,
-            etapaId,
             responsableId: tarea.responsableId || null,
             prioridad: tarea.prioridad,
             duracionDias: Number(tarea.duracionDias),
-            orden: indice + 1,
-          };
-          if (esPersistido(tarea.id)) {
-            await api.editarTarea(token, proyectoId, tarea.id, datos);
-            idsTarea.set(tarea.id, tarea.id);
-          } else {
-            const creada = await api.crearTarea(token, proyectoId, datos);
-            idsTarea.set(tarea.id, creada.id);
-          }
-        }
-      }
-
-      for (const tarea of tareasActuales) {
-        const tareaId = idsTarea.get(tarea.id);
-        for (const predecesora of tarea.dependencias) {
-          const predecesoraId = idsTarea.get(predecesora);
-          if (tareaId && predecesoraId) await api.agregarDependencia(token, proyectoId, tareaId, predecesoraId);
-        }
-      }
-
-      avisar('Planificación actualizada.', 'ok');
+            dependencias: (tarea.dependencias ?? []).map(String),
+          })),
+        })),
+      };
+      await api.guardarPlanificacion(token, proyectoId, payload);
+      avisar('Planificación actualizada. El equipo deberá confirmar sus tareas nuevamente.', 'ok');
       navigate(`/proyectos/${proyectoId}/planificacion`);
     } catch (err) {
-      avisar(`No se pudo guardar la planificación. ${err.message}`);
+      setErroresServidor((err.message || 'No se pudo guardar la planificación.').split('\n').filter(Boolean));
     } finally {
       setGuardando(false);
     }
@@ -298,6 +256,20 @@ export default function EditarPlanificacion() {
         </div>
       </div>
 
+      {erroresGlobales.length > 0 && (
+        <div className="editor-plan__aviso" role="alert">
+          <strong>Hay {validacion.errores.length} {validacion.errores.length === 1 ? 'inconsistencia' : 'inconsistencias'} por resolver:</strong>
+          <ul>{erroresGlobales.map((error, i) => <li key={i}>{error.mensaje}</li>)}</ul>
+        </div>
+      )}
+
+      {erroresServidor.length > 0 && (
+        <div className="editor-plan__aviso" role="alert">
+          <strong>El servidor no pudo guardar la planificación:</strong>
+          <ul>{erroresServidor.map((error, i) => <li key={i}>{error}</li>)}</ul>
+        </div>
+      )}
+
       <div className="editor-plan__fases" aria-label="Etapas de la planificación">
         <div className="editor-plan__lista-fases">
           {etapas.map((etapa) => <EntradaEtapa key={etapa.id} etapa={etapa} activa={etapa.id === etapaActiva?.id} cantidadDias={etapa.tareas.reduce((total, tarea) => total + Number(tarea.duracionDias || 0), 0)} onSeleccionar={() => setEtapaActivaId(etapa.id)} />)}
@@ -319,6 +291,7 @@ export default function EditarPlanificacion() {
               <label className="editor-plan__nombre-etapa">
                 <span>Nombre de la etapa</span>
                 <input value={etapaActiva.nombre} onChange={(e) => actualizarEtapa(etapaActiva.id, { nombre: e.target.value })} />
+                {erroresPorCampo[`etapa:${etapaActiva.id}:nombre`] && <small className="campo__error">{erroresPorCampo[`etapa:${etapaActiva.id}:nombre`]}</small>}
               </label>
               <p>Las fechas se calculan automáticamente a partir de las tareas generadas. {rangoActivo != null && `Rango actual: ${rangoActivo} días.`}</p>
             </div>
@@ -344,7 +317,7 @@ export default function EditarPlanificacion() {
                     <button type="button" className="icono-btn" disabled={guardando} onClick={() => eliminarTarea(tarea.id)} aria-label={`Eliminar ${tarea.nombre}`}><IconTrash /></button>
                   </div>
 
-                  <CampoTarea etiqueta="Título de la tarea"><input value={tarea.nombre} onChange={(e) => actualizarTarea(tarea.id, { nombre: e.target.value })} /></CampoTarea>
+                  <CampoTarea etiqueta="Título de la tarea" error={erroresPorCampo[`tarea:${tarea.id}:nombre`]}><input value={tarea.nombre} onChange={(e) => actualizarTarea(tarea.id, { nombre: e.target.value })} /></CampoTarea>
                   <CampoTarea etiqueta="Descripción"><textarea rows="2" value={tarea.descripcion} onChange={(e) => actualizarTarea(tarea.id, { descripcion: e.target.value })} /></CampoTarea>
 
                   <div className="editor-plan__grilla">
@@ -357,12 +330,12 @@ export default function EditarPlanificacion() {
                         {equipo.map((miembro) => <option key={miembro.integranteId} value={miembro.integranteId}>{miembro.nombre} · {miembro.rol === 'CREADOR' ? 'Creador' : 'Integrante'}</option>)}
                       </select>
                     </CampoTarea>
-                    <CampoTarea etiqueta="Prioridad">
+                    <CampoTarea etiqueta="Prioridad" error={erroresPorCampo[`tarea:${tarea.id}:prioridad`]}>
                       <select value={tarea.prioridad} onChange={(e) => actualizarTarea(tarea.id, { prioridad: e.target.value })}>
                         {Object.entries(PRIORIDAD).map(([valor, texto]) => <option key={valor} value={valor}>{texto}</option>)}
                       </select>
                     </CampoTarea>
-                    <CampoTarea etiqueta="Duración (días)"><input type="number" min="1" max="90" value={tarea.duracionDias} onChange={(e) => actualizarTarea(tarea.id, { duracionDias: e.target.value })} /></CampoTarea>
+                    <CampoTarea etiqueta="Duración (días)" error={erroresPorCampo[`tarea:${tarea.id}:duracionDias`]}><input type="number" min="1" max="90" value={tarea.duracionDias} onChange={(e) => actualizarTarea(tarea.id, { duracionDias: e.target.value })} /></CampoTarea>
                     <CampoTarea etiqueta="Mover a etapa">
                       <select value={etapaActiva.id} onChange={(e) => moverTarea(tarea.id, e.target.value)}>
                         {etapas.map((etapa) => <option key={etapa.id} value={etapa.id}>Fase {etapa.orden}: {etapa.nombre}</option>)}
@@ -370,7 +343,7 @@ export default function EditarPlanificacion() {
                     </CampoTarea>
                   </div>
 
-                  <CampoTarea etiqueta="Dependencias (selecciona una o varias tareas predecesoras)">
+                  <CampoTarea etiqueta="Dependencias (selecciona una o varias tareas predecesoras)" error={erroresPorCampo[`tarea:${tarea.id}:dependencias`]}>
                     <select multiple value={tarea.dependencias.map(String)} onChange={(e) => cambiarDependencias(tarea.id, e.target.selectedOptions)}>
                       {todasLasTareas.filter((opcion) => opcion.id !== tarea.id).map((opcion) => <option key={opcion.id} value={opcion.id}>{esPersistido(opcion.id) ? codigoTarea(opcion.id) : 'Nueva'} — {opcion.nombre}</option>)}
                     </select>

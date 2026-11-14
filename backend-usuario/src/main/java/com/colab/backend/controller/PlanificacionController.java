@@ -1,17 +1,21 @@
 package com.colab.backend.controller;
 
 import com.colab.backend.dto.PlanificacionResponse;
+import com.colab.backend.dto.PlanificacionUpdateRequest;
 import com.colab.backend.service.PlanificacionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * CU-08 — Generar y consultar la planificación de un proyecto.
+ * CU-08/CU-09 — Generar, consultar y guardar (editar) la planificación de un
+ * proyecto.
  */
 @RestController
 @RequestMapping("/api/proyectos/{proyectoId}/planificacion")
@@ -31,5 +35,11 @@ public class PlanificacionController {
     @GetMapping
     public PlanificacionResponse ver(@PathVariable Long proyectoId) {
         return planificacionService.obtener(proyectoId);
+    }
+
+    @PutMapping
+    public PlanificacionResponse actualizar(@PathVariable Long proyectoId,
+                                            @RequestBody PlanificacionUpdateRequest request) {
+        return planificacionService.actualizar(proyectoId, request);
     }
 }

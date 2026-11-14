@@ -80,6 +80,7 @@ public class EtapaService {
         Usuario u = usuarioActual();
         verificarCreador(u, proyectoId);
         Planificacion plan = planificacion(proyectoId);
+        verificarPlanEditable(plan);
 
         Etapa etapa = new Etapa();
         etapa.setPlanificacion(plan);
@@ -96,6 +97,7 @@ public class EtapaService {
         Usuario u = usuarioActual();
         verificarCreador(u, proyectoId);
         Etapa etapa = etapaDe(proyectoId, etapaId);
+        verificarPlanEditable(etapa.getPlanificacion());
 
         etapa.setNombre(request.nombre());
         etapa.setOrden(request.orden());
@@ -110,6 +112,7 @@ public class EtapaService {
         Usuario u = usuarioActual();
         verificarCreador(u, proyectoId);
         Etapa etapa = etapaDe(proyectoId, etapaId);
+        verificarPlanEditable(etapa.getPlanificacion());
         etapaRepository.delete(etapa);
     }
 
@@ -165,6 +168,14 @@ public class EtapaService {
                 .filter(i -> "CREADOR".equals(i.getRol()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Solo el Creador puede realizar esta acción"));
+    }
+
+    /** Bloquea la edición estructural cuando la plan ya salió de PROPUESTA. */
+    private void verificarPlanEditable(Planificacion plan) {
+        if (plan != null && !"PROPUESTA".equals(plan.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La planificación no se encuentra en estado PROPUESTA");
+        }
     }
 
     private Usuario usuarioActual() {

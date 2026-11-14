@@ -56,15 +56,15 @@ test('vaciar detalles envía null para permitir el borrado intencional', () => {
   assert.equal(enviado.flujoPrincipal, null);
 });
 
-test('no envía codigo ni propiedades ajenas al contrato en RF, RNF o casos de uso', () => {
+test('conserva códigos de RF y RNF al editar y omite propiedades ajenas', () => {
   const enviado = enviar({
     rf: [{ codigo: 'RF-01', descripcion: ' Registrar usuario ' }],
     rnf: [{ codigo: 'RNF-01', descripcion: ' Respuesta rápida ', categoria: ' ' }],
     cu: [casoUsoFormulario({ codigo: 'CU-01', id: 42, nombre: 'Registrar usuario' })],
   });
-  assert.deepEqual(enviado.requerimientosFuncionales, [{ descripcion: 'Registrar usuario' }]);
-  assert.deepEqual(enviado.requerimientosNoFuncionales, [{ descripcion: 'Respuesta rápida', categoria: null }]);
-  assert.ok(!JSON.stringify(enviado).includes('codigo'));
+  assert.deepEqual(enviado.requerimientosFuncionales, [{ codigo: 'RF-01', descripcion: 'Registrar usuario' }]);
+  assert.deepEqual(enviado.requerimientosNoFuncionales, [{ codigo: 'RNF-01', descripcion: 'Respuesta rápida', categoria: null }]);
+  assert.ok(!('codigo' in enviado.casosDeUso[0]));
   assert.ok(!('id' in enviado.casosDeUso[0]));
 });
 

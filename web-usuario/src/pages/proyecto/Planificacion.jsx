@@ -99,7 +99,7 @@ function PlanMaestro({ proyecto, plan, nombres, soyCreador }) {
         <span className="chip chip--verde">{ESTADO_PLAN[plan.estado] ?? plan.estado}</span>
         <div className="plan-cab__titulo">
           <h2>Plan maestro: {proyecto.nombre}</h2>
-          {soyCreador && <Link className="btn btn--ghost btn--chico" to={`/proyectos/${proyecto.id}/planificacion/editar`}>Editar planificación</Link>}
+          {soyCreador && plan.estado === 'PROPUESTA' && <Link className="btn btn--ghost btn--chico" to={`/proyectos/${proyecto.id}/planificacion/editar`}>Editar planificación</Link>}
         </div>
         <p className="seccion__sub">Planificación generada por IA a partir de los requerimientos y las habilidades del equipo.</p>
         <dl className="resumen-plan">

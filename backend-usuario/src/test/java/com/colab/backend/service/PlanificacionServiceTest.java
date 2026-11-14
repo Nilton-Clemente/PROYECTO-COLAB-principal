@@ -1,6 +1,8 @@
 package com.colab.backend.service;
 
 import com.colab.backend.domain.*;
+import com.colab.backend.dto.PlanificacionResponse;
+import com.colab.backend.dto.PlanificacionUpdateRequest;
 import com.colab.backend.ia.PlanIAClient;
 import com.colab.backend.repository.*;
 import org.junit.jupiter.api.AfterEach;
@@ -9,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
@@ -16,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -25,9 +29,10 @@ class PlanificacionServiceTest {
     private final UsuarioRepository usuarios = mock(UsuarioRepository.class);
     private final PlanificacionRepository planificaciones = mock(PlanificacionRepository.class);
     private final DependenciaTareaRepository dependencias = mock(DependenciaTareaRepository.class);
+    private final ConfirmacionRepository confirmaciones = mock(ConfirmacionRepository.class);
     private final PlanIAClient ia = mock(PlanIAClient.class);
     private final PlanificacionService service = new PlanificacionService(proyectos, integrantes, usuarios,
-            planificaciones, dependencias, ia, new ObjectMapper());
+            planificaciones, dependencias, confirmaciones, ia, new ObjectMapper());
     private final Proyecto proyecto = new Proyecto();
 
     @BeforeEach
@@ -144,6 +149,84 @@ class PlanificacionServiceTest {
         ArgumentCaptor<String> prompt = ArgumentCaptor.forClass(String.class);
         verify(ia).generarPlanificacionJson(anyString(), prompt.capture(), anyList());
         assertThat(prompt.getValue()).contains("(sin casos de uso)");
+    }
+
+    @Test
+    void actualizarRechazaSiLaPlanificacionNoEstaEnPropuesta() {
+        Planificacion plan = new Planificacion();
+        plan.setId(4L);
+        plan.setEstado("ACTIVA");
+        plan.setProyecto(proyecto);
+        when(planificaciones.findByProyectoId(1L)).thenReturn(Optional.of(plan));
+
+        Integrante creador = integrante(2L, "ana@example.com");
+        creador.setRol("CREADOR");
+        when(integrantes.findByUsuarioIdAndProyectoId(2L, 1L)).thenReturn(Optional.of(creador));
+
+        ResponseStatusException ex = catchThrowableOfType(() -> service.actualizar(1L,
+                new PlanificacionUpdateRequest(List.of())), ResponseStatusException.class);
+        assertThat(ex).isNotNull();
+        assertThat(ex.getReason()).contains("PROPUESTA");
+    }
+
+    @Test
+    void actualizarRechazaPlanificacionesConInconsistencias() {
+        Planificacion plan = new Planificacion();
+        plan.setId(4L);
+        plan.setEstado("PROPUESTA");
+        plan.setProyecto(proyecto);
+        when(planificaciones.findByProyectoId(1L)).thenReturn(Optional.of(plan));
+
+        Integrante creador = integranteActivo(2L, "ana@example.com", "CREADOR");
+        Integrante segundo = integranteActivo(3L, "luis@example.com", "INTEGRANTE");
+        when(integrantes.findByProyectoId(1L)).thenReturn(List.of(creador, segundo));
+        when(integrantes.findByUsuarioIdAndProyectoId(2L, 1L)).thenReturn(Optional.of(creador));
+
+        PlanificacionUpdateRequest request = new PlanificacionUpdateRequest(List.of(
+                new PlanificacionUpdateRequest.EtapaUpdate(null, "MVP", 1, List.of(
+                        new PlanificacionUpdateRequest.TareaUpdate(null, "t1", "Endpoint", null,
+                                segundo.getId(), "MEDIA", 0, List.of())))));
+
+        ResponseStatusException ex = catchThrowableOfType(() -> service.actualizar(1L, request),
+                ResponseStatusException.class);
+        assertThat(ex).isNotNull();
+        assertThat(ex.getReason()).contains("duración positiva");
+    }
+
+    @Test
+    void actualizarReiniciaConfirmacionesYGuardaLaPropuesta() {
+        Planificacion plan = new Planificacion();
+        plan.setId(4L);
+        plan.setEstado("PROPUESTA");
+        plan.setProyecto(proyecto);
+        when(planificaciones.findByProyectoId(1L)).thenReturn(Optional.of(plan));
+        when(confirmaciones.findByPlanificacionId(4L)).thenReturn(List.of());
+        when(dependencias.findByPlanificacionId(4L)).thenReturn(List.of());
+
+        Integrante creador = integranteActivo(2L, "ana@example.com", "CREADOR");
+        Integrante segundo = integranteActivo(3L, "luis@example.com", "INTEGRANTE");
+        when(integrantes.findByProyectoId(1L)).thenReturn(List.of(creador, segundo));
+        when(integrantes.findByUsuarioIdAndProyectoId(2L, 1L)).thenReturn(Optional.of(creador));
+
+        PlanificacionUpdateRequest request = new PlanificacionUpdateRequest(List.of(
+                new PlanificacionUpdateRequest.EtapaUpdate(null, "MVP", 1, List.of(
+                        new PlanificacionUpdateRequest.TareaUpdate(null, "t1", "Endpoint", "desc",
+                                segundo.getId(), "ALTA", 2, List.of())))));
+
+        PlanificacionResponse response = service.actualizar(1L, request);
+
+        assertThat(response.estado()).isEqualTo("PROPUESTA");
+        assertThat(response.etapas()).hasSize(1);
+        verify(confirmaciones).findByPlanificacionId(4L);
+        verify(confirmaciones).deleteAll(anyList());
+        verify(dependencias).deleteAll(anyList());
+    }
+
+    private Integrante integranteActivo(Long integranteId, String email, String rol) {
+        Integrante i = integrante(integranteId, email);
+        i.setId(integranteId);
+        i.setRol(rol);
+        return i;
     }
 
     private Integrante integrante(Long id, String email) {

@@ -10,20 +10,21 @@ class RequerimientosDtoTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    void rfSoloExponeDescripcion() {
+    void rfAceptaDescripcionSinCodigo() {
         RequerimientoFuncionalDto rf = objectMapper.readValue(
                 "{\"descripcion\":\"Permitir registrar usuarios\"}", RequerimientoFuncionalDto.class);
-        assertThat(objectMapper.readTree(objectMapper.writeValueAsString(rf)).size()).isEqualTo(1);
+        assertThat(rf.codigo()).isNull();
         assertThat(rf.descripcion()).isEqualTo("Permitir registrar usuarios");
     }
 
     @Test
-    void rnfConservaCategoriaOpcionalSinCodigo() {
+    void rnfConservaCategoriaYCodigoOpcionales() {
         RequerimientoNoFuncionalDto rnf = objectMapper.readValue(
                 "{\"descripcion\":\"Proteger contraseñas\",\"categoria\":\"Seguridad\"}",
                 RequerimientoNoFuncionalDto.class);
         var json = objectMapper.readTree(objectMapper.writeValueAsString(rnf));
-        assertThat(json.has("codigo")).isFalse();
+        assertThat(json.has("codigo")).isTrue();
+        assertThat(rnf.codigo()).isNull();
         assertThat(rnf.categoria()).isEqualTo("Seguridad");
         assertThat(objectMapper.readValue("{\"descripcion\":\"Responder rápido\"}",
                 RequerimientoNoFuncionalDto.class).categoria()).isNull();

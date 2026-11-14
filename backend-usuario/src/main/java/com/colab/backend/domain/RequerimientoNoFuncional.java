@@ -1,6 +1,7 @@
 package com.colab.backend.domain;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.Column;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -32,6 +33,9 @@ public class RequerimientoNoFuncional {
 
     /** rendimiento, seguridad, usabilidad, etc. */
     private String categoria;
+
+    @Column(nullable = false)
+    private String codigo;
 
     private String descripcion;
 }
