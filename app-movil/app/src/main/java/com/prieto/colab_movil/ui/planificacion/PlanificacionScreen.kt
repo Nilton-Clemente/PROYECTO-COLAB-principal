@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Rule
 import androidx.compose.material.icons.filled.Timer
@@ -38,6 +39,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -219,7 +221,8 @@ fun PlanificacionScreen(
     proyectoId: Long,
     viewModel: PlanificacionViewModel = viewModel(),
     onBack: () -> Unit = {},
-    onValidateRules: () -> Unit = {}
+    onValidateRules: () -> Unit = {},
+    onEditar: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -249,6 +252,13 @@ fun PlanificacionScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onEditar, enabled = uiState is PlanificacionUiState.Success) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Editar planificación",
+                            tint = Primary
+                        )
+                    }
                     Box(
                         modifier = Modifier
                             .padding(end = 16.dp)
@@ -276,7 +286,7 @@ fun PlanificacionScreen(
                         color = Primary
                     )
                 }
-                is PlanificacionUiState.Generating -> {
+                is PlanificacionUiState.Generating, is PlanificacionUiState.CheckingGeneration -> {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -284,14 +294,34 @@ fun PlanificacionScreen(
                         CircularProgressIndicator(color = Primary)
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            "Generando planificación con IA…",
+                            if (state is PlanificacionUiState.Generating) "Generando planificación con IA…"
+                            else "Comprobando el resultado de la generación…",
                             color = OnSurfaceVariant,
                             fontSize = 14.sp
                         )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "La IA puede tardar unos minutos. No necesitas volver a generar.",
+                            modifier = Modifier.padding(horizontal = 24.dp),
+                            color = OnSurfaceVariant,
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
-                is PlanificacionUiState.Empty -> {
-                    EmptyPlanificacion(onGenerar = { viewModel.generar(proyectoId) })
+                is PlanificacionUiState.PendingGeneration -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text("Generación pendiente de confirmar", color = OnSurface, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(12.dp))
+                        Text(state.message, color = OnSurfaceVariant, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(16.dp))
+                        Button(onClick = { viewModel.consultarResultado(proyectoId) }) { Text("Consultar resultado") }
+                        TextButton(onClick = onBack) { Text("Volver al proyecto") }
+                    }
                 }
                 is PlanificacionUiState.Error -> {
                     ErrorPlanificacion(
@@ -314,39 +344,6 @@ fun PlanificacionScreen(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun EmptyPlanificacion(onGenerar: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            "Aún no hay planificación para este proyecto.",
-            color = OnSurface,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "Genera una propuesta de planificación con IA a partir de la información registrada.",
-            color = OnSurfaceVariant,
-            fontSize = 13.sp,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(20.dp))
-        Button(
-            onClick = onGenerar,
-            colors = ButtonDefaults.buttonColors(containerColor = Primary)
-        ) {
-            Text("Generar planificación con IA")
         }
     }
 }

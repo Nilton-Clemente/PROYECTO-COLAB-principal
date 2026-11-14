@@ -71,7 +71,8 @@ fun DetalleProyectoScreen(
     onBack: () -> Unit = {},
     onEditar: () -> Unit = {},
     onGenerarPlanificacion: () -> Unit = {},
-    onPerfil: () -> Unit = {}
+    onPerfil: () -> Unit = {},
+    onMisTareas: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -122,7 +123,8 @@ fun DetalleProyectoScreen(
                         proyectoDto = state.proyecto,
                         equipoDto = state.equipo,
                         onEditar = onEditar,
-                        onGenerarPlanificacion = onGenerarPlanificacion
+                        onGenerarPlanificacion = onGenerarPlanificacion,
+                        onMisTareas = onMisTareas
                     )
                 }
             }
@@ -135,7 +137,8 @@ private fun DetalleProyectoContenido(
     proyectoDto: ProyectoResponseDto,
     equipoDto: List<IntegranteResponseDto>,
     onEditar: () -> Unit,
-    onGenerarPlanificacion: () -> Unit
+    onGenerarPlanificacion: () -> Unit,
+    onMisTareas: () -> Unit
 ) {
     var pestana by remember { mutableStateOf(Pestana.INFO) }
 
@@ -212,6 +215,15 @@ private fun DetalleProyectoContenido(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Cabecera(codigo, titulo, descripcion, onEditar, onGenerarPlanificacion)
+        OutlinedButton(
+            onClick = onMisTareas,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Outlined.Checklist, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Mis tareas y confirmaciones", fontWeight = FontWeight.SemiBold)
+        }
         Tabs(pestana, equipo.size) { pestana = it }
         ResumenCard(hitoActual = 3, hitosTotal = 4, progreso = 0.75f, entregaFinal = proyectoDto.fechaEntrega ?: "15 Dic, 2024")
 

@@ -14,11 +14,14 @@ import com.prieto.colab_movil.ui.invitaciones.InvitacionesScreen
 import com.prieto.colab_movil.ui.login.LoginScreen
 import com.prieto.colab_movil.ui.perfil.PerfilScreen
 import com.prieto.colab_movil.ui.planificacion.PlanificacionScreen
+import com.prieto.colab_movil.ui.planificacion.EditarPlanificacionScreen
 import com.prieto.colab_movil.ui.proyectos.CrearProyectoScreen
 import com.prieto.colab_movil.ui.proyectos.DetalleProyectoScreen
 import com.prieto.colab_movil.ui.proyectos.EditarProyectoScreen
 import com.prieto.colab_movil.ui.proyectos.ProyectosScreen
 import com.prieto.colab_movil.ui.register.RegisterScreen
+import com.prieto.colab_movil.ui.tareas.MisTareasScreen
+import com.prieto.colab_movil.ui.tareas.RegistrarAvanceScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -35,6 +38,15 @@ sealed class Screen(val route: String) {
     object Invitaciones : Screen("invitaciones")
     object Planificacion : Screen("planificacion/{proyectoId}") {
         fun createRoute(proyectoId: Long) = "planificacion/$proyectoId"
+    }
+    object EditarPlanificacion : Screen("planificacion_editar/{proyectoId}") {
+        fun createRoute(proyectoId: Long) = "planificacion_editar/$proyectoId"
+    }
+    object MisTareas : Screen("mis_tareas/{proyectoId}") {
+        fun createRoute(proyectoId: Long) = "mis_tareas/$proyectoId"
+    }
+    object RegistrarAvance : Screen("registrar_avance/{proyectoId}/{tareaId}") {
+        fun createRoute(proyectoId: Long, tareaId: Long) = "registrar_avance/$proyectoId/$tareaId"
     }
 }
 
@@ -127,7 +139,8 @@ fun AppNavigation(
                 onBack = { navController.popBackStack() },
                 onPerfil = { navController.navigate(Screen.Perfil.route) },
                 onEditar = { navController.navigate(Screen.EditarProyecto.createRoute(proyectoId)) },
-                onGenerarPlanificacion = { navController.navigate(Screen.Planificacion.createRoute(proyectoId)) }
+                onGenerarPlanificacion = { navController.navigate(Screen.Planificacion.createRoute(proyectoId)) },
+                onMisTareas = { navController.navigate(Screen.MisTareas.createRoute(proyectoId)) }
             )
         }
 
@@ -151,7 +164,54 @@ fun AppNavigation(
             PlanificacionScreen(
                 proyectoId = planProyectoId,
                 onBack = { navController.popBackStack() },
-                onValidateRules = { Toast.makeText(context, "Validar reglas", Toast.LENGTH_SHORT).show() }
+                onValidateRules = { Toast.makeText(context, "Validar reglas", Toast.LENGTH_SHORT).show() },
+                onEditar = { navController.navigate(Screen.EditarPlanificacion.createRoute(planProyectoId)) }
+            )
+        }
+
+        composable(
+            route = Screen.EditarPlanificacion.route,
+            arguments = listOf(navArgument("proyectoId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val planProyectoId = backStackEntry.arguments?.getLong("proyectoId") ?: 1L
+            EditarPlanificacionScreen(
+                proyectoId = planProyectoId,
+                onBack = { navController.popBackStack() },
+                onGuardado = {
+                    Toast.makeText(context, "Planificación actualizada correctamente", Toast.LENGTH_SHORT).show()
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = Screen.MisTareas.route,
+            arguments = listOf(navArgument("proyectoId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val proyectoId = requireNotNull(backStackEntry.arguments).getLong("proyectoId")
+            MisTareasScreen(
+                proyectoId = proyectoId,
+                onBack = { navController.popBackStack() },
+                onPerfil = { navController.navigate(Screen.Perfil.route) },
+                onRegistrarAvance = { tareaId ->
+                    navController.navigate(Screen.RegistrarAvance.createRoute(proyectoId, tareaId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.RegistrarAvance.route,
+            arguments = listOf(
+                navArgument("proyectoId") { type = NavType.LongType },
+                navArgument("tareaId") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val arguments = requireNotNull(backStackEntry.arguments)
+            RegistrarAvanceScreen(
+                proyectoId = arguments.getLong("proyectoId"),
+                tareaId = arguments.getLong("tareaId"),
+                onBack = { navController.popBackStack() },
+                onPerfil = { navController.navigate(Screen.Perfil.route) }
             )
         }
 
