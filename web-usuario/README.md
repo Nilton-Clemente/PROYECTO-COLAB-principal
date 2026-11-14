@@ -27,7 +27,7 @@ Los datos viven en PostgreSQL (esquema `usuario`); las tablas y los catálogos i
 - **Solo el Creador** puede invitar y eliminar integrantes; el resto ve el equipo en modo lectura.
 - **No existe "reenviar invitación"** ni historial de invitaciones (rechazar borra el registro).
 - **403 de negocio ≠ sesión vencida**: Spring responde 403 en ambos casos. Ante un 403 el cliente consulta `/api/usuario/perfil`; solo si también falla cierra la sesión (`src/api/client.js`).
-- **Formulario de proyecto completo** (crear y editar): problemática, objetivos, alcance, restricciones, tecnologías, requerimientos y casos de uso. Los códigos (RF-01, RNF-01, CU-01) se generan según el orden.
+- **Formulario de proyecto completo** (crear y editar): problemática, objetivos, alcance, restricciones, tecnologías, requerimientos y casos de uso. El cliente no envía códigos de requerimientos ni casos de uso porque el contrato del backend no los admite. Los casos de uso permiten registrar nombre, descripción y los detalles que la IA utiliza como contexto.
 - **Planificación (RN-18)**: solo el Creador puede generarla y el servidor exige objetivo general, fecha de entrega, ≥1 requerimiento funcional, ≥1 tecnología y ≥2 integrantes con habilidades. La web muestra esos requisitos antes de habilitar el botón. Ya generada, no se puede regenerar (409).
 - **Tareas**: el backend no tiene código de tarea; se muestra `TK-<id>`. Tampoco hay endpoint para cambiar su estado ni para "validar etapas", por eso esas acciones del diseño no existen. El estado de las tareas se muestra tal como lo devuelve la API (`PENDIENTE` al generar).
 - Con `IA_PROVIDER=mock` (valor por defecto del backend) la planificación se genera sin la red de TECSUP.

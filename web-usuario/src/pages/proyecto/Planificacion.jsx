@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { IconAlert, IconCheck } from '../../components/Icons.jsx';
 import { codigoTarea, diasEntre, ESTADO_TAREA, fechaCorta, iniciales, parseFecha, PRIORIDAD } from '../../utils.js';
 
@@ -81,7 +82,7 @@ function TarjetaTarea({ tarea, nombres }) {
   );
 }
 
-function PlanMaestro({ proyecto, plan, nombres }) {
+function PlanMaestro({ proyecto, plan, nombres, soyCreador }) {
   const [filtro, setFiltro] = useState('todas');
   const [responsable, setResponsable] = useState('todos');
   const todas = useMemo(() => plan.etapas.flatMap((e) => e.tareas), [plan]);
@@ -96,7 +97,10 @@ function PlanMaestro({ proyecto, plan, nombres }) {
     <>
       <section className="tarjeta plan-cab">
         <span className="chip chip--verde">{ESTADO_PLAN[plan.estado] ?? plan.estado}</span>
-        <h2>Plan maestro: {proyecto.nombre}</h2>
+        <div className="plan-cab__titulo">
+          <h2>Plan maestro: {proyecto.nombre}</h2>
+          {soyCreador && <Link className="btn btn--ghost btn--chico" to={`/proyectos/${proyecto.id}/planificacion/editar`}>Editar planificación</Link>}
+        </div>
         <p className="seccion__sub">Planificación generada por IA a partir de los requerimientos y las habilidades del equipo.</p>
         <dl className="resumen-plan">
           <div><dt>Duración total</dt><dd>{total ?? '—'} {total != null && 'días'}</dd></div>
@@ -144,8 +148,8 @@ function PlanMaestro({ proyecto, plan, nombres }) {
   );
 }
 
-export default function Planificacion({ proyecto, plan, equipo, ...resto }) {
+export default function Planificacion({ proyecto, plan, equipo, soyCreador, ...resto }) {
   const nombres = Object.fromEntries(equipo.map((m) => [m.email, m.nombre]));
   if (!plan) return <SinPlanificacion {...resto} />;
-  return <PlanMaestro proyecto={proyecto} plan={plan} nombres={nombres} />;
+  return <PlanMaestro proyecto={proyecto} plan={plan} nombres={nombres} soyCreador={soyCreador} />;
 }

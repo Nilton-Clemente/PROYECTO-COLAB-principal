@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext.jsx';
 import * as api from '../api/colab.js';
 import Avatares from '../components/Avatares.jsx';
 import ModalProyecto from '../components/ModalProyecto.jsx';
+import ModalProyectoJson from '../components/ModalProyectoJson.jsx';
 import { IconPlus, IconSearch } from '../components/Icons.jsx';
 import { formatearFecha, parseFecha, ROL } from '../utils.js';
 
@@ -62,6 +63,7 @@ export default function Proyectos() {
   const [busqueda, setBusqueda] = useState('');
   const [orden, setOrden] = useState('recientes');
   const [creando, setCreando] = useState(false);
+  const [importando, setImportando] = useState(false);
 
   const cargar = useCallback(async () => {
     setEstado('cargando');
@@ -128,9 +130,14 @@ export default function Proyectos() {
             <h1 className="titulo">Mis proyectos</h1>
             <p className="seccion__sub">Gestiona y colabora en tus proyectos de software del ciclo académico.</p>
           </div>
-          <button type="button" className="btn btn--primario" onClick={() => setCreando(true)}>
-            <IconPlus /> Crear proyecto
-          </button>
+          <div className="proyectos__acciones">
+            <button type="button" className="btn btn--ghost" onClick={() => setImportando(true)} aria-haspopup="dialog">
+              Importar JSON
+            </button>
+            <button type="button" className="btn btn--primario" onClick={() => setCreando(true)} aria-haspopup="dialog">
+              <IconPlus /> Crear proyecto
+            </button>
+          </div>
         </div>
       </section>
 
@@ -147,9 +154,12 @@ export default function Proyectos() {
         <section className="tarjeta vacio-grande">
           <h2>Aún no tienes proyectos</h2>
           <p>Comienza organizando los objetivos, tecnologías y equipo de tu próximo proyecto de software.</p>
-          <button type="button" className="btn btn--primario" onClick={() => setCreando(true)}>
-            <IconPlus /> Crear primer proyecto
-          </button>
+          <div className="vacio-grande__acciones">
+            <button type="button" className="btn btn--ghost" onClick={() => setImportando(true)} aria-haspopup="dialog">Importar JSON</button>
+            <button type="button" className="btn btn--primario" onClick={() => setCreando(true)} aria-haspopup="dialog">
+              <IconPlus /> Crear primer proyecto
+            </button>
+          </div>
         </section>
       )}
 
@@ -208,6 +218,12 @@ export default function Proyectos() {
       {creando && (
         <ModalProyecto
           onCerrar={() => setCreando(false)}
+          onGuardado={(p) => navigate(`/proyectos/${p.id}`)}
+        />
+      )}
+      {importando && (
+        <ModalProyectoJson
+          onCerrar={() => setImportando(false)}
           onGuardado={(p) => navigate(`/proyectos/${p.id}`)}
         />
       )}
