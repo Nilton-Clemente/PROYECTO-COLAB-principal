@@ -87,6 +87,7 @@ public class TareaService {
         Usuario u = usuarioActual();
         verificarCreador(u, proyectoId);
         Planificacion plan = planificacion(proyectoId);
+        verificarPlanEditable(plan);
 
         Etapa etapa = etapaRepository.findById(request.etapaId())
                 .filter(e -> e.getPlanificacion().getId().equals(plan.getId()))
@@ -113,6 +114,7 @@ public class TareaService {
         Usuario u = usuarioActual();
         verificarCreador(u, proyectoId);
         Tarea t = tareaDe(proyectoId, tareaId);
+        verificarPlanEditable(t.getEtapa().getPlanificacion());
         tareaRepository.delete(t);
     }
 
@@ -122,6 +124,7 @@ public class TareaService {
         Usuario u = usuarioActual();
         verificarCreador(u, proyectoId);
         Tarea t = tareaDe(proyectoId, tareaId);
+        verificarPlanEditable(t.getEtapa().getPlanificacion());
 
         Etapa etapa = etapaRepository.findById(request.etapaId())
                 .filter(e -> e.getPlanificacion().getId().equals(t.getEtapa().getPlanificacion().getId()))
@@ -139,6 +142,7 @@ public class TareaService {
         Usuario u = usuarioActual();
         verificarCreador(u, proyectoId);
         Tarea t = tareaDe(proyectoId, tareaId);
+        verificarPlanEditable(t.getEtapa().getPlanificacion());
 
         if (responsableId == null) {
             t.setResponsable(null);
@@ -200,6 +204,7 @@ public class TareaService {
         verificarCreador(u, proyectoId);
         Tarea tarea = tareaDe(proyectoId, tareaId);
         Tarea predecesora = tareaDe(proyectoId, predecesoraId);
+        verificarPlanEditable(tarea.getEtapa().getPlanificacion());
 
         if (tarea.getId().equals(predecesora.getId())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Una tarea no puede depender de sí misma");
@@ -229,6 +234,7 @@ public class TareaService {
         Usuario u = usuarioActual();
         verificarCreador(u, proyectoId);
         Tarea tarea = tareaDe(proyectoId, tareaId);
+        verificarPlanEditable(tarea.getEtapa().getPlanificacion());
 
         DependenciaTareaId id = new DependenciaTareaId(tareaId, predecesoraId);
         dependenciaTareaRepository.deleteById(id);
@@ -363,6 +369,14 @@ public class TareaService {
                 .filter(i -> "CREADOR".equals(i.getRol()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Solo el Creador puede realizar esta acción"));
+    }
+
+    /** Bloquea la edición estructural cuando la plan ya salió de PROPUESTA. */
+    private void verificarPlanEditable(Planificacion plan) {
+        if (plan != null && !"PROPUESTA".equals(plan.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La planificación no se encuentra en estado PROPUESTA");
+        }
     }
 
     /** Devuelve el integrante con rol CREADOR del proyecto, o null si no existe. */

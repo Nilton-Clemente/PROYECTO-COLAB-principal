@@ -103,6 +103,10 @@ a:hover { text-decoration: underline; }
 .alerta--error { background: var(--rojo-suave); color: var(--rojo); border: 1px solid var(--rojo-linea); }
 .alerta--info { background: var(--azul-suave); color: #2a3f9e; border: 1px solid #c9d7ff; }
 .alerta a { color: inherit; text-decoration: underline; }
+.campo__error { display: block; color: var(--rojo); font-size: 12px; margin-top: 4px; }
+.editor-plan__aviso { background: var(--rojo-suave); color: var(--rojo); border: 1px solid var(--rojo-linea); border-radius: 8px; padding: 12px 14px; margin: 14px 0; }
+.editor-plan__aviso strong { display: block; margin-bottom: 4px; }
+.editor-plan__aviso ul { margin: 0 0 0 18px; }
 
 /* ---------- Campos ---------- */
 .campo { display: flex; flex-direction: column; gap: 6px; }
