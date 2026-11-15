@@ -83,6 +83,9 @@ DATABASES = {
         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
+        # Las tablas propias de Django (auth, sesiones, etc.) viven en el esquema "admin".
+        # Las tablas del área de Usuario se acceden con db_table calificado ("usuario"."...").
+        'OPTIONS': {'options': '-c search_path=admin'},
     }
 }
 
