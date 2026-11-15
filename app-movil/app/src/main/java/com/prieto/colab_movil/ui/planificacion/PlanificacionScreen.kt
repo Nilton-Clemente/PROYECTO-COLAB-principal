@@ -250,15 +250,6 @@ fun PlanificacionScreen(
                     }
                 },
                 actions = {
-                    if ((uiState as? PlanificacionUiState.Success)?.planificacion?.estado?.trim()?.uppercase() == "PROPUESTA") {
-                        IconButton(onClick = onEditar) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Editar planificación",
-                                tint = Primary
-                            )
-                        }
-                    }
                     Box(
                         modifier = Modifier
                             .padding(end = 16.dp)
@@ -339,7 +330,8 @@ fun PlanificacionScreen(
                         proyecto = state.proyecto,
                         planificacion = state.planificacion,
                         phases = phases,
-                        allTasks = allTasks
+                        allTasks = allTasks,
+                        onEditar = onEditar
                     )
                 }
             }
@@ -394,7 +386,8 @@ private fun PlanificacionContenido(
     proyecto: ProyectoResponseDto?,
     planificacion: PlanificacionResponseDto,
     phases: List<ProjectPhase>,
-    allTasks: List<ProjectTask>
+    allTasks: List<ProjectTask>,
+    onEditar: () -> Unit
 ) {
     var selectedPhaseIndex by remember { mutableStateOf(0) }
     var selectedFilter by remember { mutableStateOf<TaskStatus?>(null) }
@@ -418,7 +411,7 @@ private fun PlanificacionContenido(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        ProjectHeader(proyecto, planificacion)
+        ProjectHeader(proyecto, planificacion, onEditar)
 
         ProjectMetrics(allTasks, phases.size)
 
@@ -537,14 +530,10 @@ private fun PlanificacionContenido(
 @Composable
 private fun ProjectHeader(
     proyecto: ProyectoResponseDto?,
-    planificacion: PlanificacionResponseDto
+    planificacion: PlanificacionResponseDto,
+    onEditar: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            SmallTag("PROYECTO #${proyecto?.id ?: planificacion.proyectoId}")
-            SmallTag("plan-${planificacion.id}")
-        }
-
         Surface(color = SecondaryContainer, shape = RoundedCornerShape(50)) {
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
@@ -566,32 +555,35 @@ private fun ProjectHeader(
             }
         }
 
-        Text(
-            "Plan Maestro: ${proyecto?.nombre ?: "Proyecto"}",
-            color = OnSurface,
-            fontSize = 24.sp,
-            lineHeight = 31.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "Plan Maestro: ${proyecto?.nombre ?: "Proyecto"}",
+                modifier = Modifier.weight(1f),
+                color = OnSurface,
+                fontSize = 24.sp,
+                lineHeight = 31.sp,
+                fontWeight = FontWeight.Bold
+            )
+            if (planificacion.estado?.trim()?.uppercase() == "PROPUESTA") {
+                IconButton(onClick = onEditar) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Editar planificación",
+                        tint = Primary
+                    )
+                }
+            }
+        }
 
         Text(
             proyecto?.descripcion ?: "Desglose estructurado en fases de entrega técnica.",
             color = OnSurfaceVariant,
             fontSize = 14.sp,
             lineHeight = 20.sp
-        )
-    }
-}
-
-@Composable
-private fun SmallTag(text: String) {
-    Surface(color = SurfaceContainer, shape = RoundedCornerShape(6.dp)) {
-        Text(
-            text,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-            color = OnSurfaceVariant,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Medium
         )
     }
 }

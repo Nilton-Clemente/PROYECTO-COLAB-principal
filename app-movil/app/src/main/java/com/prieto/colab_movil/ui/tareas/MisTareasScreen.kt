@@ -65,6 +65,8 @@ fun MisTareasScreen(
     val snackbar = remember { SnackbarHostState() }
     var confirmarTodas by rememberSaveable(proyectoId) { mutableStateOf(false) }
     var seleccionarTarea by rememberSaveable(proyectoId) { mutableStateOf(false) }
+    var pedirCambios by rememberSaveable(proyectoId) { mutableStateOf(false) }
+    var borradorSolicitud by rememberSaveable(proyectoId) { mutableStateOf("") }
 
     DisposableEffect(lifecycle, proyectoId, viewModel) {
         val observer = LifecycleEventObserver { _, evento ->
@@ -126,13 +128,24 @@ fun MisTareasScreen(
                             color = Muted, fontSize = 12.sp
                         )
                     }
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(onClick = onBack, enabled = !ocupado) { Text("Volver al proyecto") }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        if (estado?.activa != true && estado?.puedeSolicitarCambios == true) {
+                            OutlinedButton(
+                                onClick = { pedirCambios = true },
+                                enabled = !ocupado,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.EditNote, null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Solicitar cambios", fontSize = 12.sp)
+                            }
+                        }
                         Button(
                             onClick = {
                                 if (estado?.activa == true) seleccionarTarea = true else confirmarTodas = true
                             },
                             enabled = if (estado?.activa == true) estado.puedeRegistrarAvance else estado?.puedeConfirmar == true,
+                            modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = Indigo)
                         ) {
                             Icon(Icons.Default.Checklist, null, modifier = Modifier.size(18.dp))
@@ -160,9 +173,6 @@ fun MisTareasScreen(
             is MisTareasUiState.Success -> MisTareasContenido(
                 state = state,
                 modifier = Modifier.fillMaxSize().padding(padding),
-                onSolicitarCambios = { tareaId, comentario, onEnviado ->
-                    viewModel.solicitarCambios(proyectoId, tareaId, comentario, onEnviado)
-                },
                 onRegistrarAvance = onRegistrarAvance
             )
         }
@@ -198,22 +208,57 @@ fun MisTareasScreen(
             dismissButton = { TextButton(onClick = { confirmarTodas = false }) { Text("Cancelar") } }
         )
     }
+    if (pedirCambios && estado != null && !estado.activa) {
+        AlertDialog(
+            onDismissRequest = { if (!ocupado) pedirCambios = false },
+            title = { Text("Solicitar cambios") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Se enviará al creador como solicitud de cambios de la planificación y se reiniciarán las confirmaciones del resto del equipo.", fontSize = 12.sp)
+                    OutlinedTextField(
+                        value = borradorSolicitud,
+                        onValueChange = { borradorSolicitud = it },
+                        enabled = !ocupado,
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp),
+                        label = { Text("Motivos del ajuste") },
+                        minLines = 3
+                    )
+                    Row(Modifier.horizontalScroll(rememberScrollState())) {
+                        TextButton(onClick = { borradorSolicitud = "$borradorSolicitud\nSugiero ampliar el plazo en 2 días.".trim() }, enabled = !ocupado) { Text("+2 días") }
+                        TextButton(onClick = { borradorSolicitud = "$borradorSolicitud\nSolicito apoyo de otro integrante.".trim() }, enabled = !ocupado) { Text("Pedir apoyo") }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.solicitarCambios(proyectoId, borradorSolicitud) {
+                            pedirCambios = false
+                            borradorSolicitud = ""
+                        }
+                    },
+                    enabled = estado.puedeSolicitarCambios && borradorSolicitud.isNotBlank()
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Send, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(5.dp))
+                    Text("Enviar solicitud")
+                }
+            },
+            dismissButton = { TextButton(onClick = { if (!ocupado) pedirCambios = false }) { Text("Cancelar") } }
+        )
+    }
 }
 
 @Composable
 private fun MisTareasContenido(
     state: MisTareasUiState.Success,
     modifier: Modifier,
-    onSolicitarCambios: (Long, String, () -> Unit) -> Unit,
     onRegistrarAvance: (Long) -> Unit
 ) {
     val datos = state.datos
     var filtroNombre by rememberSaveable(datos.proyecto.id) { mutableStateOf(FiltroTareas.TODAS.name) }
     val filtro = FiltroTareas.valueOf(filtroNombre)
-    var tareaSolicitudId by rememberSaveable(datos.proyecto.id) { mutableStateOf<Long?>(null) }
-    var borrador by rememberSaveable(datos.proyecto.id) { mutableStateOf("") }
     var detallesId by rememberSaveable(datos.proyecto.id) { mutableStateOf<Long?>(null) }
-    var descartarSolicitud by remember { mutableStateOf(false) }
     val tareasPorId = datos.planificacion?.etapas.orEmpty().flatMap { it.tareas.orEmpty() }.associateBy { it.id }
 
     LazyColumn(
@@ -280,8 +325,6 @@ private fun MisTareasContenido(
                 dependencias = tarea.dependencias.orEmpty().joinToString("\n") { id ->
                     "TK-$id${tareasPorId[id]?.nombre?.let { " · $it" }.orEmpty()}"
                 }.ifBlank { "Sin dependencias previas" },
-                puedeSolicitarCambios = state.puedeSolicitarCambios,
-                onAjustes = { tareaSolicitudId = tarea.id; borrador = "" },
                 onDetalles = { detallesId = tarea.id },
                 activa = state.activa,
                 puedeRegistrarAvance = state.puedeRegistrarAvance,
@@ -290,55 +333,6 @@ private fun MisTareasContenido(
         }
     }
 
-    val tareaSolicitud = datos.tareas.firstOrNull { it.id == tareaSolicitudId }
-    if (tareaSolicitud != null && !state.activa) {
-        fun cerrarSolicitud() {
-            if (state.ocupado) return
-            if (borrador.isBlank()) tareaSolicitudId = null else descartarSolicitud = true
-        }
-        AlertDialog(
-            onDismissRequest = { cerrarSolicitud() },
-            title = { Text("Solicitar ajuste · TK-${tareaSolicitud.id}") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(tareaSolicitud.nombre, fontWeight = FontWeight.SemiBold)
-                    Text("Se enviará al creador como solicitud de cambios de la planificación y se reiniciarán las confirmaciones del resto del equipo.", fontSize = 12.sp)
-                    OutlinedTextField(
-                        value = borrador,
-                        onValueChange = { borrador = it },
-                        enabled = !state.ocupado,
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp),
-                        label = { Text("Motivos del ajuste") },
-                        minLines = 3
-                    )
-                    Row(Modifier.horizontalScroll(rememberScrollState())) {
-                        TextButton(onClick = { borrador = "$borrador\nSugiero ampliar el plazo en 2 días.".trim() }, enabled = !state.ocupado) { Text("+2 días") }
-                        TextButton(onClick = { borrador = "$borrador\nSolicito apoyo de otro integrante.".trim() }, enabled = !state.ocupado) { Text("Pedir apoyo") }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { onSolicitarCambios(tareaSolicitud.id, borrador) { tareaSolicitudId = null; borrador = "" } },
-                    enabled = state.puedeSolicitarCambios && borrador.isNotBlank()
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Send, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(5.dp))
-                    Text("Enviar solicitud")
-                }
-            },
-            dismissButton = { TextButton(onClick = { cerrarSolicitud() }, enabled = !state.ocupado) { Text("Cancelar") } }
-        )
-    }
-    if (descartarSolicitud) {
-        AlertDialog(
-            onDismissRequest = { descartarSolicitud = false },
-            title = { Text("¿Descartar el borrador?") },
-            text = { Text("El texto de esta solicitud todavía no se ha enviado.") },
-            confirmButton = { TextButton(onClick = { descartarSolicitud = false; tareaSolicitudId = null; borrador = "" }) { Text("Descartar") } },
-            dismissButton = { TextButton(onClick = { descartarSolicitud = false }) { Text("Seguir editando") } }
-        )
-    }
     datos.tareas.firstOrNull { it.id == detallesId }?.let { tarea ->
         AlertDialog(
             onDismissRequest = { detallesId = null },
@@ -372,8 +366,6 @@ private fun TareaAsignadaCard(
     tarea: TareaDetalleResponseDto,
     confirmada: Boolean,
     dependencias: String,
-    puedeSolicitarCambios: Boolean,
-    onAjustes: () -> Unit,
     onDetalles: () -> Unit,
     activa: Boolean,
     puedeRegistrarAvance: Boolean,
@@ -411,13 +403,6 @@ private fun TareaAsignadaCard(
             if (confirmada) Icon(Icons.Default.CheckCircle, "Asignación confirmada", tint = Green)
             else Text("Confirma con «Confirmar todas»", Modifier.weight(1f), color = Muted, fontSize = 11.sp)
             TextButton(onClick = onDetalles) { Text("Ver detalles", fontSize = 12.sp) }
-        }
-        if (puedeSolicitarCambios) {
-            OutlinedButton(onClick = onAjustes, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.EditNote, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(5.dp))
-                Text("Solicitar ajuste")
-            }
         }
         if (activa) {
             Button(onClick = onRegistrarAvance, enabled = puedeRegistrarAvance, modifier = Modifier.fillMaxWidth(),
