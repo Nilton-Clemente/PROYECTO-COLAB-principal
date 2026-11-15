@@ -22,7 +22,8 @@ class ProyectoServiceTest {
     private final IntegranteRepository integrantes = mock(IntegranteRepository.class);
     private final UsuarioRepository usuarios = mock(UsuarioRepository.class);
     private final TecnologiaRepository tecnologias = mock(TecnologiaRepository.class);
-    private final ProyectoService service = new ProyectoService(proyectos, integrantes, usuarios, tecnologias);
+    private final PlanificacionRepository planificaciones = mock(PlanificacionRepository.class);
+    private final ProyectoService service = new ProyectoService(proyectos, integrantes, usuarios, tecnologias, planificaciones);
     private final Proyecto proyecto = new Proyecto();
 
     @BeforeEach
@@ -135,6 +136,27 @@ class ProyectoServiceTest {
         assertThat(respuesta.casosDeUso()).containsExactly(basico);
         assertThat(proyecto.getCasosDeUso()).hasSize(1);
         assertThat(proyecto.getCasosDeUso().getFirst().getPrecondiciones()).isNull();
+    }
+
+    @Test
+    void editarRechazaSiYaExistePlanificacion() {
+        when(planificaciones.existsByProyectoId(2L)).thenReturn(true);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.editarProyecto(2L, requerimientos(List.of(), List.of())))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+    }
+
+    @Test
+    void invitarRechazaSiYaExistePlanificacion() {
+        when(planificaciones.existsByProyectoId(2L)).thenReturn(true);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.invitar(2L, "ana@example.com"))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+    }
+
+    @Test
+    void eliminarIntegranteRechazaSiYaExistePlanificacion() {
+        when(planificaciones.existsByProyectoId(2L)).thenReturn(true);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.eliminarIntegrante(2L, 99L))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
     }
 
     private CasoUsoDto casoDetallado() {
