@@ -6,7 +6,7 @@ Servicio Django conectado a PostgreSQL. Django administra sus propias tablas en 
 
 1. Crear un entorno virtual e instalar `requirements.txt`.
 2. Configurar `DJANGO_SECRET_KEY`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST` y `DB_PORT`. Opcionalmente, configurar `DJANGO_DEBUG` y `DJANGO_ALLOWED_HOSTS`. Para el restablecimiento de contraseñas, configurar `ADMIN_API_KEY` (clave compartida con backend-usuario) y, si corresponde, `BACKEND_USUARIO_URL` (por defecto `http://localhost:8081`).
-3. Crear previamente el esquema `admin` en PostgreSQL, con un usuario que tenga los permisos necesarios, y ejecutar `python manage.py migrate`.
+3. El esquema `admin` se crea automáticamente al conectar (no hace falta un `CREATE SCHEMA` manual); solo asegúrate de que el usuario de PostgreSQL tenga permisos de creación de esquemas (`CREATE`). Luego ejecutar `python manage.py migrate`.
 4. Configurar `ADMIN_PASSWORD` y ejecutar `python manage.py crear_admin`. El nombre de usuario predeterminado es `admin@tecsup.edu.pe`; se puede cambiar con `ADMIN_EMAIL`. La contraseña de ejemplo acordada es solo para desarrollo, no para producción.
 5. Iniciar el servidor con `python manage.py runserver`.
 
