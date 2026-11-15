@@ -553,3 +553,5 @@ a:hover { text-decoration: underline; }
 .modal--confirmacion { max-width: 440px; }
 .modal__texto { font-size: 13px; line-height: 1.7; color: var(--tinta); }
 .modal__cabecera--aviso { background: var(--rojo-suave); }
+
+.adm-avatar--icono { font-size: 16px; }

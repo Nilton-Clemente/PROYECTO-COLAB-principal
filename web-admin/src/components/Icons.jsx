@@ -178,3 +178,12 @@ export function IconPlus(props) {
     </svg>
   );
 }
+
+export function IconTerminal(props) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="m7 9 3 3-3 3M13 15h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

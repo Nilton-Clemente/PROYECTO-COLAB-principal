@@ -43,3 +43,19 @@ export async function actualizarHabilidad(id, datos) {
 export async function eliminarHabilidad(id) {
   return pedir(`/habilidades/${id}/`, { metodo: 'DELETE' });
 }
+
+export async function listarTecnologias() {
+  return pedir('/tecnologias/');
+}
+
+export async function crearTecnologia(datos) {
+  return pedir('/tecnologias/', { metodo: 'POST', cuerpo: datos });
+}
+
+export async function actualizarTecnologia(id, datos) {
+  return pedir(`/tecnologias/${id}/`, { metodo: 'PATCH', cuerpo: datos });
+}
+
+export async function eliminarTecnologia(id) {
+  return pedir(`/tecnologias/${id}/`, { metodo: 'DELETE' });
+}
