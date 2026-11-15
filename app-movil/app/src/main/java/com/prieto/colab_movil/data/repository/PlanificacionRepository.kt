@@ -5,6 +5,7 @@ import com.prieto.colab_movil.data.model.DependenciaRequestDto
 import com.prieto.colab_movil.data.model.EtapaRequestDto
 import com.prieto.colab_movil.data.model.EtapaResponseDto
 import com.prieto.colab_movil.data.model.PlanificacionResponseDto
+import com.prieto.colab_movil.data.model.PlanificacionUpdateRequestDto
 import com.prieto.colab_movil.data.model.TareaRequestDto
 import com.prieto.colab_movil.data.model.TareaResponseDto
 import com.prieto.colab_movil.data.remote.PlanificacionApiService
@@ -26,6 +27,7 @@ interface PlanificacionRepository {
     /** Devuelve la planificación o `null` cuando el proyecto aún no la tiene (HTTP 404). */
     suspend fun verPlanificacion(proyectoId: Long): Result<PlanificacionResponseDto?>
     suspend fun generarPlanificacion(proyectoId: Long): Result<PlanificacionResponseDto>
+    suspend fun guardarPlanificacion(proyectoId: Long, request: PlanificacionUpdateRequestDto): Result<PlanificacionResponseDto>
     suspend fun crearEtapa(proyectoId: Long, request: EtapaRequestDto): Result<EtapaResponseDto>
     suspend fun editarEtapa(proyectoId: Long, etapaId: Long, request: EtapaRequestDto): Result<EtapaResponseDto>
     suspend fun eliminarEtapa(proyectoId: Long, etapaId: Long): Result<Unit>
@@ -56,6 +58,12 @@ class PlanificacionRepositoryImpl(
                 Result.failure(IOException("No se pudo consultar la planificación. Verifica tu conexión.", e))
             }
         }
+
+    override suspend fun guardarPlanificacion(
+        proyectoId: Long,
+        request: PlanificacionUpdateRequestDto
+    ): Result<PlanificacionResponseDto> =
+        ejecutar { apiService.guardarPlanificacion(proyectoId, request) }
 
     override suspend fun generarPlanificacion(proyectoId: Long): Result<PlanificacionResponseDto> =
         withContext(Dispatchers.IO) {

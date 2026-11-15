@@ -4,6 +4,7 @@ import com.prieto.colab_movil.data.model.DependenciaRequestDto
 import com.prieto.colab_movil.data.model.EtapaRequestDto
 import com.prieto.colab_movil.data.model.EtapaResponseDto
 import com.prieto.colab_movil.data.model.PlanificacionResponseDto
+import com.prieto.colab_movil.data.model.PlanificacionUpdateRequestDto
 import com.prieto.colab_movil.data.model.TareaRequestDto
 import com.prieto.colab_movil.data.model.TareaResponseDto
 import retrofit2.Response
@@ -20,6 +21,12 @@ interface PlanificacionApiService {
 
     @POST("api/proyectos/{proyectoId}/planificacion")
     suspend fun generarPlanificacion(@Path("proyectoId") proyectoId: Long): Response<PlanificacionResponseDto>
+
+    @PUT("api/proyectos/{proyectoId}/planificacion")
+    suspend fun guardarPlanificacion(
+        @Path("proyectoId") proyectoId: Long,
+        @Body request: PlanificacionUpdateRequestDto
+    ): Response<PlanificacionResponseDto>
 
     @POST("api/proyectos/{proyectoId}/etapas")
     suspend fun crearEtapa(

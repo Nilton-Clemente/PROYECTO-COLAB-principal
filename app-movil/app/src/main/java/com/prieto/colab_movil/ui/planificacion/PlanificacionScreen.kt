@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Rule
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -221,7 +220,6 @@ fun PlanificacionScreen(
     proyectoId: Long,
     viewModel: PlanificacionViewModel = viewModel(),
     onBack: () -> Unit = {},
-    onValidateRules: () -> Unit = {},
     onEditar: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -252,12 +250,14 @@ fun PlanificacionScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onEditar, enabled = uiState is PlanificacionUiState.Success) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Editar planificación",
-                            tint = Primary
-                        )
+                    if ((uiState as? PlanificacionUiState.Success)?.planificacion?.estado?.trim()?.uppercase() == "PROPUESTA") {
+                        IconButton(onClick = onEditar) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Editar planificación",
+                                tint = Primary
+                            )
+                        }
                     }
                     Box(
                         modifier = Modifier
@@ -339,8 +339,7 @@ fun PlanificacionScreen(
                         proyecto = state.proyecto,
                         planificacion = state.planificacion,
                         phases = phases,
-                        allTasks = allTasks,
-                        onValidateRules = onValidateRules
+                        allTasks = allTasks
                     )
                 }
             }
@@ -395,8 +394,7 @@ private fun PlanificacionContenido(
     proyecto: ProyectoResponseDto?,
     planificacion: PlanificacionResponseDto,
     phases: List<ProjectPhase>,
-    allTasks: List<ProjectTask>,
-    onValidateRules: () -> Unit
+    allTasks: List<ProjectTask>
 ) {
     var selectedPhaseIndex by remember { mutableStateOf(0) }
     var selectedFilter by remember { mutableStateOf<TaskStatus?>(null) }
@@ -420,7 +418,7 @@ private fun PlanificacionContenido(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        ProjectHeader(proyecto, planificacion, onValidateRules)
+        ProjectHeader(proyecto, planificacion)
 
         ProjectMetrics(allTasks, phases.size)
 
@@ -539,30 +537,12 @@ private fun PlanificacionContenido(
 @Composable
 private fun ProjectHeader(
     proyecto: ProyectoResponseDto?,
-    planificacion: PlanificacionResponseDto,
-    onValidateRules: () -> Unit
+    planificacion: PlanificacionResponseDto
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                SmallTag("PROYECTO #${proyecto?.id ?: planificacion.proyectoId}")
-                SmallTag("plan-${planificacion.id}")
-            }
-
-            TextButton(onClick = onValidateRules) {
-                Icon(
-                    Icons.Default.Rule,
-                    contentDescription = null,
-                    tint = Primary,
-                    modifier = Modifier.size(17.dp)
-                )
-                Spacer(Modifier.width(4.dp))
-                Text("Validar reglas", color = Primary, fontSize = 11.sp)
-            }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            SmallTag("PROYECTO #${proyecto?.id ?: planificacion.proyectoId}")
+            SmallTag("plan-${planificacion.id}")
         }
 
         Surface(color = SecondaryContainer, shape = RoundedCornerShape(50)) {

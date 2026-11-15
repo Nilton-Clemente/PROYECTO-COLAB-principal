@@ -164,7 +164,6 @@ fun AppNavigation(
             PlanificacionScreen(
                 proyectoId = planProyectoId,
                 onBack = { navController.popBackStack() },
-                onValidateRules = { Toast.makeText(context, "Validar reglas", Toast.LENGTH_SHORT).show() },
                 onEditar = { navController.navigate(Screen.EditarPlanificacion.createRoute(planProyectoId)) }
             )
         }
