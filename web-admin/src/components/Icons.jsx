@@ -89,3 +89,67 @@ export function IconShield(props) {
     </svg>
   );
 }
+
+export function IconSearch(props) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" />
+      <path d="m20.5 20.5-4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconKey(props) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="8" cy="15" r="4.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M11.5 11.5 20 3M15.5 7.5l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconBlock(props) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M5.6 5.6 18.4 18.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconUnlock(props) {
+  return (
+    <svg {...base(props)}>
+      <rect x="5" y="10" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M8 10V7a4 4 0 0 1 7.6-1.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconCopy(props) {
+  return (
+    <svg {...base(props)}>
+      <rect x="9" y="9" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M5 15V6a2 2 0 0 1 2-2h9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconCheck(props) {
+  return (
+    <svg {...base(props)}>
+      <path d="m5 12.5 4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconUsers(props) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="9" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="17" cy="9.5" r="2.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M16.5 14.2c2.6.3 4.5 2.2 4.5 4.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
