@@ -1,5 +1,7 @@
+import urllib.error
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -165,3 +167,43 @@ class UsuarioApiTests(TestCase):
         self.assertTrue(self.cliente.post('/api/admin/usuarios/1/bloquear/').data['bloqueada'])
         self.assertTrue(self.cliente.get('/api/admin/usuarios/1/').data['bloqueada'])
         self.assertFalse(self.cliente.post('/api/admin/usuarios/1/desbloquear/').data['bloqueada'])
+
+    def test_restablecer_contrasena(self):
+        self.cliente.force_authenticate(user=self.admin)
+        with patch('core.services.urllib.request.urlopen') as urlopen:
+            respuesta = self.cliente.post(
+                '/api/admin/usuarios/1/restablecer_contrasena/',
+                {'contrasena': 'nueva-clave-segura'},
+                format='json',
+            )
+            self.assertEqual(respuesta.status_code, 200)
+            peticion = urlopen.call_args[0][0]
+            self.assertEqual(peticion.get_full_url(), 'http://localhost:8081/api/admin/usuarios/1/contrasena')
+            self.assertEqual(peticion.get_header('X-admin-key'), settings.ADMIN_API_KEY)
+            self.assertIn(b'nueva-clave-segura', peticion.data)
+
+    def test_restablecer_contrasena_valida_entrada(self):
+        self.cliente.force_authenticate(user=self.admin)
+        respuesta = self.cliente.post(
+            '/api/admin/usuarios/1/restablecer_contrasena/',
+            {'contrasena': '123'},
+            format='json',
+        )
+        self.assertEqual(respuesta.status_code, 400)
+
+    def test_restablecer_contrasena_error_del_backend(self):
+        self.cliente.force_authenticate(user=self.admin)
+        error = urllib.error.HTTPError(
+            'http://localhost:8081/api/admin/usuarios/1/contrasena',
+            401,
+            'Unauthorized',
+            None,
+            None,
+        )
+        with patch('core.services.urllib.request.urlopen', side_effect=error):
+            respuesta = self.cliente.post(
+                '/api/admin/usuarios/1/restablecer_contrasena/',
+                {'contrasena': 'nueva-clave-segura'},
+                format='json',
+            )
+        self.assertEqual(respuesta.status_code, 502)

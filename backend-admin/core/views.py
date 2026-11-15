@@ -6,7 +6,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Habilidad, Tecnologia, Usuario
-from .serializers import HabilidadSerializer, TecnologiaSerializer, UsuarioSerializer
+from .serializers import HabilidadSerializer, RestablecerContrasenaSerializer, TecnologiaSerializer, UsuarioSerializer
+from .services import BackendUsuarioError, restablecer_contrasena
 
 
 class HabilidadViewSet(viewsets.ModelViewSet):
@@ -81,3 +82,24 @@ class UsuarioViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
         usuario.bloqueada = False
         usuario.save(update_fields=['bloqueada'])
         return Response(self.get_serializer(usuario).data)
+
+    @action(detail=True, methods=['post'])
+    def restablecer_contrasena(self, request, pk=None):
+        usuario = self.get_object()
+        serializador = RestablecerContrasenaSerializer(data=request.data)
+        serializador.is_valid(raise_exception=True)
+        try:
+            restablecer_contrasena(usuario.id, serializador.validated_data['contrasena'])
+        except BackendUsuarioError as exc:
+            if exc.codigo_estado == status.HTTP_404_NOT_FOUND:
+                raise Http404
+            if exc.codigo_estado == status.HTTP_401_UNAUTHORIZED:
+                return Response(
+                    {'detail': 'Clave de administración no válida entre backends.'},
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
+            return Response(
+                {'detail': exc.detalle or 'No se pudo restablecer la contraseña.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response({'detail': 'Contraseña actualizada.'})

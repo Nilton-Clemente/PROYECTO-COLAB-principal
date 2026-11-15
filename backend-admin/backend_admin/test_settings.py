@@ -8,3 +8,6 @@ ALLOWED_HOSTS = ['testserver']
 # estas tablas PostgreSQL; la inserción de prueba usa last_insert_rowid().
 from django.db.backends.sqlite3.base import DatabaseFeatures
 DatabaseFeatures.can_return_columns_from_insert = False
+
+# Clave compartida para los endpoints internos de backend-usuario.
+ADMIN_API_KEY = 'clave-admin-de-pruebas'

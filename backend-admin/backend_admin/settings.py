@@ -143,3 +143,10 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAdminUser',
     ),
 }
+
+
+# Integración con backend-usuario (Spring Boot).
+# Opción B: Django no calcula hashes de contraseña; delega en el endpoint interno
+# PUT /api/admin/usuarios/{id}/contrasena autenticado con la clave compartida.
+ADMIN_API_KEY = os.environ.get('ADMIN_API_KEY', '')
+BACKEND_USUARIO_URL = os.environ.get('BACKEND_USUARIO_URL', 'http://localhost:8081')
