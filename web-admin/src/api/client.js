@@ -9,10 +9,21 @@ export function onSesionExpirada(callback) {
   alExpirarSesion = callback;
 }
 
+function primerMensaje(datos) {
+  if (!datos || typeof datos !== 'object') return null;
+  if (typeof datos.detail === 'string') return datos.detail;
+  if (typeof datos.message === 'string') return datos.message;
+  // Errores de validación por campo de DRF: { campo: ["mensaje", ...] }
+  for (const clave of Object.keys(datos)) {
+    const valor = datos[clave];
+    if (Array.isArray(valor) && typeof valor[0] === 'string') return valor[0];
+    if (typeof valor === 'string') return valor;
+  }
+  return null;
+}
+
 function mensajeDeError(respuesta, datos) {
-  if (datos && typeof datos.detail === 'string') return datos.detail;
-  if (datos && typeof datos.message === 'string') return datos.message;
-  return `El servidor respondió con un error (${respuesta.status}).`;
+  return primerMensaje(datos) || `El servidor respondió con un error (${respuesta.status}).`;
 }
 
 export async function pedir(ruta, { metodo = 'GET', cuerpo, token = tokenStore.get() } = {}) {

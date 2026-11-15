@@ -27,3 +27,19 @@ export async function restablecerContrasena(id, contrasena) {
     cuerpo: { contrasena },
   });
 }
+
+export async function listarHabilidades() {
+  return pedir('/habilidades/');
+}
+
+export async function crearHabilidad(datos) {
+  return pedir('/habilidades/', { metodo: 'POST', cuerpo: datos });
+}
+
+export async function actualizarHabilidad(id, datos) {
+  return pedir(`/habilidades/${id}/`, { metodo: 'PATCH', cuerpo: datos });
+}
+
+export async function eliminarHabilidad(id) {
+  return pedir(`/habilidades/${id}/`, { metodo: 'DELETE' });
+}

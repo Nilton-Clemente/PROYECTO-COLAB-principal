@@ -153,3 +153,28 @@ export function IconUsers(props) {
     </svg>
   );
 }
+
+export function IconEdit(props) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 20h4L19 9a2.6 2.6 0 0 0-3.7-3.7L4 16.5V20Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M13.5 6.5l3.7 3.7" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconTrash(props) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconPlus(props) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+    </svg>
+  );
+}

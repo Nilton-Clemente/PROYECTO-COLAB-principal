@@ -530,3 +530,26 @@ a:hover { text-decoration: underline; }
   .adm-bar { align-items: stretch; }
   .adm-busqueda { width: 100%; }
 }
+
+/* ---------- Catálogos ---------- */
+.adm-cabecera__fila { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+.adm-filtro-area { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; color: var(--apagado); }
+
+.adm-select {
+  background: var(--campo); border: 1px solid transparent; border-radius: 7px;
+  padding: 8px 10px; font-size: 11px; color: var(--primario-texto); outline: none;
+}
+.adm-select:focus { border-color: var(--primario); background: #fff; }
+
+.adm-area { display: inline-flex; align-items: center; gap: 7px; background: var(--campo); padding: 6px 10px; border-radius: 20px; font-size: 11px; white-space: nowrap; }
+.adm-area__punto { width: 7px; height: 8px; border-radius: 50%; }
+.adm-sin-area { color: var(--apagado-2); font-size: 12px; }
+
+.btn svg { font-size: 16px; }
+
+.btn--peligro-solid { background: #b3261e; color: #fff; }
+.btn--peligro-solid:hover:not(:disabled) { background: #9a1d16; }
+.modal--confirmacion { max-width: 440px; }
+.modal__texto { font-size: 13px; line-height: 1.7; color: var(--tinta); }
+.modal__cabecera--aviso { background: var(--rojo-suave); }
