@@ -124,3 +124,37 @@ class HabilidadApiTests(TestCase):
             cursor.execute('DELETE FROM usuario.proyecto_tecnologia')
         self.assertEqual(self.cliente.delete(detalle).status_code, 204)
         self.assertEqual(self.cliente.get(detalle).status_code, 404)
+class UsuarioApiTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # El esquema `usuario` ya está adjunto por HabilidadApiTests en esta suite.
+        with connection.cursor() as cursor:
+            cursor.execute('CREATE TABLE usuario.usuario (id INTEGER PRIMARY KEY AUTOINCREMENT, email VARCHAR(255) NOT NULL UNIQUE, contrasena_hash VARCHAR(255) NOT NULL, nombre VARCHAR(255) NOT NULL, fecha_registro TIMESTAMP, bloqueada BOOLEAN NOT NULL DEFAULT 0)')
+
+    @classmethod
+    def tearDownClass(cls):
+        with connection.cursor() as cursor:
+            cursor.execute('DROP TABLE usuario.usuario')
+        super().tearDownClass()
+
+    def setUp(self):
+        self.cliente = APIClient()
+        self.admin = get_user_model().objects.create_user(username='admin-usuarios', password='clave', is_staff=True)
+        with connection.cursor() as cursor:
+            cursor.execute('INSERT INTO usuario.usuario (email, contrasena_hash, nombre) VALUES (%s, %s, %s)', ['ana@tecsup.edu.pe', 'hash', 'Ana'])
+
+    def test_listado_y_envio_requieren_administrador(self):
+        self.assertEqual(self.cliente.get('/api/admin/usuarios/').status_code, 401)
+        usuario_comun = get_user_model().objects.create_user(username='normal-usuarios', password='clave')
+        self.cliente.force_authenticate(user=usuario_comun)
+        self.assertEqual(self.cliente.get('/api/admin/usuarios/').status_code, 403)
+
+    def test_listado_consulta_y_busqueda(self):
+        self.cliente.force_authenticate(user=self.admin)
+        self.assertEqual(len(self.cliente.get('/api/admin/usuarios/').data), 1)
+        self.assertEqual(self.cliente.get('/api/admin/usuarios/?q=zzz').data, [])
+        self.assertEqual(len(self.cliente.get('/api/admin/usuarios/?q=ana').data), 1)
+        detalle = self.cliente.get('/api/admin/usuarios/1/')
+        self.assertEqual(detalle.status_code, 200)
+        self.assertEqual(detalle.data['email'], 'ana@tecsup.edu.pe')

@@ -1,10 +1,11 @@
 from django.db import connection, transaction
+from django.db.models import Q
 from django.http import Http404
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.response import Response
 
-from .models import Habilidad, Tecnologia
-from .serializers import HabilidadSerializer, TecnologiaSerializer
+from .models import Habilidad, Tecnologia, Usuario
+from .serializers import HabilidadSerializer, TecnologiaSerializer, UsuarioSerializer
 
 
 class HabilidadViewSet(viewsets.ModelViewSet):
@@ -53,3 +54,15 @@ class TecnologiaViewSet(viewsets.ModelViewSet):
                     )
             tecnologia.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UsuarioViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    queryset = Usuario.objects.all()
+    serializer_class = UsuarioSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        q = self.request.query_params.get('q')
+        if q:
+            qs = qs.filter(Q(email__icontains=q) | Q(nombre__icontains=q))
+        return qs
