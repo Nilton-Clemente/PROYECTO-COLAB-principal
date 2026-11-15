@@ -66,10 +66,14 @@ class HabilidadApiTests(TestCase):
             cursor.execute("ATTACH DATABASE ':memory:' AS usuario")
             cursor.execute('CREATE TABLE usuario.habilidad (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre VARCHAR(255) NOT NULL UNIQUE, area VARCHAR(255))')
             cursor.execute('CREATE TABLE usuario.usuario_habilidad (usuario_id INTEGER NOT NULL, habilidad_id INTEGER NOT NULL)')
+            cursor.execute('CREATE TABLE usuario.tecnologia (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre VARCHAR(255) NOT NULL UNIQUE)')
+            cursor.execute('CREATE TABLE usuario.proyecto_tecnologia (proyecto_id INTEGER NOT NULL, tecnologia_id INTEGER NOT NULL)')
 
     @classmethod
     def tearDownClass(cls):
         with connection.cursor() as cursor:
+            cursor.execute('DROP TABLE usuario.proyecto_tecnologia')
+            cursor.execute('DROP TABLE usuario.tecnologia')
             cursor.execute('DROP TABLE usuario.usuario_habilidad')
             cursor.execute('DROP TABLE usuario.habilidad')
         super().tearDownClass()
@@ -99,5 +103,24 @@ class HabilidadApiTests(TestCase):
         self.assertEqual(self.cliente.delete(detalle).status_code, 409)
         with connection.cursor() as cursor:
             cursor.execute('DELETE FROM usuario.usuario_habilidad')
+        self.assertEqual(self.cliente.delete(detalle).status_code, 204)
+        self.assertEqual(self.cliente.get(detalle).status_code, 404)
+
+    def test_crud_tecnologia_y_proteccion_de_asociaciones(self):
+        url = '/api/admin/tecnologias/'
+        self.assertEqual(self.cliente.get(url).status_code, 401)
+        self.cliente.force_authenticate(user=self.admin)
+        self.assertEqual(self.cliente.post(url, {'nombre': ' '}, format='json').status_code, 400)
+        creado = self.cliente.post(url, {'nombre': 'React'}, format='json')
+        self.assertEqual(creado.status_code, 201)
+        detalle = f"{url}{creado.data['id']}/"
+        self.assertEqual(self.cliente.post(url, {'nombre': 'React'}, format='json').status_code, 400)
+        self.assertEqual(len(self.cliente.get(url).data), 1)
+        self.assertEqual(self.cliente.patch(detalle, {'nombre': 'Kotlin'}, format='json').status_code, 200)
+        with connection.cursor() as cursor:
+            cursor.execute('INSERT INTO usuario.proyecto_tecnologia VALUES (%s, %s)', [1, creado.data['id']])
+        self.assertEqual(self.cliente.delete(detalle).status_code, 409)
+        with connection.cursor() as cursor:
+            cursor.execute('DELETE FROM usuario.proyecto_tecnologia')
         self.assertEqual(self.cliente.delete(detalle).status_code, 204)
         self.assertEqual(self.cliente.get(detalle).status_code, 404)

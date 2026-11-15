@@ -18,10 +18,11 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from core.views import HabilidadViewSet
+from core.views import HabilidadViewSet, TecnologiaViewSet
 
 router = DefaultRouter()
 router.register('habilidades', HabilidadViewSet, basename='admin-habilidad')
+router.register('tecnologias', TecnologiaViewSet, basename='admin-tecnologia')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

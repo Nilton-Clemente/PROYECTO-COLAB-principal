@@ -12,4 +12,8 @@ Servicio Django conectado a PostgreSQL. Django administra sus propias tablas en 
 
 El login JWT está disponible en `POST /api/admin/auth/login/`, con los campos `username` y `password`. El token se renueva en `POST /api/admin/auth/refresh/`. Los endpoints DRF protegidos requieren un usuario activo con `is_staff`.
 
+## Catálogos (HU-19)
+
+Los recursos `/api/admin/habilidades/` y `/api/admin/tecnologias/` permiten listar y crear con GET y POST; para consultar, editar o eliminar un elemento se usa `/{id}/` con GET, PUT/PATCH o DELETE. Los nombres son obligatorios y únicos; las habilidades admiten un área opcional. Se responde con 409 si se intenta eliminar una habilidad asignada a usuarios o una tecnología vinculada a proyectos. Las tablas son gestionadas por Flyway, no por migraciones Django.
+
 Ejecutar las pruebas aisladas con `python manage.py test core --settings=backend_admin.test_settings`. Estas usan SQLite y no sustituyen las pruebas de integración con PostgreSQL y los esquemas reales.
