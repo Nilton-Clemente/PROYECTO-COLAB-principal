@@ -1,17 +1,15 @@
-# Backend de Administración (Django)
+# Backend de administración
 
-Backend del área de **Administración**.
+Servicio Django conectado a PostgreSQL. Django administra sus propias tablas en el esquema `admin`; las tablas del esquema `usuario` corresponden al backend Spring Boot y sus migraciones Flyway.
 
-- **Responsable:** Persona 3
-- **Tecnología:** Python + Django, PostgreSQL (esquema `admin`, migraciones de Django).
+## Configuración local
 
-## Puesta en marcha
+1. Crear un entorno virtual e instalar `requirements.txt`.
+2. Configurar `DJANGO_SECRET_KEY`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST` y `DB_PORT`. Opcionalmente, configurar `DJANGO_DEBUG` y `DJANGO_ALLOWED_HOSTS`.
+3. Crear previamente el esquema `admin` en PostgreSQL, con un usuario que tenga los permisos necesarios, y ejecutar `python manage.py migrate`.
+4. Configurar `ADMIN_PASSWORD` y ejecutar `python manage.py crear_admin`. El nombre de usuario predeterminado es `admin@tecsup.edu.pe`; se puede cambiar con `ADMIN_EMAIL`. La contraseña de ejemplo acordada es solo para desarrollo, no para producción.
+5. Iniciar el servidor con `python manage.py runserver`.
 
-1. Crear el proyecto con `django-admin startproject` dentro de esta carpeta.
-2. Configurar la conexión a PostgreSQL apuntando al esquema `admin`.
+El login JWT está disponible en `POST /api/admin/auth/login/`, con los campos `username` y `password`. El token se renueva en `POST /api/admin/auth/refresh/`. Los endpoints DRF protegidos requieren un usuario activo con `is_staff`.
 
-## Responsabilidades principales
-
-Operaciones administrativas del sistema (funciones por definir — ver [`docs/03-objetivos-y-alcance.md`](../docs/03-objetivos-y-alcance.md)).
-
-> **Nota:** este backend comparte la misma instancia PostgreSQL que `backend-usuario`, pero en un esquema separado (`admin`). Ver [`docs/ARQUITECTURA.md`](../docs/ARQUITECTURA.md#4-base-de-datos-compartida).
+Ejecutar las pruebas aisladas con `python manage.py test core --settings=backend_admin.test_settings`. Estas usan SQLite y no sustituyen las pruebas de integración con PostgreSQL y los esquemas reales.
