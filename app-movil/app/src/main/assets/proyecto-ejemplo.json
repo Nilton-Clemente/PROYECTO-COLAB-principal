@@ -1,0 +1,35 @@
+{
+  "nombre": "Gestor de proyectos colaborativos",
+  "descripcion": "Aplicación para organizar proyectos, tareas y avances de un equipo.",
+  "problematica": "Los equipos necesitan centralizar la planificación y el seguimiento de su trabajo.",
+  "objetivoGeneral": "Facilitar la gestión y el seguimiento de proyectos colaborativos.",
+  "objetivosEspecificos": [
+    "Registrar proyectos y sus requisitos",
+    "Planificar las tareas del equipo",
+    "Consultar los avances registrados"
+  ],
+  "alcance": "Registro de proyectos, planificación y seguimiento de tareas.",
+  "restricciones": "Se requiere conexión a Internet para guardar los datos.",
+  "fechaEntrega": "2027-06-30",
+  "tecnologias": [],
+  "requerimientosFuncionales": [
+    { "codigo": "RF-01", "descripcion": "El usuario puede crear un proyecto." }
+  ],
+  "requerimientosNoFuncionales": [
+    { "categoria": "Seguridad", "descripcion": "Solo los usuarios autenticados pueden crear proyectos." }
+  ],
+  "casosDeUso": [
+    {
+      "nombre": "Crear proyecto",
+      "descripcion": "Registrar los datos iniciales de un proyecto.",
+      "actores": "Usuario autenticado",
+      "precondiciones": "El usuario ha iniciado sesión.",
+      "disparador": "El usuario selecciona Crear Proyecto.",
+      "flujoPrincipal": "1. Completar los datos del formulario.\n2. Pulsar Guardar Proyecto.\n3. Confirmar el registro.",
+      "flujosAlternativos": "Importar un JSON para completar los datos rápidamente.",
+      "excepciones": "Si falla la conexión, mostrar el error y permitir reintentar.",
+      "postcondiciones": "El proyecto queda registrado.",
+      "reglasDeNegocio": "El nombre del proyecto es obligatorio."
+    }
+  ]
+}

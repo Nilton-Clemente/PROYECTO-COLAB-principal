@@ -24,8 +24,8 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Rule
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -38,6 +38,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -219,7 +220,7 @@ fun PlanificacionScreen(
     proyectoId: Long,
     viewModel: PlanificacionViewModel = viewModel(),
     onBack: () -> Unit = {},
-    onValidateRules: () -> Unit = {}
+    onEditar: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -276,7 +277,7 @@ fun PlanificacionScreen(
                         color = Primary
                     )
                 }
-                is PlanificacionUiState.Generating -> {
+                is PlanificacionUiState.Generating, is PlanificacionUiState.CheckingGeneration -> {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -284,14 +285,34 @@ fun PlanificacionScreen(
                         CircularProgressIndicator(color = Primary)
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            "Generando planificación con IA…",
+                            if (state is PlanificacionUiState.Generating) "Generando planificación con IA…"
+                            else "Comprobando el resultado de la generación…",
                             color = OnSurfaceVariant,
                             fontSize = 14.sp
                         )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "La IA puede tardar unos minutos. No necesitas volver a generar.",
+                            modifier = Modifier.padding(horizontal = 24.dp),
+                            color = OnSurfaceVariant,
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
-                is PlanificacionUiState.Empty -> {
-                    EmptyPlanificacion(onGenerar = { viewModel.generar(proyectoId) })
+                is PlanificacionUiState.PendingGeneration -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text("Generación pendiente de confirmar", color = OnSurface, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(12.dp))
+                        Text(state.message, color = OnSurfaceVariant, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(16.dp))
+                        Button(onClick = { viewModel.consultarResultado(proyectoId) }) { Text("Consultar resultado") }
+                        TextButton(onClick = onBack) { Text("Volver al proyecto") }
+                    }
                 }
                 is PlanificacionUiState.Error -> {
                     ErrorPlanificacion(
@@ -310,43 +331,10 @@ fun PlanificacionScreen(
                         planificacion = state.planificacion,
                         phases = phases,
                         allTasks = allTasks,
-                        onValidateRules = onValidateRules
+                        onEditar = onEditar
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun EmptyPlanificacion(onGenerar: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            "Aún no hay planificación para este proyecto.",
-            color = OnSurface,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "Genera una propuesta de planificación con IA a partir de la información registrada.",
-            color = OnSurfaceVariant,
-            fontSize = 13.sp,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(20.dp))
-        Button(
-            onClick = onGenerar,
-            colors = ButtonDefaults.buttonColors(containerColor = Primary)
-        ) {
-            Text("Generar planificación con IA")
         }
     }
 }
@@ -399,7 +387,7 @@ private fun PlanificacionContenido(
     planificacion: PlanificacionResponseDto,
     phases: List<ProjectPhase>,
     allTasks: List<ProjectTask>,
-    onValidateRules: () -> Unit
+    onEditar: () -> Unit
 ) {
     var selectedPhaseIndex by remember { mutableStateOf(0) }
     var selectedFilter by remember { mutableStateOf<TaskStatus?>(null) }
@@ -423,7 +411,7 @@ private fun PlanificacionContenido(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        ProjectHeader(proyecto, planificacion, onValidateRules)
+        ProjectHeader(proyecto, planificacion, onEditar)
 
         ProjectMetrics(allTasks, phases.size)
 
@@ -543,31 +531,9 @@ private fun PlanificacionContenido(
 private fun ProjectHeader(
     proyecto: ProyectoResponseDto?,
     planificacion: PlanificacionResponseDto,
-    onValidateRules: () -> Unit
+    onEditar: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                SmallTag("PROYECTO #${proyecto?.id ?: planificacion.proyectoId}")
-                SmallTag("plan-${planificacion.id}")
-            }
-
-            TextButton(onClick = onValidateRules) {
-                Icon(
-                    Icons.Default.Rule,
-                    contentDescription = null,
-                    tint = Primary,
-                    modifier = Modifier.size(17.dp)
-                )
-                Spacer(Modifier.width(4.dp))
-                Text("Validar reglas", color = Primary, fontSize = 11.sp)
-            }
-        }
-
         Surface(color = SecondaryContainer, shape = RoundedCornerShape(50)) {
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
@@ -589,32 +555,35 @@ private fun ProjectHeader(
             }
         }
 
-        Text(
-            "Plan Maestro: ${proyecto?.nombre ?: "Proyecto"}",
-            color = OnSurface,
-            fontSize = 24.sp,
-            lineHeight = 31.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "Plan Maestro: ${proyecto?.nombre ?: "Proyecto"}",
+                modifier = Modifier.weight(1f),
+                color = OnSurface,
+                fontSize = 24.sp,
+                lineHeight = 31.sp,
+                fontWeight = FontWeight.Bold
+            )
+            if (planificacion.estado?.trim()?.uppercase() == "PROPUESTA") {
+                IconButton(onClick = onEditar) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Editar planificación",
+                        tint = Primary
+                    )
+                }
+            }
+        }
 
         Text(
             proyecto?.descripcion ?: "Desglose estructurado en fases de entrega técnica.",
             color = OnSurfaceVariant,
             fontSize = 14.sp,
             lineHeight = 20.sp
-        )
-    }
-}
-
-@Composable
-private fun SmallTag(text: String) {
-    Surface(color = SurfaceContainer, shape = RoundedCornerShape(6.dp)) {
-        Text(
-            text,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-            color = OnSurfaceVariant,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Medium
         )
     }
 }

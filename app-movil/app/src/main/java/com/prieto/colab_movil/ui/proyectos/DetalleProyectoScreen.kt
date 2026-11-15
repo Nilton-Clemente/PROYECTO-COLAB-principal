@@ -48,7 +48,7 @@ private val ErrorContainer = Color(0xFFFFDAD6)
 private val OnErrorContainer = Color(0xFF93000A)
 
 /* ───────────── Enum y Clases de Soporte UI ───────────── */
-enum class Pestana(val titulo: String) { INFO("Información"), EQUIPO("Equipo"), HITOS("Hitos") }
+enum class Pestana(val titulo: String) { INFO("Información"), EQUIPO("Equipo") }
 
 enum class Etiqueta(val texto: String, val fondo: Color, val fg: Color) {
     ALTA("Alta Prioridad", ErrorContainer, OnErrorContainer),
@@ -61,9 +61,6 @@ data class Requerimiento(val codigo: String, val titulo: String, val detalle: St
 data class Tech(val nombre: String, val destacado: Boolean = false, val neutro: Boolean = false)
 data class Miembro(val iniciales: String, val nombre: String, val rol: String, val tag: String)
 
-enum class EstadoHito { COMPLETADO, EN_REVISION, PENDIENTE }
-data class Hito(val titulo: String, val detalle: String, val estado: EstadoHito, val fecha: String? = null)
-
 @Composable
 fun DetalleProyectoScreen(
     proyectoId: Long = 1L,
@@ -71,7 +68,8 @@ fun DetalleProyectoScreen(
     onBack: () -> Unit = {},
     onEditar: () -> Unit = {},
     onGenerarPlanificacion: () -> Unit = {},
-    onPerfil: () -> Unit = {}
+    onPerfil: () -> Unit = {},
+    onMisTareas: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -121,8 +119,10 @@ fun DetalleProyectoScreen(
                     DetalleProyectoContenido(
                         proyectoDto = state.proyecto,
                         equipoDto = state.equipo,
+                        tienePlanificacion = state.tienePlanificacion,
                         onEditar = onEditar,
-                        onGenerarPlanificacion = onGenerarPlanificacion
+                        onGenerarPlanificacion = onGenerarPlanificacion,
+                        onMisTareas = onMisTareas
                     )
                 }
             }
@@ -134,8 +134,10 @@ fun DetalleProyectoScreen(
 private fun DetalleProyectoContenido(
     proyectoDto: ProyectoResponseDto,
     equipoDto: List<IntegranteResponseDto>,
+    tienePlanificacion: Boolean,
     onEditar: () -> Unit,
-    onGenerarPlanificacion: () -> Unit
+    onGenerarPlanificacion: () -> Unit,
+    onMisTareas: () -> Unit
 ) {
     var pestana by remember { mutableStateOf(Pestana.INFO) }
 
@@ -197,13 +199,6 @@ private fun DetalleProyectoContenido(
         )
     }
 
-    val hitos = listOf(
-        Hito("Hito 1: Definición de Arquitectura", "Diagrama de entidades y componentes del sistema.", EstadoHito.COMPLETADO),
-        Hito("Hito 2: Desarrollo del Core y APIs", "Endpoints REST e integración inicial.", EstadoHito.COMPLETADO),
-        Hito("Hito 3: Pruebas e Integración Frontend", "Vistas reactivas y consumo de servicios.", EstadoHito.EN_REVISION, proyectoDto.fechaEntrega ?: "Próximamente"),
-        Hito("Hito 4: Despliegue y Entrega Final", "Publicación final del proyecto.", EstadoHito.PENDIENTE)
-    )
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -211,14 +206,22 @@ private fun DetalleProyectoContenido(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Cabecera(codigo, titulo, descripcion, onEditar, onGenerarPlanificacion)
+        Cabecera(codigo, titulo, descripcion, tienePlanificacion, onEditar, onGenerarPlanificacion)
+        OutlinedButton(
+            onClick = onMisTareas,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Outlined.Checklist, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Mis tareas y confirmaciones", fontWeight = FontWeight.SemiBold)
+        }
         Tabs(pestana, equipo.size) { pestana = it }
         ResumenCard(hitoActual = 3, hitosTotal = 4, progreso = 0.75f, entregaFinal = proyectoDto.fechaEntrega ?: "15 Dic, 2024")
 
         when (pestana) {
             Pestana.INFO -> InfoTab(problematica, objetivoGeneral, objetivosEspecificos, stack, requerimientos)
             Pestana.EQUIPO -> EquipoProyectoContent(equipoDto = equipoDto)
-            Pestana.HITOS -> HitosTab(hitos)
         }
         Spacer(Modifier.height(16.dp))
     }
@@ -255,7 +258,7 @@ private fun DetalleTopBar(onBack: () -> Unit, onPerfil: () -> Unit) {
 
 /* ───────────── Cabecera, tabs y resumen ───────────── */
 @Composable
-private fun Cabecera(codigo: String, titulo: String, descripcion: String, onEditar: () -> Unit, onGenerarPlanificacion: () -> Unit) {
+private fun Cabecera(codigo: String, titulo: String, descripcion: String, tienePlanificacion: Boolean, onEditar: () -> Unit, onGenerarPlanificacion: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -297,9 +300,17 @@ private fun Cabecera(codigo: String, titulo: String, descripcion: String, onEdit
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Primary)
         ) {
-            Icon(Icons.Outlined.AutoAwesome, null, modifier = Modifier.size(18.dp))
+            Icon(
+                imageVector = if (tienePlanificacion) Icons.Outlined.Visibility else Icons.Outlined.AutoAwesome,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
             Spacer(Modifier.width(8.dp))
-            Text("Generar planificación con IA", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                if (tienePlanificacion) "Ver planificación" else "Generar planificación con IA",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }
@@ -603,73 +614,6 @@ private fun EquipoTab(equipo: List<Miembro>) {
                     }
                 }
             }
-        }
-    }
-}
-
-/* ───────────── Pestaña Hitos (línea de tiempo) ───────────── */
-@Composable
-private fun HitosTab(hitos: List<Hito>) {
-    Tarjeta {
-        Text("Cronograma de Entregas", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = OnSurface)
-        hitos.forEachIndexed { i, h ->
-            HitoRow(h, esUltimo = i == hitos.lastIndex)
-        }
-    }
-}
-
-@Composable
-private fun HitoRow(h: Hito, esUltimo: Boolean) {
-    val (icono, fondoIcono, fgIcono) = when (h.estado) {
-        EstadoHito.COMPLETADO -> Triple(Icons.Outlined.Check, Secondary, Color.White)
-        EstadoHito.EN_REVISION -> Triple(Icons.Outlined.HourglassTop, Primary, Color.White)
-        EstadoHito.PENDIENTE -> Triple(Icons.Outlined.Schedule, SurfaceHigh, OnSurfaceVariant)
-    }
-    val (etiqueta, colorEtiqueta) = when (h.estado) {
-        EstadoHito.COMPLETADO -> "Completado" to Secondary
-        EstadoHito.EN_REVISION -> "En Revisión" to Primary
-        EstadoHito.PENDIENTE -> "Pendiente" to OnSurfaceVariant
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier.size(28.dp).clip(CircleShape).background(fondoIcono),
-                contentAlignment = Alignment.Center
-            ) { Icon(icono, null, tint = fgIcono, modifier = Modifier.size(16.dp)) }
-            if (!esUltimo) {
-                Box(
-                    modifier = Modifier
-                        .width(2.dp)
-                        .weight(1f)
-                        .background(SurfaceHighest)
-                )
-            }
-        }
-        Column(
-            modifier = Modifier.weight(1f).padding(bottom = if (esUltimo) 0.dp else 16.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(etiqueta.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colorEtiqueta)
-                if (h.fecha != null) {
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(ErrorContainer)
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) { Text(h.fecha, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = OnErrorContainer) }
-                }
-            }
-            Text(h.titulo, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = OnSurface)
-            Text(h.detalle, fontSize = 13.sp, lineHeight = 18.sp, color = OnSurfaceVariant)
         }
     }
 }
