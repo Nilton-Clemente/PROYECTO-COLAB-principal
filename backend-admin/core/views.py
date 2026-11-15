@@ -2,6 +2,7 @@ from django.db import connection, transaction
 from django.db.models import Q
 from django.http import Http404
 from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Habilidad, Tecnologia, Usuario
@@ -66,3 +67,17 @@ class UsuarioViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
         if q:
             qs = qs.filter(Q(email__icontains=q) | Q(nombre__icontains=q))
         return qs
+
+    @action(detail=True, methods=['post'])
+    def bloquear(self, request, pk=None):
+        usuario = self.get_object()
+        usuario.bloqueada = True
+        usuario.save(update_fields=['bloqueada'])
+        return Response(self.get_serializer(usuario).data)
+
+    @action(detail=True, methods=['post'])
+    def desbloquear(self, request, pk=None):
+        usuario = self.get_object()
+        usuario.bloqueada = False
+        usuario.save(update_fields=['bloqueada'])
+        return Response(self.get_serializer(usuario).data)

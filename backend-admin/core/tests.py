@@ -158,3 +158,10 @@ class UsuarioApiTests(TestCase):
         detalle = self.cliente.get('/api/admin/usuarios/1/')
         self.assertEqual(detalle.status_code, 200)
         self.assertEqual(detalle.data['email'], 'ana@tecsup.edu.pe')
+
+    def test_bloquear_y_desbloquear(self):
+        self.cliente.force_authenticate(user=self.admin)
+        self.assertFalse(self.cliente.get('/api/admin/usuarios/1/').data['bloqueada'])
+        self.assertTrue(self.cliente.post('/api/admin/usuarios/1/bloquear/').data['bloqueada'])
+        self.assertTrue(self.cliente.get('/api/admin/usuarios/1/').data['bloqueada'])
+        self.assertFalse(self.cliente.post('/api/admin/usuarios/1/desbloquear/').data['bloqueada'])
