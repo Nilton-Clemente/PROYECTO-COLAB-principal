@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import * as api from '../api/admin.js';
 import ModalRestablecerContrasena from '../components/ModalRestablecerContrasena.jsx';
-import Toast from '../components/Toast.jsx';
+import EstadoTabla from '../components/EstadoTabla.jsx';
+import Vacio from '../components/Vacio.jsx';
+import { useListado } from '../hooks/useListado.js';
+import { useCopiar } from '../hooks/useCopiar.js';
+import { useToast } from '../components/ToastProvider.jsx';
 import {
   IconBlock, IconCheck, IconCopy, IconKey, IconSearch, IconUnlock, IconUsers,
 } from '../components/Icons.jsx';
@@ -14,36 +18,13 @@ const FILTROS = [
 ];
 
 export default function Usuarios() {
-  const [usuarios, setUsuarios] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState('');
+  const { datos: usuarios, setDatos: setUsuarios, cargando, error, recargar } = useListado(api.listarUsuarios);
+  const { mostrarToast } = useToast();
+  const copiar = useCopiar();
   const [busqueda, setBusqueda] = useState('');
   const [filtro, setFiltro] = useState('todos');
   const [modalUsuario, setModalUsuario] = useState(null);
   const [enProceso, setEnProceso] = useState(null);
-  const [toast, setToast] = useState(null);
-
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    setError('');
-    try {
-      setUsuarios(await api.listarUsuarios());
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setCargando(false);
-    }
-  }, []);
-
-  useEffect(() => { cargar(); }, [cargar]);
-
-  useEffect(() => {
-    if (!toast) return undefined;
-    const t = setTimeout(() => setToast(null), 3200);
-    return () => clearTimeout(t);
-  }, [toast]);
-
-  const mostrarToast = (titulo, mensaje, tipo = 'exito') => setToast({ titulo, mensaje, tipo });
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -84,15 +65,6 @@ export default function Usuarios() {
     mostrarToast('Contraseña actualizada', `Se restableció la contraseña de ${usuario.nombre}.`);
   }
 
-  async function copiarId(id) {
-    try {
-      await navigator.clipboard.writeText(String(id));
-      mostrarToast('Identificador copiado', `Código ${id} en el portapapeles.`);
-    } catch {
-      mostrarToast('No se pudo copiar', 'Comprueba los permisos del navegador.', 'error');
-    }
-  }
-
   return (
     <div className="usuarios">
       <section className="adm-cabecera tarjeta">
@@ -124,7 +96,8 @@ export default function Usuarios() {
           </div>
         </div>
       </section>
-<section className="adm-bar tarjeta">
+
+      <section className="adm-bar tarjeta">
         <div className="adm-busqueda">
           <span className="adm-busqueda__icono"><IconSearch /></span>
           <input
@@ -153,16 +126,8 @@ export default function Usuarios() {
           })}
         </div>
       </section>
-
-      <section className="adm-tabla tarjeta">
-        {cargando && <div className="adm-estado"><p>Cargando cuentas…</p></div>}
-
-        {!cargando && error && (
-          <div className="adm-estado" role="alert">
-            <p>{error}</p>
-            <button className="btn btn--primario" type="button" onClick={cargar}>Reintentar</button>
-          </div>
-        )}
+<section className="adm-tabla tarjeta">
+        <EstadoTabla cargando={cargando} error={error} onReintentar={recargar} cargandoTexto="Cargando cuentas…" />
 
         {!cargando && !error && (
           <>
@@ -184,7 +149,7 @@ export default function Usuarios() {
                       <td>
                         <span className="adm-id">
                           {usuario.id}
-                          <button className="adm-copiar" type="button" title="Copiar ID" onClick={() => copiarId(usuario.id)}>
+                          <button className="adm-copiar" type="button" title="Copiar ID" onClick={() => copiar(usuario.id)}>
                             <IconCopy />
                           </button>
                         </span>
@@ -227,14 +192,11 @@ export default function Usuarios() {
             </div>
 
             {filtrados.length === 0 && (
-              <div className="adm-vacio">
-                <IconSearch />
-                <h2>No se encontraron cuentas coincidentes</h2>
-                <p>Verifique el criterio de búsqueda o los filtros aplicados.</p>
-                <button className="btn btn--secundario" type="button" onClick={() => { setBusqueda(''); setFiltro('todos'); }}>
-                  Limpiar filtros
-                </button>
-              </div>
+              <Vacio
+                titulo="No se encontraron cuentas coincidentes"
+                mensaje="Verifique el criterio de búsqueda o los filtros aplicados."
+                onLimpiar={() => { setBusqueda(''); setFiltro('todos'); }}
+              />
             )}
 
             <footer className="adm-tabla__pie">
@@ -251,8 +213,6 @@ export default function Usuarios() {
           onGuardar={(contrasena) => guardarContrasena(modalUsuario, contrasena)}
         />
       )}
-
-      <Toast toast={toast} />
     </div>
   );
 }

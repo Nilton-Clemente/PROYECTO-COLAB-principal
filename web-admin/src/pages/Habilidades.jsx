@@ -1,15 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import * as api from '../api/admin.js';
-import ModalHabilidad from '../components/ModalHabilidad.jsx';
+import ModalCatalogo from '../components/ModalCatalogo.jsx';
 import ModalConfirmacion from '../components/ModalConfirmacion.jsx';
-import Toast from '../components/Toast.jsx';
+import EstadoTabla from '../components/EstadoTabla.jsx';
+import Vacio from '../components/Vacio.jsx';
+import { useListado } from '../hooks/useListado.js';
+import { useCopiar } from '../hooks/useCopiar.js';
+import { useToast } from '../components/ToastProvider.jsx';
 import { IconCopy, IconEdit, IconPlus, IconSearch, IconTrash } from '../components/Icons.jsx';
 import { colorArea } from '../utils.js';
 
+const CAMPOS_HABILIDAD = [
+  { nombre: 'nombre', etiqueta: 'Nombre', obligatorio: true, placeholder: 'Ej. Desarrollo Frontend React', maxLength: 100 },
+  { nombre: 'area', etiqueta: 'Área', obligatorio: false, placeholder: 'Ej. Desarrollo de Software', maxLength: 255 },
+];
+
 export default function Habilidades() {
-  const [habilidades, setHabilidades] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState('');
+  const { datos: habilidades, setDatos: setHabilidades, cargando, error, recargar } = useListado(api.listarHabilidades);
+  const { mostrarToast } = useToast();
+  const copiar = useCopiar();
   const [busqueda, setBusqueda] = useState('');
   const [areaFiltro, setAreaFiltro] = useState('todas');
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -17,29 +26,6 @@ export default function Habilidades() {
   const [eliminando, setEliminando] = useState(null);
   const [conflicto, setConflicto] = useState(null);
   const [enProceso, setEnProceso] = useState(false);
-  const [toast, setToast] = useState(null);
-
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    setError('');
-    try {
-      setHabilidades(await api.listarHabilidades());
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setCargando(false);
-    }
-  }, []);
-
-  useEffect(() => { cargar(); }, [cargar]);
-
-  useEffect(() => {
-    if (!toast) return undefined;
-    const t = setTimeout(() => setToast(null), 3200);
-    return () => clearTimeout(t);
-  }, [toast]);
-
-  const mostrarToast = (titulo, mensaje, tipo = 'exito') => setToast({ titulo, mensaje, tipo });
 
   const areas = useMemo(() => {
     const conjunto = new Set(habilidades.map((h) => h.area).filter(Boolean));
@@ -93,15 +79,6 @@ export default function Habilidades() {
     }
   }
 
-  async function copiarId(id) {
-    try {
-      await navigator.clipboard.writeText(String(id));
-      mostrarToast('Identificador copiado', `Código ${id} en el portapapeles.`);
-    } catch {
-      mostrarToast('No se pudo copiar', 'Comprueba los permisos del navegador.', 'error');
-    }
-  }
-
   return (
     <div className="usuarios">
       <section className="adm-cabecera tarjeta">
@@ -138,14 +115,7 @@ export default function Habilidades() {
         </label>
       </section>
 <section className="adm-tabla tarjeta">
-        {cargando && <div className="adm-estado"><p>Cargando habilidades…</p></div>}
-
-        {!cargando && error && (
-          <div className="adm-estado" role="alert">
-            <p>{error}</p>
-            <button className="btn btn--primario" type="button" onClick={cargar}>Reintentar</button>
-          </div>
-        )}
+        <EstadoTabla cargando={cargando} error={error} onReintentar={recargar} cargandoTexto="Cargando habilidades…" />
 
         {!cargando && !error && (
           <>
@@ -165,7 +135,7 @@ export default function Habilidades() {
                       <td>
                         <span className="adm-id">
                           {h.id}
-                          <button className="adm-copiar" type="button" title="Copiar ID" onClick={() => copiarId(h.id)}>
+                          <button className="adm-copiar" type="button" title="Copiar ID" onClick={() => copiar(h.id)}>
                             <IconCopy />
                           </button>
                         </span>
@@ -198,14 +168,11 @@ export default function Habilidades() {
             </div>
 
             {filtradas.length === 0 && (
-              <div className="adm-vacio">
-                <IconSearch />
-                <h2>No se encontraron habilidades</h2>
-                <p>Prueba modificando el texto de búsqueda o el área seleccionada.</p>
-                <button className="btn btn--secundario" type="button" onClick={() => { setBusqueda(''); setAreaFiltro('todas'); }}>
-                  Limpiar filtros
-                </button>
-              </div>
+              <Vacio
+                titulo="No se encontraron habilidades"
+                mensaje="Prueba modificando el texto de búsqueda o el área seleccionada."
+                onLimpiar={() => { setBusqueda(''); setAreaFiltro('todas'); }}
+              />
             )}
 
             <footer className="adm-tabla__pie">
@@ -216,8 +183,11 @@ export default function Habilidades() {
       </section>
 
       {modalAbierto && (
-        <ModalHabilidad
-          habilidad={editando}
+        <ModalCatalogo
+          titulo={editando ? 'Editar habilidad' : 'Nueva habilidad'}
+          subtitulo={editando ? 'Modificando registro del catálogo.' : 'Añadir al catálogo formativo.'}
+          registro={editando}
+          campos={CAMPOS_HABILIDAD}
           onCerrar={() => { setModalAbierto(false); setEditando(null); }}
           onGuardar={guardarHabilidad}
         />
@@ -233,15 +203,8 @@ export default function Habilidades() {
       )}
 
       {conflicto && (
-        <ModalConfirmacion
-          titulo="No se puede eliminar"
-          mensaje={conflicto}
-          variante="aviso"
-          onCerrar={() => setConflicto(null)}
-        />
+        <ModalConfirmacion titulo="No se puede eliminar" mensaje={conflicto} variante="aviso" onCerrar={() => setConflicto(null)} />
       )}
-
-      <Toast toast={toast} />
     </div>
   );
 }

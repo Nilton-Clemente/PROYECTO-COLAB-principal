@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Modal from './Modal.jsx';
 import { IconEye, IconEyeOff, IconError } from './Icons.jsx';
 
 function validar(nueva, confirmar) {
@@ -29,7 +30,6 @@ export default function ModalRestablecerContrasena({ usuario, onCerrar, onGuarda
     setError('');
     try {
       await onGuardar(nueva);
-      // En caso de éxito, el padre cierra el modal.
     } catch (err) {
       setError(err.message || 'No se pudo restablecer la contraseña.');
       setEnviando(false);
@@ -37,78 +37,63 @@ export default function ModalRestablecerContrasena({ usuario, onCerrar, onGuarda
   }
 
   return (
-    <div
-      className="modal-overlay"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCerrar();
-      }}
+    <Modal
+      titulo="Restablecer contraseña"
+      subtitulo={<>Usuario: <strong>{usuario.nombre}</strong><br /><span className="modal__email">{usuario.email}</span></>}
+      onCerrar={onCerrar}
     >
-      <section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
-        <header className="modal__cabecera">
-          <div>
-            <h2 className="modal__titulo" id="modal-titulo">Restablecer contraseña</h2>
-            <p className="modal__usuario">
-              Usuario: <strong>{usuario.nombre}</strong>
-              <br />
-              <span className="modal__email">{usuario.email}</span>
-            </p>
-          </div>
-          <button className="modal__cerrar" type="button" onClick={onCerrar} aria-label="Cerrar">×</button>
-        </header>
-
-        <form className="modal__cuerpo" onSubmit={enviar} noValidate>
-          <div className="modal__campo">
-            <label className="modal__label" htmlFor="nueva-contrasena">Nueva contraseña</label>
-            <div className="modal__input-bloque">
-              <input
-                id="nueva-contrasena"
-                className="modal__input"
-                type={mostrar ? 'text' : 'password'}
-                placeholder="Ingrese nueva contraseña"
-                autoComplete="new-password"
-                value={nueva}
-                onChange={(e) => { setNueva(e.target.value); setError(''); }}
-              />
-              <button
-                className="modal__ojo"
-                type="button"
-                onClick={() => setMostrar(!mostrar)}
-                aria-label={mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-              >
-                {mostrar ? <IconEyeOff /> : <IconEye />}
-              </button>
-            </div>
-            <p className="modal__ayuda">Mínimo 6 y máximo 100 caracteres.</p>
-          </div>
-
-          <div className="modal__campo">
-            <label className="modal__label" htmlFor="confirmar-contrasena">Confirmar nueva contraseña</label>
+      <form className="modal__cuerpo" onSubmit={enviar} noValidate>
+        <div className="modal__campo">
+          <label className="modal__label" htmlFor="nueva-contrasena">Nueva contraseña</label>
+          <div className="modal__input-bloque">
             <input
-              id="confirmar-contrasena"
+              id="nueva-contrasena"
               className="modal__input"
               type={mostrar ? 'text' : 'password'}
-              placeholder="Confirme la contraseña"
+              placeholder="Ingrese nueva contraseña"
               autoComplete="new-password"
-              value={confirmar}
-              onChange={(e) => { setConfirmar(e.target.value); setError(''); }}
+              value={nueva}
+              onChange={(e) => { setNueva(e.target.value); setError(''); }}
             />
-          </div>
-
-          {error && (
-            <div className="modal__validacion" role="alert">
-              <IconError />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <footer className="modal__pie">
-            <button className="btn btn--secundario" type="button" onClick={onCerrar}>Cancelar</button>
-            <button className="btn btn--primario" type="submit" disabled={enviando}>
-              {enviando ? 'Guardando…' : 'Guardar contraseña'}
+            <button
+              className="modal__ojo"
+              type="button"
+              onClick={() => setMostrar(!mostrar)}
+              aria-label={mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            >
+              {mostrar ? <IconEyeOff /> : <IconEye />}
             </button>
-          </footer>
-        </form>
-      </section>
-    </div>
+          </div>
+          <p className="modal__ayuda">Mínimo 6 y máximo 100 caracteres.</p>
+        </div>
+
+        <div className="modal__campo">
+          <label className="modal__label" htmlFor="confirmar-contrasena">Confirmar nueva contraseña</label>
+          <input
+            id="confirmar-contrasena"
+            className="modal__input"
+            type={mostrar ? 'text' : 'password'}
+            placeholder="Confirme la contraseña"
+            autoComplete="new-password"
+            value={confirmar}
+            onChange={(e) => { setConfirmar(e.target.value); setError(''); }}
+          />
+        </div>
+
+        {error && (
+          <div className="modal__validacion" role="alert">
+            <IconError />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <footer className="modal__pie">
+          <button className="btn btn--secundario" type="button" onClick={onCerrar}>Cancelar</button>
+          <button className="btn btn--primario" type="submit" disabled={enviando}>
+            {enviando ? 'Guardando…' : 'Guardar contraseña'}
+          </button>
+        </footer>
+      </form>
+    </Modal>
   );
 }
