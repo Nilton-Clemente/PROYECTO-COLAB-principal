@@ -59,16 +59,15 @@ class MisTareasViewModel(
         guardar(proyectoId, "Tus tareas fueron confirmadas.") { repository.confirmar(proyectoId) }
     }
 
-    fun solicitarCambios(proyectoId: Long, tareaId: Long, comentario: String, onEnviado: () -> Unit) {
+    fun solicitarCambios(proyectoId: Long, comentario: String, onEnviado: () -> Unit) {
         val estado = _uiState.value as? MisTareasUiState.Success ?: return
         if (!estado.puedeSolicitarCambios) return
-        val tarea = estado.datos.tareas.firstOrNull { it.id == tareaId } ?: return
         if (comentario.isBlank()) {
             _uiState.value = estado.copy(mensaje = "Describe los motivos del ajuste antes de enviarlo.")
             return
         }
         guardar(proyectoId, "Solicitud enviada al creador del proyecto.", onEnviado) {
-            repository.solicitarCambios(proyectoId, "TK-${tarea.id} · ${tarea.nombre}\n${comentario.trim()}")
+            repository.solicitarCambios(proyectoId, comentario.trim())
         }
     }
 

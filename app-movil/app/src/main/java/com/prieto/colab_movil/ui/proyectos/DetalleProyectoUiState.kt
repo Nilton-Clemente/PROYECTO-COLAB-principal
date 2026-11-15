@@ -7,7 +7,8 @@ sealed interface DetalleProyectoUiState {
     object Loading : DetalleProyectoUiState
     data class Success(
         val proyecto: ProyectoResponseDto,
-        val equipo: List<IntegranteResponseDto>
+        val equipo: List<IntegranteResponseDto>,
+        val tienePlanificacion: Boolean
     ) : DetalleProyectoUiState
     data class Error(val message: String) : DetalleProyectoUiState
 }

@@ -188,6 +188,8 @@ private fun EditorContent(
     }
 
     val selectedStage = stages.firstOrNull { it.localId == selectedStageId }
+    val errores = remember(stages) { validarEditor(stages) }
+    val erroresPorCampo = errores.associate { it.clave to it.mensaje }
 
     Scaffold(
         modifier = modifier,
@@ -205,7 +207,7 @@ private fun EditorContent(
                 ) { Text("Descartar") }
                 Button(
                     onClick = { onSave(originalStages, stages) },
-                    enabled = !isSaving && stages.isNotEmpty() && stages.all { it.nombre.isNotBlank() && it.tareas.all { task -> task.nombre.isNotBlank() && (task.duracionDias.toIntOrNull() ?: 0) > 0 } },
+                    enabled = !isSaving && errores.isEmpty(),
                     modifier = Modifier.weight(1.55f).height(48.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = EditPrimary)
@@ -230,10 +232,27 @@ private fun EditorContent(
                     Text("Edita el borrador y guarda todos los cambios al finalizar.", color = EditMuted, fontSize = 13.sp)
                 }
             }
+            if (errores.isNotEmpty()) {
+                item {
+                    Surface(color = Color(0xFFFFDAD6), shape = RoundedCornerShape(12.dp)) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Hay ${errores.size} ${if (errores.size == 1) "inconsistencia" else "inconsistencias"} por resolver:", color = EditError, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            errores.forEach { error ->
+                                Text("• ${error.mensaje}", color = EditError, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+            }
             if (errorMessage != null) {
                 item {
                     Surface(color = Color(0xFFFFDAD6), shape = RoundedCornerShape(12.dp)) {
-                        Text(errorMessage, modifier = Modifier.padding(12.dp), color = EditError, fontSize = 13.sp)
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("El servidor no pudo guardar la planificación:", color = EditError, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            errorMessage.split("\n").filter { it.isNotBlank() }.forEach { linea ->
+                                Text("• $linea", color = EditError, fontSize = 13.sp)
+                            }
+                        }
                     }
                 }
             }
@@ -275,6 +294,7 @@ private fun EditorContent(
                     StageHeader(
                         stage = selectedStage,
                         disabled = isSaving,
+                        errorNombre = erroresPorCampo["etapa:${selectedStage.localId}:nombre"],
                         onRename = {
                             stageNameInput = selectedStage.nombre
                             stageToRename = selectedStage.localId
@@ -292,6 +312,7 @@ private fun EditorContent(
                         allTasks = stages.flatMap { it.tareas },
                         members = members,
                         disabled = isSaving,
+                        errors = erroresPorCampo,
                         onUpdate = { updated ->
                             replaceStage(selectedStage.copy(tareas = selectedStage.tareas.map { if (it.localId == task.localId) updated else it }))
                         },
@@ -369,7 +390,7 @@ private fun EditorContent(
 }
 
 @Composable
-private fun StageHeader(stage: EtapaEditableUi, disabled: Boolean, onRename: () -> Unit, onDelete: () -> Unit) {
+private fun StageHeader(stage: EtapaEditableUi, disabled: Boolean, errorNombre: String?, onRename: () -> Unit, onDelete: () -> Unit) {
     var menuExpanded by remember { mutableStateOf(false) }
     Surface(color = EditSurface, shape = RoundedCornerShape(16.dp), shadowElevation = 1.dp) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -396,6 +417,7 @@ private fun StageHeader(stage: EtapaEditableUi, disabled: Boolean, onRename: () 
                 }
             }
             Text("${stage.tareas.size} tareas · ${stage.tareas.sumOf { it.duracionDias.toIntOrNull() ?: 0 }} días estimados", color = EditMuted, fontSize = 12.sp)
+            CampoError(errorNombre)
         }
     }
 }
@@ -425,6 +447,7 @@ private fun EditableTaskCard(
     allTasks: List<TareaEditableUi>,
     members: List<IntegranteResponseDto>,
     disabled: Boolean,
+    errors: Map<String, String>,
     onUpdate: (TareaEditableUi) -> Unit,
     onDelete: () -> Unit
 ) {
@@ -454,6 +477,7 @@ private fun EditableTaskCard(
                 singleLine = false,
                 colors = editorFieldColors()
             )
+            CampoError(errors["tarea:${task.localId}:nombre"])
             EditorFieldLabel("Descripción")
             OutlinedTextField(
                 value = task.descripcion,
@@ -519,6 +543,8 @@ private fun EditableTaskCard(
                     }
                 }
             }
+            CampoError(errors["tarea:${task.localId}:duracionDias"])
+            CampoError(errors["tarea:${task.localId}:dependencias"])
             if (task.dependencias.isEmpty()) {
                 Text("Sin dependencias previas", color = EditMuted, fontSize = 11.sp)
             } else {
@@ -544,6 +570,13 @@ private fun EditableTaskCard(
 @Composable
 private fun EditorFieldLabel(text: String) {
     Text(text.uppercase(), color = EditMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.3.sp)
+}
+
+@Composable
+private fun CampoError(mensaje: String?) {
+    if (mensaje != null) {
+        Text(mensaje, color = EditError, fontSize = 11.sp)
+    }
 }
 
 @Composable

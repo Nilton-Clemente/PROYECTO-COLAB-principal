@@ -2,10 +2,9 @@ package com.prieto.colab_movil.ui.planificacion
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.prieto.colab_movil.data.model.EtapaRequestDto
 import com.prieto.colab_movil.data.model.IntegranteResponseDto
 import com.prieto.colab_movil.data.model.PlanificacionResponseDto
-import com.prieto.colab_movil.data.model.TareaRequestDto
+import com.prieto.colab_movil.data.model.PlanificacionUpdateRequestDto
 import com.prieto.colab_movil.data.repository.PlanificacionRepository
 import com.prieto.colab_movil.data.repository.PlanificacionRepositoryImpl
 import com.prieto.colab_movil.data.repository.ProyectoRepository
@@ -83,7 +82,7 @@ class EditarPlanificacionViewModel(
         _uiState.value = estadoExitoso.copy(isSaving = true, errorMessage = null)
         viewModelScope.launch {
             val resultado = runCatching {
-                sincronizar(proyectoId, etapasOriginales, etapasActuales)
+                guardarPlan(proyectoId, etapasActuales)
             }
             resultado.onSuccess { onGuardado() }
                 .onFailure { error ->
@@ -95,78 +94,31 @@ class EditarPlanificacionViewModel(
         }
     }
 
-    private suspend fun sincronizar(
-        proyectoId: Long,
-        originales: List<EtapaEditableUi>,
-        actuales: List<EtapaEditableUi>
-    ) {
-        val etapasActualesPorId = actuales.mapNotNull { etapa -> etapa.remoteId?.let { it to etapa } }.toMap()
-        val tareasEliminadas = mutableSetOf<Long>()
-
-        originales.forEach { etapaOriginal ->
-            val etapaId = etapaOriginal.remoteId ?: return@forEach
-            val etapaActual = etapasActualesPorId[etapaId] ?: return@forEach
-            val tareasActualesIds = etapaActual.tareas.mapNotNull { it.remoteId }.toSet()
-            etapaOriginal.tareas.mapNotNull { it.remoteId }
-                .filterNot(tareasActualesIds::contains)
-                .forEach { tareaId ->
-                    planificacionRepository.eliminarTarea(proyectoId, tareaId).orThrow()
-                    tareasEliminadas += tareaId
-                }
-        }
-
-        val idsEtapasActuales = actuales.mapNotNull { it.remoteId }.toSet()
-        originales.filter { it.remoteId !in idsEtapasActuales }.forEach { etapa ->
-            tareasEliminadas += etapa.tareas.mapNotNull { it.remoteId }
-            planificacionRepository.eliminarEtapa(proyectoId, checkNotNull(etapa.remoteId)).orThrow()
-        }
-
-        val etapaIdPorLocalId = mutableMapOf<String, Long>()
-        actuales.forEachIndexed { indice, etapa ->
-            val request = EtapaRequestDto(nombre = etapa.nombre.trim(), orden = indice + 1)
-            val etapaGuardada = if (etapa.remoteId == null) {
-                planificacionRepository.crearEtapa(proyectoId, request).orThrow()
-            } else {
-                planificacionRepository.editarEtapa(proyectoId, etapa.remoteId, request).orThrow()
-            }
-            etapaIdPorLocalId[etapa.localId] = etapaGuardada.id
-        }
-
-        val tareaIdPorLocalId = mutableMapOf<String, Long>()
-        actuales.forEach { etapa ->
-            val etapaId = checkNotNull(etapaIdPorLocalId[etapa.localId])
-            etapa.tareas.forEachIndexed { indice, tarea ->
-                val duracion = tarea.duracionDias.toIntOrNull()?.takeIf { it > 0 }
-                    ?: throw IllegalArgumentException("La duración de «${tarea.nombre}» debe ser mayor que cero.")
-                val request = TareaRequestDto(
-                    nombre = tarea.nombre.trim(),
-                    descripcion = tarea.descripcion.trim().ifBlank { null },
-                    etapaId = etapaId,
-                    responsableId = tarea.responsableId,
-                    prioridad = tarea.prioridad,
-                    duracionDias = duracion,
-                    orden = indice + 1
+    private suspend fun guardarPlan(proyectoId: Long, actuales: List<EtapaEditableUi>) {
+        val request = PlanificacionUpdateRequestDto(
+            etapas = actuales.mapIndexed { indice, etapa ->
+                PlanificacionUpdateRequestDto.EtapaUpdateDto(
+                    id = etapa.remoteId,
+                    nombre = etapa.nombre.trim(),
+                    orden = indice + 1,
+                    tareas = etapa.tareas.map { tarea ->
+                        val duracion = tarea.duracionDias.toIntOrNull()?.takeIf { it > 0 }
+                            ?: throw IllegalArgumentException("La duración de «${tarea.nombre}» debe ser mayor que cero.")
+                        PlanificacionUpdateRequestDto.TareaUpdateDto(
+                            id = tarea.remoteId,
+                            key = tarea.localId,
+                            nombre = tarea.nombre.trim(),
+                            descripcion = tarea.descripcion.trim().ifBlank { null },
+                            responsableId = tarea.responsableId,
+                            prioridad = tarea.prioridad,
+                            duracionDias = duracion,
+                            dependencias = tarea.dependencias
+                        )
+                    }
                 )
-                val tareaGuardada = if (tarea.remoteId == null) {
-                    planificacionRepository.crearTarea(proyectoId, request).orThrow()
-                } else {
-                    planificacionRepository.editarTarea(proyectoId, tarea.remoteId, request).orThrow()
-                }
-                tareaIdPorLocalId[tarea.localId] = tareaGuardada.id
             }
-        }
-
-        actuales.flatMap { it.tareas }.forEach { tarea ->
-            val tareaId = checkNotNull(tareaIdPorLocalId[tarea.localId])
-            val dependenciasActuales = tarea.dependencias.mapNotNull(tareaIdPorLocalId::get).toSet()
-            val dependenciasOriginales = tarea.dependenciasOriginales - tareasEliminadas
-            (dependenciasOriginales - dependenciasActuales).forEach { predecesoraId ->
-                planificacionRepository.quitarDependencia(proyectoId, tareaId, predecesoraId).orThrow()
-            }
-            (dependenciasActuales - dependenciasOriginales).forEach { predecesoraId ->
-                planificacionRepository.agregarDependencia(proyectoId, tareaId, predecesoraId).orThrow()
-            }
-        }
+        )
+        planificacionRepository.guardarPlanificacion(proyectoId, request).orThrow()
     }
 }
 
