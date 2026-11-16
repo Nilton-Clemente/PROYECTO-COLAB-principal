@@ -11,6 +11,9 @@ class Habilidad(models.Model):
         db_table = '"usuario"."habilidad"'
         ordering = ['nombre', 'id']
 
+    def __str__(self):
+        return self.nombre
+
 
 class Tecnologia(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -20,6 +23,9 @@ class Tecnologia(models.Model):
         managed = False
         db_table = '"usuario"."tecnologia"'
         ordering = ['nombre', 'id']
+
+    def __str__(self):
+        return self.nombre
 
 
 class Usuario(models.Model):
@@ -34,3 +40,6 @@ class Usuario(models.Model):
         managed = False
         db_table = '"usuario"."usuario"'
         ordering = ['id']
+
+    def __str__(self):
+        return self.email

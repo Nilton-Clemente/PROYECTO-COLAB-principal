@@ -23,4 +23,20 @@ Los recursos `/api/admin/habilidades/` y `/api/admin/tecnologias/` permiten list
 - `POST /api/admin/usuarios/{id}/bloquear/` y `POST /api/admin/usuarios/{id}/desbloquear/` escriben directamente el campo `bloqueada` en `usuario.usuario`.
 - `POST /api/admin/usuarios/{id}/restablecer_contrasena/` recibe `{"contrasena": "..."}` (6–100 caracteres) y delega el cálculo del hash BCrypt en backend-usuario mediante `PUT /api/admin/usuarios/{id}/contrasena` con el header `X-Admin-Key`. Django no almacena ni conoce el hash; por eso la clave tiene que coincidir en ambos servicios: Spring Boot la lee de `colab.admin.api-key` (`ADMIN_API_KEY`) y Django de `ADMIN_API_KEY`.
 
+## Admin de Django (interfaz nativa)
+
+Además del frontend React, el admin nativo de Django está disponible en `/admin/` (login con la cuenta de `crear_admin`). Están registrados:
+
+- `Habilidad`: `list_display` (id, nombre, área, usuarios asignados), `search_fields` (nombre, área) y `list_filter` (área). En el detalle se muestra un campo de solo lectura con los correos de los usuarios que la tienen asignada (relación N:M vía `usuario_habilidad`).
+- `Tecnologia`: `list_display`, `search_fields` (nombre) y, en el detalle, un campo de solo lectura con los proyectos que la usan (relación N:M vía `proyecto_tecnologia`).
+- `Usuario`: lista y búsqueda por email/nombre, filtro por `bloqueada`, y **solo lectura** (no se muestra ni se edita `contrasena_hash`, que administra Spring Boot).
+
+Cargar datos de prueba (idempotente):
+
+```bash
+python manage.py seed_datos
+```
+
+Las relaciones se muestran con **campos de solo lectura** porque las tablas puente (`usuario_habilidad`, `proyecto_tecnologia`) usan clave primaria compuesta y Django 4.2 no las puede mapear como modelos (requiere un `pk` de una sola columna).
+
 Ejecutar las pruebas aisladas con `python manage.py test core --settings=backend_admin.test_settings`. Estas usan SQLite y no sustituyen las pruebas de integración con PostgreSQL y los esquemas reales.
