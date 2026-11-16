@@ -5,6 +5,7 @@ class Habilidad(models.Model):
     id = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=255, unique=True)
     area = models.CharField(max_length=255, null=True, blank=True)
+    icono = models.CharField(max_length=64, null=True, blank=True)
 
     class Meta:
         managed = False
@@ -18,6 +19,7 @@ class Habilidad(models.Model):
 class Tecnologia(models.Model):
     id = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=255, unique=True)
+    icono = models.CharField(max_length=64, null=True, blank=True)
 
     class Meta:
         managed = False

@@ -1,18 +1,32 @@
 from rest_framework import serializers
 
 from .models import Habilidad, Tecnologia, Usuario
+from .iconos import IDENTIFICADORES_ICONOS
 
 
-class HabilidadSerializer(serializers.ModelSerializer):
+class IconoSerializerMixin:
+    def validate_icono(self, value):
+        if value in (None, ''):
+            return None
+        if value not in IDENTIFICADORES_ICONOS:
+            raise serializers.ValidationError('Selecciona un icono disponible.')
+        return value
+
+
+class HabilidadSerializer(IconoSerializerMixin, serializers.ModelSerializer):
+    icono = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=64)
+
     class Meta:
         model = Habilidad
-        fields = ['id', 'nombre', 'area']
+        fields = ['id', 'nombre', 'area', 'icono']
 
 
-class TecnologiaSerializer(serializers.ModelSerializer):
+class TecnologiaSerializer(IconoSerializerMixin, serializers.ModelSerializer):
+    icono = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=64)
+
     class Meta:
         model = Tecnologia
-        fields = ['id', 'nombre']
+        fields = ['id', 'nombre', 'icono']
 
 
 class UsuarioSerializer(serializers.ModelSerializer):

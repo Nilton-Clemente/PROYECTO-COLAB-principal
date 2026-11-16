@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import * as api from '../api/admin.js';
 import ModalCatalogo from '../components/ModalCatalogo.jsx';
+import IconoCatalogo from '../components/IconoCatalogo.jsx';
 import ModalConfirmacion from '../components/ModalConfirmacion.jsx';
 import EstadoTabla from '../components/EstadoTabla.jsx';
 import Vacio from '../components/Vacio.jsx';
 import { useListado } from '../hooks/useListado.js';
 import { useCopiar } from '../hooks/useCopiar.js';
 import { useToast } from '../components/ToastProvider.jsx';
-import { IconCopy, IconEdit, IconPlus, IconSearch, IconTerminal, IconTrash } from '../components/Icons.jsx';
+import { IconCopy, IconEdit, IconPlus, IconSearch, IconTrash } from '../components/Icons.jsx';
 
 const CAMPOS_TECNOLOGIA = [
   { nombre: 'nombre', etiqueta: 'Nombre', obligatorio: true, placeholder: 'Ej. React, Docker, FastAPI…', maxLength: 255 },
@@ -119,7 +120,7 @@ export default function Tecnologias() {
                       </td>
                       <td>
                         <div className="adm-usuario">
-                          <span className="adm-avatar adm-avatar--icono"><IconTerminal /></span>
+                          <IconoCatalogo key={t.icono} icono={t.icono} nombre={t.nombre} className="adm-icono-catalogo" />
                           <span className="adm-usuario__nombre">{t.nombre}</span>
                         </div>
                       </td>
