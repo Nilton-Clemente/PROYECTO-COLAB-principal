@@ -24,7 +24,7 @@ public class TecnologiaController {
     @GetMapping
     public List<TecnologiaDto> listar() {
         return tecnologiaRepository.findAll().stream()
-                .map(t -> new TecnologiaDto(t.getId(), t.getNombre()))
+                .map(t -> new TecnologiaDto(t.getId(), t.getNombre(), t.getIcono()))
                 .toList();
     }
 }

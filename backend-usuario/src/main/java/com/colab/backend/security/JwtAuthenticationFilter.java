@@ -1,5 +1,6 @@
 package com.colab.backend.security;
 
+import com.colab.backend.repository.UsuarioRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,9 +18,11 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UsuarioRepository usuarioRepository;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(JwtService jwtService, UsuarioRepository usuarioRepository) {
         this.jwtService = jwtService;
+        this.usuarioRepository = usuarioRepository;
     }
 
     @Override
@@ -31,9 +34,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
             if (jwtService.esValido(token)) {
                 String email = jwtService.extraerEmail(token);
-                var authentication = new UsernamePasswordAuthenticationToken(
-                        email, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                // Solo se autentica si la cuenta sigue activa (no bloqueada).
+                usuarioRepository.findByEmail(email)
+                        .filter(u -> !u.isBloqueada())
+                        .ifPresent(u -> {
+                            var authentication = new UsernamePasswordAuthenticationToken(
+                                    email, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+                            SecurityContextHolder.getContext().setAuthentication(authentication);
+                        });
             }
         }
 

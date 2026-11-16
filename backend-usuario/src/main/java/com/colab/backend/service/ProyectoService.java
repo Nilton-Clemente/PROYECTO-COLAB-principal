@@ -16,6 +16,7 @@ import com.colab.backend.dto.RequerimientoFuncionalDto;
 import com.colab.backend.dto.RequerimientoNoFuncionalDto;
 import com.colab.backend.dto.TecnologiaDto;
 import com.colab.backend.repository.IntegranteRepository;
+import com.colab.backend.repository.PlanificacionRepository;
 import com.colab.backend.repository.ProyectoRepository;
 import com.colab.backend.repository.TecnologiaRepository;
 import com.colab.backend.repository.UsuarioRepository;
@@ -41,15 +42,18 @@ public class ProyectoService {
     private final IntegranteRepository integranteRepository;
     private final UsuarioRepository usuarioRepository;
     private final TecnologiaRepository tecnologiaRepository;
+    private final PlanificacionRepository planificacionRepository;
 
     public ProyectoService(ProyectoRepository proyectoRepository,
                            IntegranteRepository integranteRepository,
                            UsuarioRepository usuarioRepository,
-                           TecnologiaRepository tecnologiaRepository) {
+                           TecnologiaRepository tecnologiaRepository,
+                           PlanificacionRepository planificacionRepository) {
         this.proyectoRepository = proyectoRepository;
         this.integranteRepository = integranteRepository;
         this.usuarioRepository = usuarioRepository;
         this.tecnologiaRepository = tecnologiaRepository;
+        this.planificacionRepository = planificacionRepository;
     }
 
     @Transactional
@@ -78,6 +82,7 @@ public class ProyectoService {
         Proyecto p = proyectoRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
         verificarCreador(u, id);
+        verificarSinPlanificacion(id);
 
         aplicarRequest(p, request);
         proyectoRepository.save(p);
@@ -132,6 +137,7 @@ public class ProyectoService {
     public void invitar(Long proyectoId, String email) {
         Usuario u = usuarioActual();
         verificarCreador(u, proyectoId);
+        verificarSinPlanificacion(proyectoId);
 
         Usuario invitado = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El correo no corresponde a un usuario registrado"));
@@ -153,6 +159,7 @@ public class ProyectoService {
     public void eliminarIntegrante(Long proyectoId, Long integranteId) {
         Usuario u = usuarioActual();
         verificarCreador(u, proyectoId);
+        verificarSinPlanificacion(proyectoId);
         Integrante i = integranteRepository.findById(integranteId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Integrante no existe"));
         if (!i.getProyecto().getId().equals(proyectoId)) {
@@ -312,7 +319,7 @@ public class ProyectoService {
                 p.getTipo(),
                 p.getTecnologias().stream()
                         .sorted((a, b) -> Long.compare(a.getId(), b.getId()))
-                        .map(t -> new TecnologiaDto(t.getId(), t.getNombre()))
+                        .map(t -> new TecnologiaDto(t.getId(), t.getNombre(), t.getIcono()))
                         .toList(),
                 p.getRequerimientosFuncionales().stream()
                         .map(rf -> new RequerimientoFuncionalDto(rf.getCodigo(), rf.getDescripcion()))
@@ -337,6 +344,14 @@ public class ProyectoService {
     private void verificarMiembro(Usuario u, Long proyectoId) {
         if (!integranteRepository.existsByUsuarioIdAndProyectoId(u.getId(), proyectoId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No perteneces a este proyecto");
+        }
+    }
+
+    /** Una vez generada la planificación, el proyecto y su equipo quedan bloqueados. */
+    private void verificarSinPlanificacion(Long proyectoId) {
+        if (planificacionRepository.existsByProyectoId(proyectoId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El proyecto ya tiene una planificación y no se puede modificar.");
         }
     }
 
