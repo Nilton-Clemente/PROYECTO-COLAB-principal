@@ -1,5 +1,7 @@
 package com.prieto.colab_movil.ui.tareas
 
+import com.prieto.colab_movil.ui.components.ColabBarraSecundaria
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -41,7 +43,6 @@ fun RegistrarAvanceScreen(
     proyectoId: Long,
     tareaId: Long,
     onBack: () -> Unit,
-    onPerfil: () -> Unit,
     viewModel: RegistrarAvanceViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -50,18 +51,16 @@ fun RegistrarAvanceScreen(
     var minutos by rememberSaveable(proyectoId, tareaId) { mutableIntStateOf(30) }
     var descripcion by rememberSaveable(proyectoId, tareaId) { mutableStateOf("") }
     var descartar by remember { mutableStateOf(false) }
-    var salirAPerfil by remember { mutableStateOf(false) }
     var nuevoEstado by rememberSaveable(proyectoId, tareaId) { mutableStateOf<String?>(null) }
     val snackbar = remember { SnackbarHostState() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val descripcionValida = descripcion.trim().length in 20..1000
 
-    fun salir(perfil: Boolean = false) {
+    fun salir() {
         if (ocupado) return
         if (descripcion.isNotBlank() || minutos != 30) {
-            salirAPerfil = perfil
             descartar = true
-        } else if (perfil) onPerfil() else onBack()
+        } else onBack()
     }
     DisposableEffect(lifecycle, proyectoId, tareaId, viewModel) {
         val observer = LifecycleEventObserver { _, evento ->
@@ -82,23 +81,7 @@ fun RegistrarAvanceScreen(
         containerColor = AvanceBackground,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            TopAppBar(
-                title = { Text("Registrar avance", color = AvanceInk, fontSize = 18.sp) },
-                navigationIcon = {
-                    IconButton(onClick = { salir() }, enabled = !ocupado) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver a mis tareas", tint = AvancePrimary)
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.cargar(proyectoId, tareaId) }, enabled = !ocupado) {
-                        Icon(Icons.Default.Refresh, "Actualizar avance", tint = AvancePrimary)
-                    }
-                    IconButton(onClick = { salir(true) }, enabled = !ocupado) {
-                        Icon(Icons.Default.Person, "Mi perfil", tint = AvancePrimary)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = AvanceBackground)
-            )
+            ColabBarraSecundaria("Registrar avance", onVolver = { salir() }, habilitado = !ocupado, descripcionVolver = "Volver a mis tareas")
         },
         bottomBar = {
             Surface(color = AvanceBackground, shadowElevation = 8.dp) {
@@ -266,7 +249,7 @@ fun RegistrarAvanceScreen(
             onDismissRequest = { descartar = false },
             title = { Text("¿Descartar el avance sin guardar?") },
             text = { Text("La descripción y el tiempo de esta sesión aún no se han guardado.") },
-            confirmButton = { TextButton(onClick = { descartar = false; if (salirAPerfil) onPerfil() else onBack() }) { Text("Descartar") } },
+            confirmButton = { TextButton(onClick = { descartar = false; onBack() }) { Text("Descartar") } },
             dismissButton = { TextButton(onClick = { descartar = false }) { Text("Seguir editando") } }
         )
     }

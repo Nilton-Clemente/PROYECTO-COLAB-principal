@@ -26,6 +26,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.prieto.colab_movil.ui.components.ColabBarraSecundaria
 import com.prieto.colab_movil.data.model.IntegranteResponseDto
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
 
@@ -68,7 +69,6 @@ fun DetalleProyectoScreen(
     onBack: () -> Unit = {},
     onEditar: () -> Unit = {},
     onGenerarPlanificacion: () -> Unit = {},
-    onPerfil: () -> Unit = {},
     onMisTareas: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -79,7 +79,7 @@ fun DetalleProyectoScreen(
 
     Scaffold(
         containerColor = Surface,
-        topBar = { DetalleTopBar(onBack, onPerfil) }
+        topBar = { ColabBarraSecundaria("Detalle De Proyecto", onVolver = onBack, descripcionVolver = "Regresar") }
     ) { padding ->
         Box(
             modifier = Modifier
@@ -225,35 +225,6 @@ private fun DetalleProyectoContenido(
         }
         Spacer(Modifier.height(16.dp))
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DetalleTopBar(onBack: () -> Unit, onPerfil: () -> Unit) {
-    TopAppBar(
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Regresar", tint = OnSurface)
-            }
-        },
-        title = {
-            Text("Detalle De Proyecto", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = OnSurface)
-        },
-        actions = {
-            Box(
-                modifier = Modifier
-                    .padding(end = 16.dp)
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(Primary)
-                    .clickable(onClick = onPerfil),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Outlined.Person, "Mi perfil", tint = Color.White, modifier = Modifier.size(18.dp))
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Surface)
-    )
 }
 
 /* ───────────── Cabecera, tabs y resumen ───────────── */

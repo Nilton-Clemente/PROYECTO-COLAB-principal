@@ -21,7 +21,7 @@ class RegistrarAvanceScreenTest {
 
     private fun mostrar(repository: RepositorioPrueba = RepositorioPrueba(), onBack: () -> Unit = {}): RegistrarAvanceViewModel {
         val vm = RegistrarAvanceViewModel(repository)
-        compose.setContent { MaterialTheme { RegistrarAvanceScreen(7, 21, onBack, {}, vm) } }
+        compose.setContent { MaterialTheme { RegistrarAvanceScreen(7, 21, onBack, vm) } }
         compose.waitForIdle()
         return vm
     }
@@ -78,15 +78,26 @@ class RegistrarAvanceScreenTest {
     }
 
     @Test
+    fun volverDesdeBarraPideConfirmarBorrador() {
+        val repo = RepositorioPrueba()
+        var salidas = 0
+        mostrar(repo) { salidas++ }
+        escribirNota()
+        compose.onNodeWithContentDescription("Volver a mis tareas").performClick()
+        compose.onNodeWithText("¿Descartar el avance sin guardar?").assertIsDisplayed()
+        compose.runOnIdle { assertEquals(0, salidas) }
+        compose.onNodeWithText("Descartar").performClick()
+        compose.runOnIdle { assertEquals(1, salidas) }
+    }
+
+    @Test
     fun errorDeRecargaBloqueaGuardadoHastaActualizarSinPerderBorrador() {
         val repo = RepositorioPrueba()
-        mostrar(repo)
+        val vm = mostrar(repo)
         escribirNota()
-        compose.runOnIdle { repo.fallarCarga = true }
-        compose.onNodeWithContentDescription("Actualizar avance").performClick()
+        compose.runOnIdle { repo.fallarCarga = true; vm.cargar(7, 21) }
         compose.onNodeWithText("Guardar avance").assertIsNotEnabled()
-        compose.runOnIdle { repo.fallarCarga = false }
-        compose.onNodeWithContentDescription("Actualizar avance").performClick()
+        compose.runOnIdle { repo.fallarCarga = false; vm.cargar(7, 21) }
         compose.onNodeWithText("Guardar avance").assertIsEnabled()
     }
 
@@ -171,12 +182,11 @@ class RegistrarAvanceScreenTest {
     fun guardadoExitosoConRecargaFallidaNoReenviaLaSesion() {
         val repo = RepositorioPrueba()
         repo.fallarDespuesDeGuardar = true
-        mostrar(repo)
+        val vm = mostrar(repo)
         escribirNota()
         compose.onNodeWithText("Guardar avance").performClick()
         compose.onNodeWithText("Guardar avance").assertIsNotEnabled()
-        compose.runOnIdle { repo.fallarCarga = false }
-        compose.onNodeWithContentDescription("Actualizar avance").performClick()
+        compose.runOnIdle { repo.fallarCarga = false; vm.cargar(7, 21) }
         compose.onNodeWithText("Guardar avance").assertIsNotEnabled()
         desplazarA("Historial de sesiones (1)")
         compose.onNodeWithText("Historial de sesiones (1)").assertIsDisplayed()

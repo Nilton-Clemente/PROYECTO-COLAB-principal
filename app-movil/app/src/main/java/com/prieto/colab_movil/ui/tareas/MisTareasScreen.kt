@@ -33,6 +33,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.prieto.colab_movil.ui.components.ColabBarraSecundaria
 import com.prieto.colab_movil.data.model.TareaDetalleResponseDto
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -54,7 +55,6 @@ private val GreenContainer = Color(0xFF6CF8BB)
 fun MisTareasScreen(
     proyectoId: Long,
     onBack: () -> Unit,
-    onPerfil: () -> Unit,
     viewModel: MisTareasViewModel = viewModel(),
     onRegistrarAvance: (Long) -> Unit = {}
 ) {
@@ -99,23 +99,7 @@ fun MisTareasScreen(
         containerColor = SurfaceBg,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            TopAppBar(
-                title = { Text("Mis tareas", color = Ink, fontWeight = FontWeight.SemiBold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack, enabled = !ocupado) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver al proyecto", tint = Indigo)
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.cargar(proyectoId) }, enabled = !ocupado) {
-                        Icon(Icons.Default.Refresh, "Actualizar tareas", tint = Indigo)
-                    }
-                    IconButton(onClick = onPerfil, enabled = !ocupado) {
-                        Icon(Icons.Default.Person, "Mi perfil", tint = Indigo)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceBg)
-            )
+            ColabBarraSecundaria("Mis tareas", onVolver = onBack, habilitado = !ocupado, descripcionVolver = "Volver al proyecto")
         },
         bottomBar = {
             Surface(color = SurfaceBg, shadowElevation = 8.dp) {

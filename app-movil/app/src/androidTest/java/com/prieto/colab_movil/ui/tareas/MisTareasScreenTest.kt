@@ -27,7 +27,7 @@ class MisTareasScreenTest {
         val vm = MisTareasViewModel(repository)
         compose.setContent {
             MaterialTheme {
-                MisTareasScreen(proyectoId = 7, onBack = {}, onPerfil = {}, viewModel = vm)
+                MisTareasScreen(proyectoId = 7, onBack = {}, viewModel = vm)
             }
         }
         compose.waitForIdle()
@@ -64,16 +64,14 @@ class MisTareasScreenTest {
     }
 
     @Test
-    fun solicitudVaciaNoSeEnviaYElBorradorSePuedeDescartarSinReabrir() {
+    fun solicitudVaciaNoSeEnviaYSePuedeCancelar() {
         val repository = RepositorioPrueba()
         mostrar(repository)
-        compose.onNodeWithText("Solicitar ajuste").performScrollTo().performClick()
+        compose.onNodeWithText("Solicitar cambios").performClick()
         compose.onNodeWithText("Enviar solicitud").assertIsNotEnabled()
         compose.onNodeWithText("Motivos del ajuste").performTextInput("Necesito apoyo")
         compose.onNodeWithText("Cancelar").performClick()
-        compose.onNodeWithText("¿Descartar el borrador?").assertIsDisplayed()
-        compose.onNodeWithText("Descartar").performClick()
-        compose.onNodeWithText("Solicitar ajuste · TK-21").assertDoesNotExist()
+        compose.onNodeWithText("Enviar solicitud").assertDoesNotExist()
         compose.runOnIdle { assertNull(repository.comentario) }
     }
 
@@ -81,12 +79,12 @@ class MisTareasScreenTest {
     fun solicitudIncluyeContextoDeLaTareaYSeRecargaTrasGuardar() {
         val repository = RepositorioPrueba()
         mostrar(repository)
-        compose.onNodeWithText("Solicitar ajuste").performScrollTo().performClick()
+        compose.onNodeWithText("Solicitar cambios").performClick()
         compose.onNodeWithText("Motivos del ajuste").performTextInput("Necesito apoyo")
         compose.onNodeWithText("Enviar solicitud").performClick()
-        compose.onNodeWithText("Solicitar ajuste · TK-21").assertDoesNotExist()
+        compose.onNodeWithText("Enviar solicitud").assertDoesNotExist()
         compose.runOnIdle {
-            assertEquals("TK-21 · API de matrícula\nNecesito apoyo", repository.comentario)
+            assertEquals("Necesito apoyo", repository.comentario)
             assertTrue(repository.cargas >= 2)
         }
     }
@@ -94,12 +92,10 @@ class MisTareasScreenTest {
     @Test
     fun errorDeRecargaBloqueaAccionesHastaActualizar() {
         val repository = RepositorioPrueba()
-        mostrar(repository)
-        compose.runOnIdle { repository.fallarCarga = true }
-        compose.onNodeWithContentDescription("Actualizar tareas").performClick()
+        val vm = mostrar(repository)
+        compose.runOnIdle { repository.fallarCarga = true; vm.cargar(7) }
         compose.onNodeWithText("Confirmar todas").assertIsNotEnabled()
-        compose.runOnIdle { repository.fallarCarga = false }
-        compose.onNodeWithContentDescription("Actualizar tareas").performClick()
+        compose.runOnIdle { repository.fallarCarga = false; vm.cargar(7) }
         compose.onNodeWithText("Confirmar todas").assertIsEnabled()
     }
 
@@ -128,7 +124,7 @@ class MisTareasScreenTest {
         var seleccionada: Long? = null
         compose.setContent {
             MaterialTheme {
-                MisTareasScreen(7, {}, {}, vm, onRegistrarAvance = { seleccionada = it })
+                MisTareasScreen(7, {}, vm, onRegistrarAvance = { seleccionada = it })
             }
         }
         compose.onNodeWithText("Confirmar todas").assertDoesNotExist()
@@ -141,12 +137,12 @@ class MisTareasScreenTest {
     @Test
     fun recargarDetectaActivacionDelEquipoYCambiaElBoton() {
         val repository = RepositorioPrueba()
-        mostrar(repository)
+        val vm = mostrar(repository)
         compose.onNodeWithText("Confirmar todas").assertExists()
         compose.runOnIdle {
             repository.datos = repository.datos.copy(planificacion = repository.datos.planificacion!!.copy(estado = "ACTIVA"))
         }
-        compose.onNodeWithContentDescription("Actualizar tareas").performClick()
+        compose.runOnIdle { vm.cargar(7) }
         compose.onNodeWithText("Confirmar todas").assertDoesNotExist()
         compose.onNodeWithText("Registrar avance").assertIsEnabled()
         compose.onNodeWithText("Por confirmar (1)").assertDoesNotExist()

@@ -137,7 +137,6 @@ fun AppNavigation(
             DetalleProyectoScreen(
                 proyectoId = proyectoId,
                 onBack = { navController.popBackStack() },
-                onPerfil = { navController.navigate(Screen.Perfil.route) },
                 onEditar = { navController.navigate(Screen.EditarProyecto.createRoute(proyectoId)) },
                 onGenerarPlanificacion = { navController.navigate(Screen.Planificacion.createRoute(proyectoId)) },
                 onMisTareas = { navController.navigate(Screen.MisTareas.createRoute(proyectoId)) }
@@ -191,7 +190,6 @@ fun AppNavigation(
             MisTareasScreen(
                 proyectoId = proyectoId,
                 onBack = { navController.popBackStack() },
-                onPerfil = { navController.navigate(Screen.Perfil.route) },
                 onRegistrarAvance = { tareaId ->
                     navController.navigate(Screen.RegistrarAvance.createRoute(proyectoId, tareaId))
                 }
@@ -209,8 +207,7 @@ fun AppNavigation(
             RegistrarAvanceScreen(
                 proyectoId = arguments.getLong("proyectoId"),
                 tareaId = arguments.getLong("tareaId"),
-                onBack = { navController.popBackStack() },
-                onPerfil = { navController.navigate(Screen.Perfil.route) }
+                onBack = { navController.popBackStack() }
             )
         }
 

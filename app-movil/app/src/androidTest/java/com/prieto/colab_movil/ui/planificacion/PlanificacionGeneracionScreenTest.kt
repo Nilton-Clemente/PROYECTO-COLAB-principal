@@ -61,7 +61,7 @@ class PlanificacionGeneracionScreenTest {
         }
         val vm = mostrar(repo)
         compose.onNodeWithText("Generación pendiente de confirmar").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Editar planificación").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Editar planificación").assertDoesNotExist()
         compose.runOnIdle {
             assertTrue(vm.uiState.value is PlanificacionUiState.PendingGeneration)
             repo.disponibleEnConsulta = repo.gets + 1
@@ -78,7 +78,7 @@ class PlanificacionGeneracionScreenTest {
         val repo = RepositorioPlan().apply { pendiente = CompletableDeferred() }
         val vm = mostrar(repo)
         compose.onNodeWithText("Generando planificación con IA…").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Editar planificación").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Editar planificación").assertDoesNotExist()
         compose.runOnIdle {
             vm.generar(repo.id)
             vm.cargar(repo.id)
