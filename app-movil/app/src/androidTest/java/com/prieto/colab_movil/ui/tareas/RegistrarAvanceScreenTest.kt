@@ -48,6 +48,20 @@ class RegistrarAvanceScreenTest {
     }
 
     @Test
+    fun actualizarConGestoConservaBorrador() {
+        val repo = RepositorioPrueba()
+        mostrar(repo)
+        escribirNota()
+        compose.onNodeWithTag("avance-contenido").performScrollToIndex(0)
+        val antes = repo.cargas
+        compose.onNodeWithTag("avance-contenido").performTouchInput { swipeDown() }
+        compose.waitUntil(5_000) { repo.cargas > antes }
+        desplazarA("Descripción del avance")
+        compose.onNode(hasSetTextAction()).assertTextContains(nota)
+        compose.runOnIdle { assertEquals(0, repo.registros) }
+    }
+
+    @Test
     fun guardarActualizaHistorialYLimpiaFormularioSinCambiarEstado() {
         val repo = RepositorioPrueba()
         mostrar(repo)

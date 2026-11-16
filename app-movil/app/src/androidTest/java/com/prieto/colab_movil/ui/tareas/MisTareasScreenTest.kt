@@ -47,6 +47,16 @@ class MisTareasScreenTest {
     }
 
     @Test
+    fun deslizarActualizaLasTareas() {
+        val repository = RepositorioPrueba()
+        mostrar(repository)
+        val anteriores = repository.cargas
+        compose.onNodeWithTag("tareas-actualizar").performTouchInput { swipeDown() }
+        compose.waitUntil(5_000) { repository.cargas > anteriores }
+        compose.onNodeWithText("Proyecto de prueba").assertIsDisplayed()
+    }
+
+    @Test
     fun confirmaTodasSoloTrasAceptarDialogoYRecarga() {
         val repository = RepositorioPrueba()
         mostrar(repository)

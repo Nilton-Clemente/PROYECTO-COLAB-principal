@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 class ProyectosViewModel(
     private val repository: ProyectoRepository = ProyectoRepositoryImpl()
@@ -16,25 +17,27 @@ class ProyectosViewModel(
     private val _uiState = MutableStateFlow<ProyectosUiState>(ProyectosUiState.Loading)
     val uiState: StateFlow<ProyectosUiState> = _uiState.asStateFlow()
 
+    private var operacion: Job? = null
+
     fun cargarDatos() {
-        _uiState.value = ProyectosUiState.Loading
-        viewModelScope.launch {
+        if (operacion?.isActive == true) return
+        val anterior = _uiState.value as? ProyectosUiState.Success
+        _uiState.value = anterior?.copy(actualizando = true, aviso = null) ?: ProyectosUiState.Loading
+        operacion = viewModelScope.launch {
             val perfilRes = repository.obtenerPerfil()
             val proyectosRes = repository.listarProyectos()
             val invitacionesRes = repository.listarInvitaciones()
 
-            val nombre = perfilRes.getOrNull()?.nombre ?: "Usuario"
-            val proyectos = proyectosRes.getOrNull() ?: emptyList()
-            val invitaciones = invitacionesRes.getOrNull() ?: emptyList()
-
-            if (perfilRes.isSuccess || proyectosRes.isSuccess) {
+            if (anterior != null || (perfilRes.isSuccess && proyectosRes.isSuccess && invitacionesRes.isSuccess)) {
                 _uiState.value = ProyectosUiState.Success(
-                    nombre = nombre,
-                    proyectos = proyectos,
-                    invitaciones = invitaciones
+                    nombre = perfilRes.getOrNull()?.nombre ?: anterior!!.nombre,
+                    proyectos = proyectosRes.getOrNull() ?: anterior!!.proyectos,
+                    invitaciones = invitacionesRes.getOrNull() ?: anterior!!.invitaciones,
+                    aviso = if (perfilRes.isFailure || proyectosRes.isFailure || invitacionesRes.isFailure)
+                        "No se pudieron actualizar todos los datos. Inténtalo de nuevo." else null
                 )
             } else {
-                val error = proyectosRes.exceptionOrNull() ?: perfilRes.exceptionOrNull()
+                val error = proyectosRes.exceptionOrNull() ?: perfilRes.exceptionOrNull() ?: invitacionesRes.exceptionOrNull()
                 _uiState.value = ProyectosUiState.Error(error?.message ?: "Error al cargar datos")
             }
         }

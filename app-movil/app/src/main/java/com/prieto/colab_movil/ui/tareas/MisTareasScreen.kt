@@ -1,5 +1,7 @@
 package com.prieto.colab_movil.ui.tareas
 
+import androidx.compose.ui.platform.testTag
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -33,6 +35,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.prieto.colab_movil.ui.components.ColabActualizar
 import com.prieto.colab_movil.ui.components.ColabBarraSecundaria
 import com.prieto.colab_movil.data.model.TareaDetalleResponseDto
 import java.text.SimpleDateFormat
@@ -154,11 +157,12 @@ fun MisTareasScreen(
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = { viewModel.cargar(proyectoId) }) { Text("Reintentar") }
             }
-            is MisTareasUiState.Success -> MisTareasContenido(
-                state = state,
-                modifier = Modifier.fillMaxSize().padding(padding),
-                onRegistrarAvance = onRegistrarAvance
-            )
+            is MisTareasUiState.Success -> ColabActualizar(
+                actualizando = state.isRefreshing, habilitado = !state.ocupado,
+                onActualizar = { viewModel.cargar(proyectoId) }, modifier = Modifier.padding(padding).testTag("tareas-actualizar")
+            ) {
+                MisTareasContenido(state = state, modifier = Modifier.fillMaxSize(), onRegistrarAvance = onRegistrarAvance)
+            }
         }
     }
 

@@ -33,6 +33,7 @@ sealed interface RegistrarAvanceUiState {
     data class Success(
         val datos: AvanceDatos,
         val ocupado: Boolean = false,
+        val actualizando: Boolean = false,
         val desactualizado: Boolean = false,
         val registroIncierto: Boolean = false,
         val mensaje: String? = null
@@ -118,7 +119,7 @@ class RegistrarAvanceViewModel(
 
     private suspend fun actualizar(proyectoId: Long, tareaId: Long, mensaje: String? = null) {
         val anterior = _uiState.value as? RegistrarAvanceUiState.Success
-        _uiState.value = anterior?.copy(ocupado = true, mensaje = null) ?: RegistrarAvanceUiState.Loading
+        _uiState.value = anterior?.copy(ocupado = true, actualizando = true, mensaje = null) ?: RegistrarAvanceUiState.Loading
         repository.cargar(proyectoId, tareaId).fold(
             onSuccess = {
                 _uiState.value = RegistrarAvanceUiState.Success(
@@ -128,7 +129,7 @@ class RegistrarAvanceViewModel(
             onFailure = {
                 val error = it.message ?: "No se pudo cargar la tarea y su historial."
                 _uiState.value = anterior?.copy(
-                    ocupado = false, desactualizado = true,
+                    ocupado = false, actualizando = false, desactualizado = true,
                     mensaje = listOfNotNull(mensaje, "$error Actualiza los datos para continuar.").joinToString("\n")
                 ) ?: RegistrarAvanceUiState.Error(error)
             }

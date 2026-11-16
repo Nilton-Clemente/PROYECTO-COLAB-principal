@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 class DetalleProyectoViewModel(
     private val repository: ProyectoRepository = ProyectoRepositoryImpl(),
@@ -19,21 +20,28 @@ class DetalleProyectoViewModel(
     private val _uiState = MutableStateFlow<DetalleProyectoUiState>(DetalleProyectoUiState.Loading)
     val uiState: StateFlow<DetalleProyectoUiState> = _uiState.asStateFlow()
 
+    private var operacion: Job? = null
+
     fun cargarDetalle(proyectoId: Long) {
-        _uiState.value = DetalleProyectoUiState.Loading
-        viewModelScope.launch {
+        if (operacion?.isActive == true) return
+        val anterior = (_uiState.value as? DetalleProyectoUiState.Success)?.takeIf { it.proyecto.id == proyectoId }
+        _uiState.value = anterior?.copy(actualizando = true, aviso = null) ?: DetalleProyectoUiState.Loading
+        operacion = viewModelScope.launch {
             val proyectoRes = repository.verProyecto(proyectoId)
             val equipoRes = repository.verEquipo(proyectoId)
             val planRes = planificacionRepository.verPlanificacion(proyectoId)
 
-            if (proyectoRes.isSuccess && proyectoRes.getOrNull() != null) {
+            if (anterior != null || (proyectoRes.getOrNull() != null && equipoRes.isSuccess && planRes.isSuccess)) {
                 _uiState.value = DetalleProyectoUiState.Success(
-                    proyecto = proyectoRes.getOrNull()!!,
-                    equipo = equipoRes.getOrNull() ?: emptyList(),
-                    tienePlanificacion = planRes.getOrNull() != null
+                    proyecto = proyectoRes.getOrNull() ?: anterior!!.proyecto,
+                    equipo = equipoRes.getOrNull() ?: anterior!!.equipo,
+                    tienePlanificacion = if (planRes.isSuccess) planRes.getOrNull() != null else anterior!!.tienePlanificacion,
+                    datosDesactualizados = proyectoRes.isFailure || equipoRes.isFailure || planRes.isFailure,
+                    aviso = if (proyectoRes.isFailure || equipoRes.isFailure || planRes.isFailure)
+                        "No se pudieron actualizar todos los datos. Inténtalo de nuevo." else null
                 )
             } else {
-                val error = proyectoRes.exceptionOrNull()?.message ?: "No se pudo cargar la información del proyecto."
+                val error = (proyectoRes.exceptionOrNull() ?: equipoRes.exceptionOrNull() ?: planRes.exceptionOrNull())?.message ?: "No se pudo cargar la información del proyecto."
                 _uiState.value = DetalleProyectoUiState.Error(error)
             }
         }

@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.prieto.colab_movil.ui.components.ColabBarraSecundaria
+import com.prieto.colab_movil.ui.components.ColabActualizar
 import com.prieto.colab_movil.data.model.IntegranteResponseDto
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
 
@@ -116,14 +117,19 @@ fun DetalleProyectoScreen(
                     }
                 }
                 is DetalleProyectoUiState.Success -> {
+                    ColabActualizar(actualizando = state.actualizando, habilitado = !state.actualizando,
+                        onActualizar = { viewModel.cargarDetalle(proyectoId) }) {
                     DetalleProyectoContenido(
                         proyectoDto = state.proyecto,
                         equipoDto = state.equipo,
                         tienePlanificacion = state.tienePlanificacion,
                         onEditar = onEditar,
                         onGenerarPlanificacion = onGenerarPlanificacion,
-                        onMisTareas = onMisTareas
+                        onMisTareas = onMisTareas,
+                        habilitarAcciones = !state.actualizando && !state.datosDesactualizados,
+                        aviso = state.aviso
                     )
+                    }
                 }
             }
         }
@@ -137,7 +143,9 @@ private fun DetalleProyectoContenido(
     tienePlanificacion: Boolean,
     onEditar: () -> Unit,
     onGenerarPlanificacion: () -> Unit,
-    onMisTareas: () -> Unit
+    onMisTareas: () -> Unit,
+    habilitarAcciones: Boolean,
+    aviso: String?
 ) {
     var pestana by remember { mutableStateOf(Pestana.INFO) }
 
@@ -206,9 +214,11 @@ private fun DetalleProyectoContenido(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Cabecera(codigo, titulo, descripcion, tienePlanificacion, onEditar, onGenerarPlanificacion)
+        if (aviso != null) Text(aviso, color = OnErrorContainer, fontSize = 13.sp)
+        Cabecera(codigo, titulo, descripcion, tienePlanificacion, onEditar, onGenerarPlanificacion, habilitarAcciones)
         OutlinedButton(
             onClick = onMisTareas,
+            enabled = habilitarAcciones,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -229,7 +239,7 @@ private fun DetalleProyectoContenido(
 
 /* ───────────── Cabecera, tabs y resumen ───────────── */
 @Composable
-private fun Cabecera(codigo: String, titulo: String, descripcion: String, tienePlanificacion: Boolean, onEditar: () -> Unit, onGenerarPlanificacion: () -> Unit) {
+private fun Cabecera(codigo: String, titulo: String, descripcion: String, tienePlanificacion: Boolean, onEditar: () -> Unit, onGenerarPlanificacion: () -> Unit, habilitarAcciones: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -254,7 +264,7 @@ private fun Cabecera(codigo: String, titulo: String, descripcion: String, tieneP
                 modifier = Modifier
                     .clip(CircleShape)
                     .background(PrimaryFixed)
-                    .clickable(onClick = onEditar)
+                    .clickable(enabled = habilitarAcciones, onClick = onEditar)
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -267,6 +277,7 @@ private fun Cabecera(codigo: String, titulo: String, descripcion: String, tieneP
         Text(descripcion, fontSize = 13.sp, lineHeight = 19.sp, color = OnSurfaceVariant)
         Button(
             onClick = onGenerarPlanificacion,
+            enabled = habilitarAcciones,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Primary)

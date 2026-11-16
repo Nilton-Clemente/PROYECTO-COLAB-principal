@@ -26,6 +26,7 @@ import com.prieto.colab_movil.data.model.InvitacionResponseDto
 import com.prieto.colab_movil.ui.components.EstadoCarga
 import com.prieto.colab_movil.ui.components.EstadoError
 import com.prieto.colab_movil.ui.components.ColabTopBar
+import com.prieto.colab_movil.ui.components.ColabActualizar
 import com.prieto.colab_movil.ui.components.ColabBottomBar
 import com.prieto.colab_movil.ui.components.SeccionPrincipal
 
@@ -59,10 +60,6 @@ fun InvitacionesScreen(
     val uiState by viewModel.uiState.collectAsState()
     val mensaje by viewModel.mensaje.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(Unit) {
-        viewModel.cargar()
-    }
 
     LaunchedEffect(mensaje) {
         mensaje?.let {
@@ -98,10 +95,11 @@ fun InvitacionesScreen(
             is InvitacionesUiState.Success -> {
                 val invitaciones = state.invitaciones
 
+                ColabActualizar(actualizando = state.actualizando, habilitado = !state.actualizando && !state.ocupado,
+                    onActualizar = { viewModel.cargar() }, modifier = Modifier.padding(padding)) {
                 LazyColumn(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
+                        .fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
@@ -186,13 +184,15 @@ fun InvitacionesScreen(
                                 InvitacionCard(
                                     invitacion = invitacion,
                                     onAceptar = { viewModel.aceptar(invitacion.integranteId) },
-                                    onDeclinar = { viewModel.rechazar(invitacion.integranteId) }
+                                    onDeclinar = { viewModel.rechazar(invitacion.integranteId) },
+                                    habilitado = !state.ocupado && !state.actualizando && !state.desactualizado
                                 )
                             }
                         }
                     } else {
                         item { HistorialVacio() }
                     }
+                }
                 }
             }
         }
@@ -207,7 +207,8 @@ fun InvitacionesScreen(
 private fun InvitacionCard(
     invitacion: InvitacionResponseDto,
     onAceptar: () -> Unit,
-    onDeclinar: () -> Unit
+    onDeclinar: () -> Unit,
+    habilitado: Boolean
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -288,6 +289,7 @@ private fun InvitacionCard(
             ) {
                 Button(
                     onClick = onAceptar,
+                    enabled = habilitado,
                     modifier = Modifier
                         .weight(1f)
                         .height(46.dp),
@@ -312,6 +314,7 @@ private fun InvitacionCard(
 
                 OutlinedButton(
                     onClick = onDeclinar,
+                    enabled = habilitado,
                     modifier = Modifier.height(46.dp),
                     shape = RoundedCornerShape(9.dp),
                     colors = ButtonDefaults.outlinedButtonColors(

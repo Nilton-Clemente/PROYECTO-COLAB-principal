@@ -8,7 +8,10 @@ sealed interface DetalleProyectoUiState {
     data class Success(
         val proyecto: ProyectoResponseDto,
         val equipo: List<IntegranteResponseDto>,
-        val tienePlanificacion: Boolean
+        val tienePlanificacion: Boolean,
+        val actualizando: Boolean = false,
+        val datosDesactualizados: Boolean = false,
+        val aviso: String? = null
     ) : DetalleProyectoUiState
     data class Error(val message: String) : DetalleProyectoUiState
 }

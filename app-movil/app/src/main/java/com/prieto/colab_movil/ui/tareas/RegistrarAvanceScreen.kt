@@ -1,5 +1,6 @@
 package com.prieto.colab_movil.ui.tareas
 
+import com.prieto.colab_movil.ui.components.ColabActualizar
 import com.prieto.colab_movil.ui.components.ColabBarraSecundaria
 
 import androidx.activity.compose.BackHandler
@@ -123,8 +124,12 @@ fun RegistrarAvanceScreen(
             }
             is RegistrarAvanceUiState.Success -> {
                 val datos = state.datos
+                ColabActualizar(
+                    actualizando = state.actualizando, habilitado = !state.ocupado,
+                    onActualizar = { viewModel.cargar(proyectoId, tareaId) }, modifier = Modifier.padding(padding)
+                ) {
                 LazyColumn(
-                    Modifier.fillMaxSize().padding(padding).imePadding().testTag("avance-contenido"),
+                    Modifier.fillMaxSize().imePadding().testTag("avance-contenido"),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -240,6 +245,7 @@ fun RegistrarAvanceScreen(
                             Text(registro.nota?.takeIf { it.isNotBlank() } ?: "Sin nota registrada.", color = AvanceInk, fontSize = 13.sp)
                         }
                     }
+                }
                 }
             }
         }

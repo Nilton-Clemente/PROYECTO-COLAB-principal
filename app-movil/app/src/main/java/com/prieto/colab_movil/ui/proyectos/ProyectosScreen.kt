@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
 import com.prieto.colab_movil.ui.components.ColabTopBar
+import com.prieto.colab_movil.ui.components.ColabActualizar
 import com.prieto.colab_movil.ui.components.ColabBottomBar
 import com.prieto.colab_movil.ui.components.SeccionPrincipal
 
@@ -219,7 +220,10 @@ fun ProyectosScreen(
                 onProyectoClick = onProyectoClick,
                 onOpcionesClick = onOpcionesClick,
                 onInvitacionesClick = onInvitacionesClick,
-                hayInvitaciones = hayInvitaciones
+                hayInvitaciones = hayInvitaciones,
+                actualizando = state.actualizando,
+                aviso = state.aviso,
+                onActualizar = { viewModel.cargarDatos() }
             )
         }
     }
@@ -235,7 +239,10 @@ fun ProyectosContent(
     onProyectoClick: (Proyecto) -> Unit = {},
     onOpcionesClick: (Proyecto) -> Unit = {},
     onInvitacionesClick: () -> Unit = {},
-    hayInvitaciones: Boolean = false
+    hayInvitaciones: Boolean = false,
+    actualizando: Boolean = false,
+    aviso: String? = null,
+    onActualizar: () -> Unit = {}
 ) {
     var filtro by remember { mutableStateOf(Filtro.TODOS) }
 
@@ -259,13 +266,13 @@ fun ProyectosContent(
                 hayInvitaciones = hayInvitaciones, colorNoSeleccionado = OnSurfaceVariant)
         }
     ) { padding ->
+        ColabActualizar(actualizando = actualizando, habilitado = !actualizando, onActualizar = onActualizar, modifier = Modifier.padding(padding)) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (aviso != null) item { Text(aviso, color = OnErrorContainer, fontSize = 13.sp) }
             item { Saludo(nombre, proyectos.size, onCrearClick) }
             item { Metricas(sprintsActivos = 2, entregasPendientes = 1) }
             item {
@@ -288,6 +295,7 @@ fun ProyectosContent(
                 }
             }
             item { Spacer(Modifier.height(8.dp)) }
+        }
         }
     }
 }
