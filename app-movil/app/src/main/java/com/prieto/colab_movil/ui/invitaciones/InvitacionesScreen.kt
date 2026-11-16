@@ -11,8 +11,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Mail
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.HowToReg
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.prieto.colab_movil.data.model.InvitacionResponseDto
+import com.prieto.colab_movil.ui.components.ColabTopBar
+import com.prieto.colab_movil.ui.components.ColabBottomBar
+import com.prieto.colab_movil.ui.components.SeccionPrincipal
 
 // ----------------------------------------------------
 // COLORES (misma paleta del resto de la app)
@@ -73,76 +74,13 @@ fun InvitacionesScreen(
     Scaffold(
         containerColor = Fondo,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Colab",
-                        fontSize = 21.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextoPrincipal
-                    )
-                },
-                actions = {
-                    IconButton(onClick = onNotificacionesClick) {
-                        Icon(
-                            Icons.Default.Notifications,
-                            contentDescription = "Notificaciones",
-                            tint = TextoSecundario
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .padding(end = 16.dp)
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(Primario),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = "Perfil",
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Fondo)
-            )
+            ColabTopBar(onNotificaciones = onNotificacionesClick, onPerfil = onPerfilClick)
         },
         bottomBar = {
-            NavigationBar(containerColor = Superficie, tonalElevation = 4.dp) {
-                val colores = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Primario,
-                    selectedTextColor = Primario,
-                    indicatorColor = Color.Transparent,
-                    unselectedIconColor = TextoSecundario,
-                    unselectedTextColor = TextoSecundario
-                )
-
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onProyectosClick,
-                    colors = colores,
-                    icon = { Icon(Icons.Default.Folder, contentDescription = "Proyectos") },
-                    label = { Text("Proyectos", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-                )
-
-                NavigationBarItem(
-                    selected = true,
-                    onClick = {},
-                    colors = colores,
-                    icon = { Icon(Icons.Default.Mail, contentDescription = "Invitaciones") },
-                    label = { Text("Invitaciones", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-                )
-
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onPerfilClick,
-                    colors = colores,
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Mi Perfil") },
-                    label = { Text("Mi Perfil", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-                )
-            }
+            ColabBottomBar(
+                seleccionada = SeccionPrincipal.INVITACIONES, onProyectos = onProyectosClick,
+                onInvitaciones = {}, onPerfil = onPerfilClick, iconosRellenos = true, elevacion = 4.dp
+            )
         },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)

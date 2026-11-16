@@ -18,10 +18,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Mail
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,6 +32,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.prieto.colab_movil.data.model.HabilidadDto
+import com.prieto.colab_movil.ui.components.ColabTopBar
+import com.prieto.colab_movil.ui.components.ColabBottomBar
+import com.prieto.colab_movil.ui.components.SeccionPrincipal
 
 // ---------------------------------------------------------
 // COLORES INSPIRADOS EN EL DISEÑO ORIGINAL DE STITCH
@@ -80,16 +79,15 @@ fun PerfilScreen(
     Scaffold(
         containerColor = Fondo,
         topBar = {
-            EncabezadoColab(
+            ColabTopBar(
                 onNotificaciones = onNotificacionesClick,
                 onPerfil = onPerfilClick
             )
         },
         bottomBar = {
-            BarraNavegacion(
-                onProyectosClick = onProyectosClick,
-                onInvitacionesClick = onInvitacionesClick,
-                onPerfilClick = onPerfilClick
+            ColabBottomBar(
+                seleccionada = SeccionPrincipal.PERFIL, onProyectos = onProyectosClick,
+                onInvitaciones = onInvitacionesClick, onPerfil = onPerfilClick
             )
         }
     ) { paddingValues ->
@@ -153,46 +151,6 @@ private fun ContenidoPerfil(
     paddingValues: PaddingValues
 ) {
     ContenidoPerfilRedisenado(state, onEliminar, onCerrarSesion, paddingValues)
-}
-
-// ---------------------------------------------------------
-// ENCABEZADO SUPERIOR
-// ---------------------------------------------------------
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun EncabezadoColab(onNotificaciones: () -> Unit, onPerfil: () -> Unit) {
-    TopAppBar(
-        title = {
-            Text("Colab", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal)
-        },
-        actions = {
-            IconButton(onClick = onNotificaciones) {
-                Icon(
-                    imageVector = Icons.Outlined.Notifications,
-                    contentDescription = "Notificaciones",
-                    tint = TextoSecundario
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .padding(end = 16.dp)
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(Primario)
-                    .clickable(onClick = onPerfil),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Person,
-                    contentDescription = "Mi perfil",
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Fondo)
-    )
 }
 
 // ---------------------------------------------------------
@@ -609,49 +567,4 @@ fun MensajeVacio(mensaje: String) {
         )
     }
 }
-
-// ---------------------------------------------------------
-// BARRA DE NAVEGACIÓN INFERIOR
-// (por ahora solo muestra la opción "Mi Perfil")
-// ---------------------------------------------------------
-
-@Composable
-fun BarraNavegacion(
-    onProyectosClick: () -> Unit = {},
-    onInvitacionesClick: () -> Unit = {},
-    onPerfilClick: () -> Unit = {}
-) {
-    NavigationBar(containerColor = Superficie) {
-        val colores = NavigationBarItemDefaults.colors(
-            selectedIconColor = Primario,
-            selectedTextColor = Primario,
-            indicatorColor = Color.Transparent,
-            unselectedIconColor = TextoSecundario,
-            unselectedTextColor = TextoSecundario
-        )
-        NavigationBarItem(
-            selected = false,
-            onClick = onProyectosClick,
-            colors = colores,
-            icon = { Icon(Icons.Outlined.Folder, null) },
-            label = { Text("Proyectos", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-        )
-        NavigationBarItem(
-            selected = false,
-            onClick = onInvitacionesClick,
-            colors = colores,
-            icon = { Icon(Icons.Outlined.Mail, null) },
-            label = { Text("Invitaciones", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-        )
-        NavigationBarItem(
-            selected = true,
-            onClick = onPerfilClick,
-            colors = colores,
-            icon = { Icon(Icons.Outlined.Person, null) },
-            label = { Text("Mi Perfil", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-        )
-    }
-}
-
-
 

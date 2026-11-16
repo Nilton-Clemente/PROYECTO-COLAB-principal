@@ -28,14 +28,10 @@ import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.Flag
-import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Layers
-import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PendingActions
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Smartphone
@@ -45,20 +41,12 @@ import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.filled.Star as StarFilled
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -83,6 +71,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
+import com.prieto.colab_movil.ui.components.ColabTopBar
+import com.prieto.colab_movil.ui.components.ColabBottomBar
+import com.prieto.colab_movil.ui.components.SeccionPrincipal
 
 /* ───────────── Colores (tomados del DESIGN.md) ───────────── */
 private val Surface = Color(0xFFFAF8FF)
@@ -100,7 +91,6 @@ private val Secondary = Color(0xFF006C49)
 private val SecondaryFixed = Color(0xFF6FFBBE)
 private val OnSecondaryFixed = Color(0xFF002113)
 private val OnSecondaryFixedVariant = Color(0xFF005236)
-private val Tertiary = Color(0xFF960014)
 private val ErrorContainer = Color(0xFFFFDAD6)
 private val OnErrorContainer = Color(0xFF93000A)
 
@@ -262,8 +252,12 @@ fun ProyectosContent(
 
     Scaffold(
         containerColor = Surface,
-        topBar = { ColabTopBar(onNotificacionesClick, onPerfilClick) },
-        bottomBar = { ColabBottomBar(hayInvitaciones, onInvitacionesClick, onPerfilClick) }
+        topBar = { ColabTopBar(onNotificacionesClick, onPerfilClick, colorIconoNotificaciones = OnSurfaceVariant) },
+        bottomBar = {
+            ColabBottomBar(SeccionPrincipal.PROYECTOS, onProyectos = {},
+                onInvitaciones = onInvitacionesClick, onPerfil = onPerfilClick,
+                hayInvitaciones = hayInvitaciones, colorNoSeleccionado = OnSurfaceVariant)
+        }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -295,66 +289,6 @@ fun ProyectosContent(
             }
             item { Spacer(Modifier.height(8.dp)) }
         }
-    }
-}
-
-/* ───────────── Barras ───────────── */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ColabTopBar(onNotificaciones: () -> Unit, onPerfil: () -> Unit) {
-    TopAppBar(
-        title = {
-            Text("Colab", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = OnSurface)
-        },
-        actions = {
-            IconButton(onClick = onNotificaciones) {
-                Icon(Icons.Outlined.Notifications, "Notificaciones", tint = OnSurfaceVariant)
-            }
-            Box(
-                modifier = Modifier
-                    .padding(end = 16.dp)
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(Primary)
-                    .clickable(onClick = onPerfil),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Outlined.Person, "Mi perfil", tint = Color.White, modifier = Modifier.size(18.dp))
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Surface)
-    )
-}
-
-@Composable
-private fun ColabBottomBar(hayInvitaciones: Boolean, onInvitaciones: () -> Unit, onPerfil: () -> Unit) {
-    NavigationBar(containerColor = SurfaceLowest) {
-        val colores = NavigationBarItemDefaults.colors(
-            selectedIconColor = Primary,
-            selectedTextColor = Primary,
-            indicatorColor = Color.Transparent,
-            unselectedIconColor = OnSurfaceVariant,
-            unselectedTextColor = OnSurfaceVariant
-        )
-        NavigationBarItem(
-            selected = true, onClick = {}, colors = colores,
-            icon = { Icon(Icons.Outlined.Folder, null) },
-            label = { Text("Proyectos", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-        )
-        NavigationBarItem(
-            selected = false, onClick = onInvitaciones, colors = colores,
-            icon = {
-                BadgedBox(badge = {
-                    if (hayInvitaciones) Badge(containerColor = Tertiary)
-                }) { Icon(Icons.Outlined.Mail, null) }
-            },
-            label = { Text("Invitaciones", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-        )
-        NavigationBarItem(
-            selected = false, onClick = onPerfil, colors = colores,
-            icon = { Icon(Icons.Outlined.Person, null) },
-            label = { Text("Mi Perfil", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-        )
     }
 }
 
