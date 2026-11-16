@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -71,7 +72,8 @@ fun PerfilScreen(
     onProyectosClick: () -> Unit = {},
     onInvitacionesClick: () -> Unit = {},
     onPerfilClick: () -> Unit = {},
-    onNotificacionesClick: () -> Unit = {}
+    onNotificacionesClick: () -> Unit = {},
+    onCerrarSesion: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -125,14 +127,17 @@ fun PerfilScreen(
                     ) {
                         Text("Reintentar")
                     }
+                    TextButton(onClick = onCerrarSesion) {
+                        Text("Cerrar sesión", color = Rojo)
+                    }
                 }
             }
 
             is PerfilUiState.Success -> {
                 ContenidoPerfil(
                     state = state,
-                    onAgregar = { viewModel.agregarHabilidad(it) },
                     onEliminar = { viewModel.eliminarHabilidad(it) },
+                    onCerrarSesion = onCerrarSesion,
                     paddingValues = paddingValues
                 )
             }
@@ -143,127 +148,11 @@ fun PerfilScreen(
 @Composable
 private fun ContenidoPerfil(
     state: PerfilUiState.Success,
-    onAgregar: (Long) -> Unit,
     onEliminar: (Long) -> Unit,
+    onCerrarSesion: () -> Unit,
     paddingValues: PaddingValues
 ) {
-    var busqueda by remember { mutableStateOf("") }
-    var categoriaSeleccionada by remember { mutableStateOf("Todos") }
-
-    val idsHabilidades = state.habilidades.map { it.id }.toSet()
-    val catalogoDisponible = state.catalogo.filter { it.id !in idsHabilidades }
-
-    val categorias = remember(catalogoDisponible) {
-        listOf("Todos") + catalogoDisponible.map { it.area ?: "General" }.distinct()
-    }
-
-    val tecnologiasFiltradas = catalogoDisponible.filter { tecnologia ->
-        val coincideBusqueda = tecnologia.nombre.contains(
-            busqueda.trim(),
-            ignoreCase = true
-        )
-        val coincideCategoria = categoriaSeleccionada == "Todos" ||
-            (tecnologia.area ?: "General") == categoriaSeleccionada
-        coincideBusqueda && coincideCategoria
-    }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues),
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = 16.dp,
-            bottom = 24.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(22.dp)
-    ) {
-        item {
-            PerfilEstudiante(nombre = state.nombre, email = state.email)
-        }
-
-        item {
-            EncabezadoSeccion(
-                titulo = "Mis habilidades",
-                subtitulo = "Tecnologías que forman parte de tu perfil",
-                contador = "${state.habilidades.size}"
-            )
-        }
-
-        item {
-            if (state.habilidades.isEmpty()) {
-                MensajeVacio("Todavía no tienes habilidades agregadas.")
-            } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    state.habilidades.chunked(2).forEach { fila ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            fila.forEach { habilidad ->
-                                Box(modifier = Modifier.weight(1f)) {
-                                    TarjetaHabilidad(
-                                        habilidad = habilidad,
-                                        onEliminar = { onEliminar(habilidad.id) }
-                                    )
-                                }
-                            }
-
-                            if (fila.size == 1) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            HorizontalDivider(color = Lavanda.copy(alpha = 0.8f))
-        }
-
-        item {
-            EncabezadoSeccion(
-                titulo = "Catálogo disponible",
-                subtitulo = "Explora y añade tecnologías a tu perfil",
-                contador = "${catalogoDisponible.size}"
-            )
-        }
-
-        item {
-            Buscador(
-                texto = busqueda,
-                onTextoCambio = { busqueda = it }
-            )
-        }
-
-        item {
-            FiltrosCategorias(
-                categorias = categorias,
-                seleccionada = categoriaSeleccionada,
-                onSeleccionar = { categoriaSeleccionada = it }
-            )
-        }
-
-        if (tecnologiasFiltradas.isEmpty()) {
-            item {
-                MensajeVacio("No se encontraron tecnologías con esos criterios.")
-            }
-        } else {
-            items(
-                items = tecnologiasFiltradas,
-                key = { it.id }
-            ) { tecnologia ->
-                TarjetaCatalogo(
-                    habilidad = tecnologia,
-                    onAgregar = { onAgregar(tecnologia.id) }
-                )
-            }
-        }
-    }
+    ContenidoPerfilRedisenado(state, onEliminar, onCerrarSesion, paddingValues)
 }
 
 // ---------------------------------------------------------
@@ -313,7 +202,8 @@ fun EncabezadoColab(onNotificaciones: () -> Unit, onPerfil: () -> Unit) {
 @Composable
 fun PerfilEstudiante(
     nombre: String,
-    email: String
+    email: String,
+    onCerrarSesion: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -344,22 +234,6 @@ fun PerfilEstudiante(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                Surface(
-                    color = VerdeSuave,
-                    shape = RoundedCornerShape(50)
-                ) {
-                    Text(
-                        text = "Activo",
-                        modifier = Modifier.padding(
-                            horizontal = 9.dp,
-                            vertical = 5.dp
-                        ),
-                        color = Color(0xFF00452E),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
                 Spacer(Modifier.height(8.dp))
 
                 Text(
@@ -377,6 +251,24 @@ fun PerfilEstudiante(
                     fontSize = 11.sp,
                     color = TextoSecundario
                 )
+
+                Spacer(Modifier.height(5.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+
+                ) {
+                    Text(text = "relleno intencional ._.")
+                    TextButton(
+                        onClick = onCerrarSesion,
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text("Cerrar sesión", color = Rojo)
+                    }
+                }
+
             }
         }
     }

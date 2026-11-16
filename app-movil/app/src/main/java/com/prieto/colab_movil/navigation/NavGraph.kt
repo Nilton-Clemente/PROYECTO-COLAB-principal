@@ -225,6 +225,13 @@ fun AppNavigation(
                 onPerfilClick = {},
                 onNotificacionesClick = {
                     Toast.makeText(context, "Notificaciones", Toast.LENGTH_SHORT).show()
+                },
+                onCerrarSesion = {
+                    SessionManager.token = null
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                        launchSingleTop = true
+                    }
                 }
             )
         }
