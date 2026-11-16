@@ -30,6 +30,9 @@ public class Habilidad {
 
     private String area;
 
+    @Column(length = 64)
+    private String icono;
+
     @OneToMany(mappedBy = "habilidad")
     private Set<UsuarioHabilidad> usuarios = new HashSet<>();
 }
