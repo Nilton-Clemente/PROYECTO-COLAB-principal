@@ -169,6 +169,7 @@ class PlanificacionGeneracionScreenTest {
             error?.let { return Result.failure(it) }
             return Result.success(plan)
         }
+        override suspend fun guardarPlanificacion(proyectoId: Long, request: PlanificacionUpdateRequestDto): Result<PlanificacionResponseDto> = error("No se usa")
         override suspend fun crearEtapa(proyectoId: Long, request: EtapaRequestDto): Result<EtapaResponseDto> = error("No se usa")
         override suspend fun editarEtapa(proyectoId: Long, etapaId: Long, request: EtapaRequestDto): Result<EtapaResponseDto> = error("No se usa")
         override suspend fun eliminarEtapa(proyectoId: Long, etapaId: Long): Result<Unit> = error("No se usa")

@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.prieto.colab_movil.data.model.HabilidadDto
+import com.prieto.colab_movil.ui.components.EstadoCarga
+import com.prieto.colab_movil.ui.components.EstadoError
 import com.prieto.colab_movil.ui.components.ColabTopBar
 import com.prieto.colab_movil.ui.components.ColabBottomBar
 import com.prieto.colab_movil.ui.components.SeccionPrincipal
@@ -92,44 +94,11 @@ fun PerfilScreen(
         }
     ) { paddingValues ->
         when (val state = uiState) {
-            is PerfilUiState.Loading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = Primario)
-                }
-            }
+            is PerfilUiState.Loading -> EstadoCarga(modifier = Modifier.padding(paddingValues))
 
-            is PerfilUiState.Error -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = state.message,
-                        color = TextoSecundario,
-                        fontSize = 14.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Button(
-                        onClick = { viewModel.cargar() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Primario)
-                    ) {
-                        Text("Reintentar")
-                    }
-                    TextButton(onClick = onCerrarSesion) {
-                        Text("Cerrar sesión", color = Rojo)
-                    }
-                }
-            }
+            is PerfilUiState.Error -> EstadoError(
+                onReintentar = { viewModel.cargar() }, modifier = Modifier.padding(paddingValues)
+            )
 
             is PerfilUiState.Success -> {
                 ContenidoPerfil(

@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.prieto.colab_movil.data.model.InvitacionResponseDto
+import com.prieto.colab_movil.ui.components.EstadoCarga
+import com.prieto.colab_movil.ui.components.EstadoError
 import com.prieto.colab_movil.ui.components.ColabTopBar
 import com.prieto.colab_movil.ui.components.ColabBottomBar
 import com.prieto.colab_movil.ui.components.SeccionPrincipal
@@ -87,33 +89,11 @@ fun InvitacionesScreen(
         }
     ) { padding ->
         when (val state = uiState) {
-            is InvitacionesUiState.Loading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = Primario)
-                }
-            }
+            is InvitacionesUiState.Loading -> EstadoCarga(modifier = Modifier.padding(padding))
 
-            is InvitacionesUiState.Error -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(text = state.message, color = TextoSecundario, fontSize = 14.sp)
-                    Spacer(Modifier.height(16.dp))
-                    Button(onClick = { viewModel.cargar() }) {
-                        Text("Reintentar")
-                    }
-                }
-            }
+            is InvitacionesUiState.Error -> EstadoError(
+                onReintentar = { viewModel.cargar() }, modifier = Modifier.padding(padding)
+            )
 
             is InvitacionesUiState.Success -> {
                 val invitaciones = state.invitaciones
