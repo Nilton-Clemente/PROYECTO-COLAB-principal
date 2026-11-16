@@ -28,12 +28,14 @@ class PerfilControllerTest {
     @Test
     void perfilIncluyeNivelYCatalogoNoLoIncluye() throws Exception {
         when(servicio.obtenerPerfil()).thenReturn(new PerfilResponse("ana@example.com", "Ana",
-                List.of(new HabilidadPerfilDto(2L, "Java", "Backend", "AVANZADO"))));
-        when(servicio.listarCatalogo()).thenReturn(List.of(new HabilidadDto(2L, "Java", "Backend")));
+                List.of(new HabilidadPerfilDto(2L, "Java", "Backend", "AVANZADO", "java"))));
+        when(servicio.listarCatalogo()).thenReturn(List.of(new HabilidadDto(2L, "Java", "Backend", "java")));
         mvc.perform(get("/api/usuario/perfil")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.habilidades[0].nivel").value("AVANZADO"));
+        mvc.perform(get("/api/usuario/perfil")).andExpect(jsonPath("$.habilidades[0].icono").value("java"));
         mvc.perform(get("/api/habilidades")).andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].nivel").doesNotExist());
+                .andExpect(jsonPath("$[0].nivel").doesNotExist())
+                .andExpect(jsonPath("$[0].icono").value("java"));
     }
 
     @Test

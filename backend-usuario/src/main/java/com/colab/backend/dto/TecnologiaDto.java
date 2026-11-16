@@ -1,3 +1,3 @@
 package com.colab.backend.dto;
 
-public record TecnologiaDto(Long id, String nombre) {}
+public record TecnologiaDto(Long id, String nombre, String icono) {}

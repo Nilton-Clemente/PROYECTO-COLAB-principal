@@ -319,7 +319,7 @@ public class ProyectoService {
                 p.getTipo(),
                 p.getTecnologias().stream()
                         .sorted((a, b) -> Long.compare(a.getId(), b.getId()))
-                        .map(t -> new TecnologiaDto(t.getId(), t.getNombre()))
+                        .map(t -> new TecnologiaDto(t.getId(), t.getNombre(), t.getIcono()))
                         .toList(),
                 p.getRequerimientosFuncionales().stream()
                         .map(rf -> new RequerimientoFuncionalDto(rf.getCodigo(), rf.getDescripcion()))

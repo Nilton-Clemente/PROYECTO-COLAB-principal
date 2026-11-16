@@ -34,6 +34,7 @@ class PerfilHabilidadPersistenceTest {
         Habilidad java = new Habilidad();
         java.setNombre("Java-" + sufijo);
         java.setArea("Backend");
+        java.setIcono("java");
         entityManager.persist(java);
         entityManager.flush();
         Long habilidadId = java.getId();
@@ -48,6 +49,7 @@ class PerfilHabilidadPersistenceTest {
         entityManager.clear();
 
         assertThat(service.obtenerPerfil().habilidades().getFirst().nivel()).isNull();
+        assertThat(service.obtenerPerfil().habilidades().getFirst().icono()).isEqualTo("java");
         autenticar(ana.getEmail());
         assertThat(service.obtenerPerfil().habilidades().getFirst().nivel()).isEqualTo("AVANZADO");
         // Cada petición HTTP usa un contexto de persistencia independiente.

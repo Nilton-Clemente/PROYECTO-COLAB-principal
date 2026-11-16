@@ -39,7 +39,7 @@ public class PerfilService {
 
     public List<HabilidadDto> listarCatalogo() {
         return habilidadRepository.findAll().stream()
-                .map(h -> new HabilidadDto(h.getId(), h.getNombre(), h.getArea()))
+                .map(h -> new HabilidadDto(h.getId(), h.getNombre(), h.getArea(), h.getIcono()))
                 .toList();
     }
 
@@ -51,7 +51,8 @@ public class PerfilService {
                         uh.getHabilidad().getId(),
                         uh.getHabilidad().getNombre(),
                         uh.getHabilidad().getArea(),
-                        uh.getNivel()))
+                        uh.getNivel(),
+                        uh.getHabilidad().getIcono()))
                 .toList();
         return new PerfilResponse(u.getEmail(), u.getNombre(), habilidades);
     }

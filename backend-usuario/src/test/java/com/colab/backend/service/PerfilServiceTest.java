@@ -96,9 +96,19 @@ class PerfilServiceTest {
     void perfilIncluyeNivelYRespetaValorHistoricoNulo() {
         UsuarioHabilidad uh = relacion(null);
         usuario.getHabilidades().add(uh);
+        habilidad.setIcono("java");
         assertThat(service.obtenerPerfil().habilidades().getFirst().nivel()).isNull();
+        assertThat(service.obtenerPerfil().habilidades().getFirst().icono()).isEqualTo("java");
         uh.setNivel("INTERMEDIO");
         assertThat(service.obtenerPerfil().habilidades().getFirst().nivel()).isEqualTo("INTERMEDIO");
+    }
+
+    @Test
+    void catalogoIncluyeIconoOpcional() {
+        when(habilidades.findAll()).thenReturn(List.of(habilidad));
+        assertThat(service.listarCatalogo().getFirst().icono()).isNull();
+        habilidad.setIcono("java");
+        assertThat(service.listarCatalogo().getFirst().icono()).isEqualTo("java");
     }
 
     @Test
