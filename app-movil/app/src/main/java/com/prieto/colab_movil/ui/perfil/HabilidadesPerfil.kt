@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.prieto.colab_movil.data.model.HabilidadDto
+import com.prieto.colab_movil.ui.components.IconoHabilidad
 
 private val Primario = Color(0xFF3525CD)
 private val Lavanda = Color(0xFFE2DFFF)
@@ -94,7 +95,7 @@ internal fun SeccionHabilidades(
         } else if (mostrarTodas) {
             habilidades.forEach { habilidad ->
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("◆", color = Primario)
+                    IconoHabilidad(habilidad.nombre, habilidad.icono, modifier = Modifier.size(32.dp), tamanoInicial = 18.sp)
                     Spacer(Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(habilidad.nombre, fontWeight = FontWeight.SemiBold, color = Texto, fontSize = 14.sp)
@@ -112,7 +113,7 @@ internal fun SeccionHabilidades(
                         Box(modifier = Modifier.size(70.dp).clip(RoundedCornerShape(16.dp))
                             .background(Color(0xFFEAEDFF)).border(1.dp, Borde, RoundedCornerShape(16.dp)),
                             contentAlignment = Alignment.Center) {
-                            Text(habilidad.nombre.take(1).uppercase(), fontSize = 25.sp, color = Primario, fontWeight = FontWeight.Bold)
+                            IconoHabilidad(habilidad.nombre, habilidad.icono, modifier = Modifier.size(42.dp))
                         }
                         Spacer(Modifier.height(4.dp))
                         Text(habilidad.nombre, fontSize = 11.sp, color = Texto, maxLines = 1, overflow = TextOverflow.Ellipsis)

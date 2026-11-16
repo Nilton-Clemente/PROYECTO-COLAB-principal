@@ -16,6 +16,17 @@ Pantallas de usuario: autenticación, proyectos, equipo, generación de planific
 
 Ver acuerdos en el [README raíz](../README.md).
 
+## Iconos de habilidades
+
+El perfil carga los SVG de habilidades desde `backend-usuario`, usando la
+misma `base.url` configurada en `local.properties` (por defecto
+`http://10.0.2.2:8081/` para el emulador). En un teléfono físico debe configurarse
+una dirección del backend alcanzable desde el dispositivo. La inicial de la
+habilidad se muestra si no tiene icono, mientras carga o si falla la descarga.
+La app usa Coil con soporte SVG y caché; un icono nunca descargado requiere
+conexión. La prueba automática de error funciona sin el backend; para comprobar
+la carga real, iniciar `backend-usuario` y asignar un icono desde administración.
+
 ## Registro rápido mediante JSON
 
 En **Crear Proyecto → Importar JSON** puedes seleccionar un archivo JSON UTF-8

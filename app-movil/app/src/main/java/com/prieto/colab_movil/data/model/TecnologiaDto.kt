@@ -6,5 +6,7 @@ data class TecnologiaDto(
     @SerializedName("id")
     val id: Long,
     @SerializedName("nombre")
-    val nombre: String
+    val nombre: String,
+    @SerializedName("icono")
+    val icono: String? = null
 )
