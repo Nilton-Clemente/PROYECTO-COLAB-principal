@@ -17,13 +17,15 @@ class HabilidadesPerfilTest {
     @get:Rule val compose = createComposeRule()
 
     @Test
-    fun permiteExpandirEliminarYMostrarAvisoDelCatalogo() {
+    fun permiteExpandirEliminarYAbrirCatalogo() {
         var eliminado: Long? = null
+        var abrioCatalogo = false
         compose.setContent {
             MaterialTheme {
                 ContenidoPerfilRedisenado(
                     PerfilUiState.Success("Alexis", "alexis@tecsup.edu.pe", listOf(HabilidadDto(7, "Kotlin", "Mobile"))),
-                    onEliminar = { eliminado = it }, onCerrarSesion = {}, paddingValues = PaddingValues(0.dp)
+                    onEliminar = { eliminado = it }, onCerrarSesion = {}, paddingValues = PaddingValues(0.dp),
+                    onCatalogo = { abrioCatalogo = true }
                 )
             }
         }
@@ -33,6 +35,6 @@ class HabilidadesPerfilTest {
         compose.onNodeWithText("Eliminar").performClick()
         compose.runOnIdle { assertEquals(7L, eliminado) }
         compose.onNodeWithText("Explorar catálogo de habilidades").performScrollTo().performClick()
-        compose.onNodeWithText("La pantalla del catálogo estará disponible próximamente.").assertIsDisplayed()
+        compose.runOnIdle { assertEquals(true, abrioCatalogo) }
     }
 }

@@ -38,7 +38,7 @@ class PerfilErrorTest {
             return Result.failure(Exception("Detalle técnico"))
         }
         override suspend fun listarCatalogo(): Result<List<HabilidadDto>> = error("No se usa")
-        override suspend fun agregarHabilidad(habilidadId: Long): Result<Unit> = error("No se usa")
+        override suspend fun agregarHabilidad(habilidadId: Long, nivel: String): Result<Unit> = error("No se usa")
         override suspend fun eliminarHabilidad(habilidadId: Long): Result<Unit> = error("No se usa")
     }
 }

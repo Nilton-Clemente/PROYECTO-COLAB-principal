@@ -36,10 +36,10 @@ internal fun ContenidoPerfilRedisenado(
     state: PerfilUiState.Success,
     onEliminar: (Long) -> Unit,
     onCerrarSesion: () -> Unit,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    onCatalogo: () -> Unit = {}
 ) {
     var mostrarTodas by remember { mutableStateOf(false) }
-    var mostrarAviso by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(paddingValues),
@@ -50,16 +50,7 @@ internal fun ContenidoPerfilRedisenado(
         item {
             SeccionHabilidades(state.habilidades, mostrarTodas, { mostrarTodas = !mostrarTodas }, onEliminar)
         }
-        item { ExplorarCatalogo { mostrarAviso = true } }
-    }
-
-    if (mostrarAviso) {
-        AlertDialog(
-            onDismissRequest = { mostrarAviso = false },
-            title = { Text("Catálogo de habilidades") },
-            text = { Text("La pantalla del catálogo estará disponible próximamente.") },
-            confirmButton = { TextButton(onClick = { mostrarAviso = false }) { Text("Entendido") } }
-        )
+        item { ExplorarCatalogo(onCatalogo) }
     }
 }
 
@@ -100,6 +91,7 @@ internal fun SeccionHabilidades(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(habilidad.nombre, fontWeight = FontWeight.SemiBold, color = Texto, fontSize = 14.sp)
                         Text(habilidad.area ?: "General", fontSize = 11.sp, color = Secundario)
+                        Text(nivelHabilidadTexto(habilidad.nivel), fontSize = 11.sp, color = Secundario)
                     }
                     TextButton(onClick = { onEliminar(habilidad.id) }) { Text("Eliminar", color = Rojo, fontSize = 11.sp) }
                 }

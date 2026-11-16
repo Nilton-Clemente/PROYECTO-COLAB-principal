@@ -74,7 +74,8 @@ fun PerfilScreen(
     onInvitacionesClick: () -> Unit = {},
     onPerfilClick: () -> Unit = {},
     onNotificacionesClick: () -> Unit = {},
-    onCerrarSesion: () -> Unit = {}
+    onCerrarSesion: () -> Unit = {},
+    onCatalogo: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -105,6 +106,7 @@ fun PerfilScreen(
                     state = state,
                     onEliminar = { viewModel.eliminarHabilidad(it) },
                     onCerrarSesion = onCerrarSesion,
+                    onCatalogo = onCatalogo,
                     paddingValues = paddingValues
                 )
             }
@@ -117,9 +119,10 @@ private fun ContenidoPerfil(
     state: PerfilUiState.Success,
     onEliminar: (Long) -> Unit,
     onCerrarSesion: () -> Unit,
+    onCatalogo: () -> Unit,
     paddingValues: PaddingValues
 ) {
-    ContenidoPerfilRedisenado(state, onEliminar, onCerrarSesion, paddingValues)
+    ContenidoPerfilRedisenado(state, onEliminar, onCerrarSesion, paddingValues, onCatalogo)
 }
 
 // ---------------------------------------------------------

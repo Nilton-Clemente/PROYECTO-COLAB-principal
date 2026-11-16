@@ -45,13 +45,6 @@ class PerfilViewModel(
         }
     }
 
-    fun agregarHabilidad(habilidadId: Long) {
-        viewModelScope.launch {
-            repository.agregarHabilidad(habilidadId)
-            refrescar()
-        }
-    }
-
     fun eliminarHabilidad(habilidadId: Long) {
         viewModelScope.launch {
             repository.eliminarHabilidad(habilidadId)

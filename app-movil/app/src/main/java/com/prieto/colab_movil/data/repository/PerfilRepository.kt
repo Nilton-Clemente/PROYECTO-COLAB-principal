@@ -5,12 +5,13 @@ import com.prieto.colab_movil.data.model.PerfilResponseDto
 import com.prieto.colab_movil.data.remote.PerfilApiService
 import com.prieto.colab_movil.data.remote.RetrofitClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 
 interface PerfilRepository {
     suspend fun obtenerPerfil(): Result<PerfilResponseDto>
     suspend fun listarCatalogo(): Result<List<HabilidadDto>>
-    suspend fun agregarHabilidad(habilidadId: Long): Result<Unit>
+    suspend fun agregarHabilidad(habilidadId: Long, nivel: String): Result<Unit>
     suspend fun eliminarHabilidad(habilidadId: Long): Result<Unit>
 }
 
@@ -26,6 +27,8 @@ class PerfilRepositoryImpl(
             } else {
                 Result.failure(Exception("No se pudo cargar el perfil (${response.code()})."))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(Exception("No se pudo conectar con el servidor backend. Verifica tu conexión."))
         }
@@ -39,19 +42,23 @@ class PerfilRepositoryImpl(
             } else {
                 Result.failure(Exception("No se pudo cargar el catálogo (${response.code()})."))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(Exception("No se pudo conectar con el servidor backend. Verifica tu conexión."))
         }
     }
 
-    override suspend fun agregarHabilidad(habilidadId: Long): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun agregarHabilidad(habilidadId: Long, nivel: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val response = apiService.agregarHabilidad(habilidadId)
+            val response = apiService.agregarHabilidad(habilidadId, nivel)
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {
                 Result.failure(Exception("No se pudo agregar la habilidad (${response.code()})."))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(Exception("No se pudo conectar con el servidor backend. Verifica tu conexión."))
         }
@@ -65,6 +72,8 @@ class PerfilRepositoryImpl(
             } else {
                 Result.failure(Exception("No se pudo eliminar la habilidad (${response.code()})."))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(Exception("No se pudo conectar con el servidor backend. Verifica tu conexión."))
         }

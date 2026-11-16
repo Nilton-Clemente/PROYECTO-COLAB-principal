@@ -13,6 +13,7 @@ import com.prieto.colab_movil.data.session.SessionManager
 import com.prieto.colab_movil.ui.invitaciones.InvitacionesScreen
 import com.prieto.colab_movil.ui.login.LoginScreen
 import com.prieto.colab_movil.ui.perfil.PerfilScreen
+import com.prieto.colab_movil.ui.perfil.CatalogoScreen
 import com.prieto.colab_movil.ui.planificacion.PlanificacionScreen
 import com.prieto.colab_movil.ui.planificacion.EditarPlanificacionScreen
 import com.prieto.colab_movil.ui.proyectos.CrearProyectoScreen
@@ -28,6 +29,7 @@ sealed class Screen(val route: String) {
     object Register : Screen("register")
     object Proyectos : Screen("proyectos")
     object Perfil : Screen("perfil")
+    object CatalogoHabilidades : Screen("catalogo_habilidades")
     object DetalleProyecto : Screen("proyecto_detalle/{proyectoId}") {
         fun createRoute(proyectoId: Long) = "proyecto_detalle/$proyectoId"
     }
@@ -211,8 +213,18 @@ fun AppNavigation(
             )
         }
 
-        composable(Screen.Perfil.route) {
+        composable(Screen.Perfil.route) { backStackEntry ->
+            val perfilViewModel: com.prieto.colab_movil.ui.perfil.PerfilViewModel = androidx.lifecycle.viewmodel.compose.viewModel(backStackEntry)
+            androidx.compose.runtime.LaunchedEffect(backStackEntry) {
+                backStackEntry.savedStateHandle.getStateFlow("recargar_perfil", false).collect { recargar ->
+                    if (recargar) {
+                        perfilViewModel.cargar()
+                        backStackEntry.savedStateHandle["recargar_perfil"] = false
+                    }
+                }
+            }
             PerfilScreen(
+                viewModel = perfilViewModel,
                 onProyectosClick = {
                     navController.popBackStack(Screen.Proyectos.route, inclusive = false)
                 },
@@ -220,6 +232,7 @@ fun AppNavigation(
                     navController.navigate(Screen.Invitaciones.route) { launchSingleTop = true }
                 },
                 onPerfilClick = {},
+                onCatalogo = { navController.navigate(Screen.CatalogoHabilidades.route) },
                 onNotificacionesClick = {
                     Toast.makeText(context, "Notificaciones", Toast.LENGTH_SHORT).show()
                 },
@@ -231,6 +244,13 @@ fun AppNavigation(
                     }
                 }
             )
+        }
+
+        composable(Screen.CatalogoHabilidades.route) {
+            CatalogoScreen(onBack = {
+                navController.previousBackStackEntry?.savedStateHandle?.set("recargar_perfil", true)
+                navController.popBackStack()
+            })
         }
 
         composable(Screen.Invitaciones.route) {

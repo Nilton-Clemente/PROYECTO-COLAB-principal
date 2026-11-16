@@ -27,6 +27,17 @@ La app usa Coil con soporte SVG y caché; un icono nunca descargado requiere
 conexión. La prueba automática de error funciona sin el backend; para comprobar
 la carga real, iniciar `backend-usuario` y asignar un icono desde administración.
 
+## Catálogo de habilidades
+
+Desde **Mi perfil → Explorar catálogo de habilidades** se consultan el catálogo
+y las habilidades actuales del usuario. Se puede buscar por nombre o área y
+seleccionar una habilidad no registrada. Para añadirla es obligatorio elegir
+Básico, Intermedio o Avanzado; el nivel se envía al backend y se consulta el
+perfil al terminar. Al volver, el perfil se recarga. Si no puede confirmarse el
+resultado de la operación, se debe reintentar la consulta antes de volver a
+añadirla. Los niveles anteriores no especificados aparecen como tales en la
+lista expandida del perfil. No se muestran descripciones ni cifras inventadas.
+
 ## Registro rápido mediante JSON
 
 En **Crear Proyecto → Importar JSON** puedes seleccionar un archivo JSON UTF-8
