@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { IconAlert, IconCheck } from '../../components/Icons.jsx';
 import { codigoTarea, diasEntre, ESTADO_TAREA, fechaCorta, iniciales, parseFecha, PRIORIDAD } from '../../utils.js';
+import EstadoProyecto from '../../components/EstadoProyecto.jsx';
 
 const FILTROS = [
   ['todas', 'Todas'],
@@ -10,7 +11,6 @@ const FILTROS = [
   ['COMPLETADA', 'Completadas'],
   ['BLOQUEADA', 'Bloqueadas'],
 ];
-const ESTADO_PLAN = { PROPUESTA: 'Propuesta lista para revisión' };
 
 function rango(tareas) {
   const ini = tareas.map((t) => parseFecha(t.fechaInicio)).filter(Boolean);
@@ -19,7 +19,7 @@ function rango(tareas) {
   return diasEntre(new Date(Math.min(...ini)), new Date(Math.max(...fin)));
 }
 
-function SinPlanificacion({ requisitos, soyCreador, generando, error, onGenerar, onEditar }) {
+function SinPlanificacion({ requisitos, soyCreador, generando, error, onGenerar }) {
   const completo = requisitos.every((r) => r.ok);
   return (
     <section className="tarjeta vacio-grande">
@@ -37,8 +37,8 @@ function SinPlanificacion({ requisitos, soyCreador, generando, error, onGenerar,
             <li className="requisito requisito--nota">Al menos dos integrantes activos deben tener habilidades en su perfil (lo valida el servidor).</li>
           </ul>
           {error && <div className="alerta alerta--error" role="alert"><IconAlert width={18} height={18} /><p>{error}</p></div>}
+          {!completo && <p className="seccion__sub">Completa los datos desde Más acciones → Editar proyecto.</p>}
           <div className="vacio-grande__acciones">
-            {!completo && <button type="button" className="btn btn--ghost" onClick={onEditar}>Completar información</button>}
             <button type="button" className="btn btn--primario" disabled={!completo || generando} onClick={onGenerar}>
               {generando ? 'Generando planificación…' : 'Generar planificación con IA'}
             </button>
@@ -96,7 +96,7 @@ function PlanMaestro({ proyecto, plan, nombres, soyCreador }) {
   return (
     <>
       <section className="tarjeta plan-cab">
-        <span className="chip chip--verde">{ESTADO_PLAN[plan.estado] ?? plan.estado}</span>
+        <EstadoProyecto estado={proyecto.estado} />
         <div className="plan-cab__titulo">
           <h2>Plan maestro: {proyecto.nombre}</h2>
           {soyCreador && plan.estado === 'PROPUESTA' && <Link className="btn btn--ghost btn--chico" to={`/proyectos/${proyecto.id}/planificacion/editar`}>Editar planificación</Link>}
@@ -150,6 +150,6 @@ function PlanMaestro({ proyecto, plan, nombres, soyCreador }) {
 
 export default function Planificacion({ proyecto, plan, equipo, soyCreador, ...resto }) {
   const nombres = Object.fromEntries(equipo.map((m) => [m.email, m.nombre]));
-  if (!plan) return <SinPlanificacion {...resto} />;
+  if (!plan) return <SinPlanificacion {...resto} soyCreador={soyCreador} />;
   return <PlanMaestro proyecto={proyecto} plan={plan} nombres={nombres} soyCreador={soyCreador} />;
 }

@@ -3,6 +3,8 @@ import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom
 import { useAuth } from '../auth/AuthContext.jsx';
 import * as api from '../api/colab.js';
 import Alerta from '../components/Alerta.jsx';
+import EstadoProyecto from '../components/EstadoProyecto.jsx';
+import { proyectoCerrado } from '../cicloProyecto.js';
 import { codigoTarea, ESTADO_TAREA, fechaCorta, iniciales, PRIORIDAD } from '../utils.js';
 import { puedeRegistrarAvance } from '../tareas.js';
 import {
@@ -59,11 +61,12 @@ function PantallaAvance({ proyectoId, tareaId }) {
   return <FormularioAvance {...carga} proyectoId={proyectoId} tareaId={tareaId} onRecargar={() => setIntento((valor) => valor + 1)} />;
 }
 
-function FormularioAvance({ proyectoId, tareaId, proyecto, plan: planInicial, tarea: tareaInicial, historial: historialInicial, onRecargar }) {
+function FormularioAvance({ proyectoId, tareaId, proyecto: proyectoInicial, plan: planInicial, tarea: tareaInicial, historial: historialInicial, onRecargar }) {
   const { token } = useAuth();
   const { usuario, avisar } = useOutletContext();
   const navigate = useNavigate();
   const [plan, setPlan] = useState(planInicial);
+  const [proyecto, setProyecto] = useState(proyectoInicial);
   const [tarea, setTarea] = useState(tareaInicial);
   const [historial, setHistorial] = useState(historialInicial);
   const [horas, setHoras] = useState(1);
@@ -77,7 +80,8 @@ function FormularioAvance({ proyectoId, tareaId, proyecto, plan: planInicial, ta
   const operando = useRef(false);
 
   const volver = `/proyectos/${proyectoId}/mis-tareas`;
-  const permitido = puedeRegistrarAvance(plan.estado, tarea);
+  const cerrado = proyectoCerrado(proyecto.estado);
+  const permitido = !cerrado && puedeRegistrarAvance(plan.estado, tarea);
   const errores = validarAvance({ horas, nota, estadoActual: tarea.estado, nuevoEstado });
   const bloqueado = guardando || guardado || Boolean(estadoPendiente) || resultadoIncierto || !permitido;
   const tiempo = resumenTiempo(historial.totalMinutos, guardado || estadoPendiente ? 0 : horas);
@@ -102,6 +106,16 @@ function FormularioAvance({ proyectoId, tareaId, proyecto, plan: planInicial, ta
       throw new Error('Solo puedes registrar avances en una planificación activa y una tarea no completada.');
     }
     return asignada;
+  }
+
+  async function consultarProyectoTrasCompletar(actualizada) {
+    if (actualizada?.estado !== 'COMPLETADA') return;
+    try {
+      setProyecto(await api.verProyecto(token, proyectoId));
+    } catch {
+      // El registro y el cambio de tarea ya se confirmaron; no deben repetirse.
+      avisar('La tarea se completó, pero no se pudo consultar el estado del proyecto. Vuelve al detalle para actualizarlo.');
+    }
   }
 
   async function guardar(event) {
@@ -135,6 +149,7 @@ function FormularioAvance({ proyectoId, tareaId, proyecto, plan: planInicial, ta
         if (resultado.tarea) setTarea(resultado.tarea);
         setGuardado(true);
         avisar(`Registraste ${horasTexto(registro.minutos / 60)} horas en ${codigoTarea(tarea.id)}.`, 'ok');
+        await consultarProyectoTrasCompletar(resultado.tarea);
       }
     } catch (err) {
       if (enviandoRegistro && (err.status == null || err.status === 0 || err.status >= 500)) {
@@ -158,9 +173,9 @@ function FormularioAvance({ proyectoId, tareaId, proyecto, plan: planInicial, ta
         api.obtenerPlanificacion(token, proyectoId), api.misTareas(token, proyectoId),
       ]);
       const asignada = tareas.find((item) => String(item.id) === tareaId);
-      if (!asignada || actual.estado !== 'ACTIVA') throw new Error('La tarea o la planificación cambiaron. Recarga para revisar su estado; las horas ya están guardadas.');
+      if (!asignada) throw new Error('La tarea ya no está asignada. Recarga para revisar su estado.');
       const actualizada = asignada.estado === estadoPendiente ? asignada
-        : permiteEstadoAvance(asignada.estado, estadoPendiente)
+        : actual.estado === 'ACTIVA' && permiteEstadoAvance(asignada.estado, estadoPendiente)
           ? await api.cambiarEstadoTarea(token, proyectoId, tareaId, estadoPendiente)
           : null;
       if (!actualizada) throw new Error('La transición ya no está permitida. Recarga para revisar la tarea; las horas ya están guardadas.');
@@ -170,6 +185,7 @@ function FormularioAvance({ proyectoId, tareaId, proyecto, plan: planInicial, ta
       setGuardado(true);
       setError('');
       avisar('Estado actualizado. No se añadieron horas adicionales.', 'ok');
+      await consultarProyectoTrasCompletar(actualizada);
     } catch (err) {
       setError(`Las horas ya están guardadas. ${err.message}`);
     } finally {
@@ -203,22 +219,28 @@ function FormularioAvance({ proyectoId, tareaId, proyecto, plan: planInicial, ta
             <span className="chip">{tarea.etapaNombre}</span>
             <span className={`prio prio--${tarea.prioridad}`}>Prioridad {PRIORIDAD[tarea.prioridad] ?? tarea.prioridad}</span>
           </div>
-          <h1>Registrar avance</h1>
+          <h1>{cerrado ? 'Historial de avances' : 'Registrar avance'}</h1>
           <h2>{tarea.nombre}</h2>
           <p>{proyecto.nombre} · {fechaCorta(tarea.fechaInicio)} — {fechaCorta(tarea.fechaFin)}</p>
         </div>
         <span className={`estado-tarea estado-tarea--${tarea.estado}`}>{ESTADO_TAREA[tarea.estado] ?? tarea.estado}</span>
       </section>
 
-      {!permitido && !guardado && <Alerta titulo="Registro no disponible" tipo="info">La planificación debe estar activa y la tarea no debe estar completada para registrar avances. Puedes consultar el historial a continuación.</Alerta>}
+      {!permitido && !guardado && !cerrado && <Alerta titulo="Registro no disponible" tipo="info">La planificación debe estar activa y la tarea no debe estar completada para registrar avances. Puedes consultar el historial a continuación.</Alerta>}
       {error && <Alerta titulo={estadoPendiente ? 'Avance guardado; estado pendiente' : 'Revisa el registro'}>{error}</Alerta>}
       {guardado && <div className="registro-avance__exito" role="status"><strong>Avance guardado correctamente.</strong> El historial y el total acumulado ya incluyen este registro.</div>}
+      {cerrado && (
+        <div className="registro-avance__cierre">
+          <EstadoProyecto estado={proyecto.estado} />
+          <Link to={`/proyectos/${proyectoId}`}>Ver detalle del proyecto →</Link>
+        </div>
+      )}
       {(estadoPendiente || resultadoIncierto) && <div className="registro-avance__recuperar">
         {estadoPendiente && <button type="button" className="btn btn--primario" disabled={guardando} onClick={reintentarEstado}>{guardando ? 'Actualizando…' : 'Reintentar solo el cambio de estado'}</button>}
         <button type="button" className="btn btn--ghost" disabled={guardando} onClick={onRecargar}>Recargar tarea e historial</button>
       </div>}
 
-      <section className="tarjeta registro-avance__resumen" aria-label="Resumen de tiempo">
+      {!cerrado && <section className="tarjeta registro-avance__resumen" aria-label="Resumen de tiempo">
         <div className="registro-avance__metricas">
           <div className="registro-avance__metrica"><span>Duración estimada</span><strong>{tarea.duracionDias} <small>días</small></strong><p>Estimación de la planificación</p></div>
           <div className="registro-avance__metrica"><span>Horas acumuladas</span><strong>{horasTexto(tiempo.acumuladas)} <small>h</small></strong><p>{historial.registros.length} {historial.registros.length === 1 ? 'registro guardado' : 'registros guardados'}</p></div>
@@ -226,10 +248,10 @@ function FormularioAvance({ proyectoId, tareaId, proyecto, plan: planInicial, ta
           <div className="registro-avance__metrica registro-avance__metrica--principal"><span>Total tras guardar</span><strong>{horasTexto(tiempo.proyectadas)} <small>h</small></strong><p>Tiempo registrado, no porcentaje completado</p></div>
         </div>
         <p className="registro-avance__ayuda">La estimación está expresada en días. No se convierte a horas porque el proyecto no define la duración de una jornada.</p>
-      </section>
+      </section>}
 
-      <div className="registro-avance__grilla">
-        <div className="registro-avance__columna">
+      <div className={`registro-avance__grilla${cerrado ? ' registro-avance__grilla--historial' : ''}`}>
+        {!cerrado && <div className="registro-avance__columna">
           <section className="tarjeta registro-avance__panel">
             <h2 id="estado-avance-titulo">Estado de la tarea</h2>
             <fieldset className="registro-avance__estados" disabled={bloqueado} aria-labelledby="estado-avance-titulo" aria-describedby="estado-avance-ayuda">
@@ -261,18 +283,19 @@ function FormularioAvance({ proyectoId, tareaId, proyecto, plan: planInicial, ta
             <span className="avatar avatar--chico" aria-hidden="true">{iniciales(usuario.nombre)}</span>
             <div><strong>{usuario.nombre}</strong><small>{usuario.email}</small><p>Responsable de la tarea · Usuario autenticado</p></div>
           </section>
-        </div>
+        </div>}
 
         <div className="registro-avance__columna">
-          <section className="tarjeta registro-avance__panel">
+          {!cerrado && <section className="tarjeta registro-avance__panel">
             <label className="campo" htmlFor="nota-avance"><span className="registro-avance__titulo-campo">Descripción del trabajo realizado</span>
               <textarea id="nota-avance" value={nota} disabled={bloqueado} minLength={MIN_NOTA_AVANCE} maxLength={MAX_NOTA_AVANCE} required rows="7" aria-describedby="nota-avance-ayuda" aria-invalid={nota.length > 0 && Boolean(errores.nota)} onChange={(event) => setNota(event.target.value)} placeholder="Describe lo que realizaste, los resultados, las pruebas o el impedimento encontrado en esta sesión…" />
             </label>
             <div id="nota-avance-ayuda" className="registro-avance__descripcion-pie"><span>{nota.trim().length >= MIN_NOTA_AVANCE ? '✓ Longitud válida' : `Mínimo ${MIN_NOTA_AVANCE} caracteres, sin contar espacios al inicio y al final`}</span><span>{nota.length} / {MAX_NOTA_AVANCE}</span></div>
-          </section>
+          </section>}
 
           <section className="tarjeta registro-avance__panel">
             <div className="registro-avance__historial-cab"><h2>Historial de avances</h2><span>{historial.registros.length} {historial.registros.length === 1 ? 'registro' : 'registros'}</span></div>
+            {cerrado && <p className="registro-avance__ayuda">Tiempo total registrado: {horasTexto(historial.totalMinutos / 60)} h</p>}
             {historial.registros.length === 0 ? <p className="registro-avance__ayuda">Aún no hay avances registrados para esta tarea.</p> : <ol className="registro-avance__historial">{historial.registros.map((registro) => <li key={registro.id}>
               <span className="registro-avance__historial-icono" aria-hidden="true">◷</span>
               <div><strong>{horasTexto(registro.minutos / 60)} h registradas</strong><time dateTime={registro.fecha}>{fechaRegistro(registro.fecha)}</time><small>{registro.usuarioNombre}</small><p>{registro.nota || 'Sin descripción.'}</p></div>
@@ -281,12 +304,12 @@ function FormularioAvance({ proyectoId, tareaId, proyecto, plan: planInicial, ta
         </div>
       </div>
 
-      <section className="tarjeta registro-avance__acciones">
+      {!cerrado && <section className="tarjeta registro-avance__acciones">
         <div><button type="button" className="btn btn--ghost" disabled={guardando} onClick={salir}>← Volver a mis tareas</button><button type="button" className="enlace-peligro" disabled={bloqueado} onClick={descartar}>Descartar cambios</button></div>
         <div><p>Total acumulado tras guardar<strong>{horasTexto(tiempo.proyectadas)} horas</strong></p>
           {guardado ? <button type="button" className="btn btn--primario" disabled={!permitido} onClick={onRecargar}>Registrar otra sesión</button> : <button type="submit" className="btn btn--primario" disabled={bloqueado || Object.keys(errores).length > 0}>{guardando ? 'Guardando…' : '✓ Guardar avance'}</button>}
         </div>
-      </section>
+      </section>}
     </form>
   );
 }

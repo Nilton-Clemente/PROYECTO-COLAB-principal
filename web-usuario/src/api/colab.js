@@ -19,6 +19,8 @@ export const eliminarHabilidad = (token, id) =>
 // Proyectos y equipo
 export const listarProyectos = (token) => request('/api/proyectos', { token });
 export const verProyecto = (token, id) => request(`/api/proyectos/${id}`, { token });
+export const cancelarProyecto = (token, id) => request(`/api/proyectos/${id}/cancelar`, { method: 'POST', token });
+export const eliminarProyecto = (token, id) => request(`/api/proyectos/${id}`, { method: 'DELETE', token });
 export const crearProyecto = (token, datos) => request('/api/proyectos', { method: 'POST', token, body: datos });
 export const listarTecnologias = (token) => request('/api/tecnologias', { token });
 export const verEquipo = (token, id) => request(`/api/proyectos/${id}/integrantes`, { token });

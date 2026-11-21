@@ -3,10 +3,12 @@ import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import * as api from '../api/colab.js';
 import Avatares from '../components/Avatares.jsx';
+import EstadoProyecto from '../components/EstadoProyecto.jsx';
 import ModalProyecto from '../components/ModalProyecto.jsx';
 import ModalProyectoJson from '../components/ModalProyectoJson.jsx';
 import { IconPlus, IconSearch } from '../components/Icons.jsx';
 import { formatearFecha, parseFecha, ROL } from '../utils.js';
+import { coincideProyecto, ESTADOS_PROYECTO, proyectoCerrado } from '../cicloProyecto.js';
 
 const FILTROS = [
   ['todos', 'Todos'],
@@ -31,6 +33,7 @@ function TarjetaProyecto({ proyecto }) {
       <div className="proyecto__etiquetas">
         <span className="chip chip--verde">{proyecto.tipo === 'SOFTWARE' ? 'Software' : proyecto.tipo}</span>
         <span className={proyecto.miRol === 'CREADOR' ? 'chip' : 'chip chip--gris'}>{ROL[proyecto.miRol]}</span>
+        <EstadoProyecto estado={proyecto.estado} />
       </div>
       <h3>{proyecto.nombre}</h3>
       <p className="proyecto__desc">{proyecto.descripcion || 'Sin descripción.'}</p>
@@ -60,6 +63,7 @@ export default function Proyectos() {
   const [error, setError] = useState('');
   const [proyectos, setProyectos] = useState([]);
   const [filtro, setFiltro] = useState('todos');
+  const [filtroEstado, setFiltroEstado] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [orden, setOrden] = useState('recientes');
   const [creando, setCreando] = useState(false);
@@ -94,6 +98,7 @@ export default function Proyectos() {
   const resumen = useMemo(() => {
     const hoy = new Date().setHours(0, 0, 0, 0);
     const futuras = proyectos
+      .filter((p) => !proyectoCerrado(p.estado))
       .map((p) => parseFecha(p.fechaEntrega))
       .filter((f) => f && f.getTime() >= hoy)
       .sort((a, b) => a - b);
@@ -107,18 +112,13 @@ export default function Proyectos() {
   }, [proyectos]);
 
   const visibles = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
-    const lista = proyectos.filter(
-      (p) =>
-        (filtro === 'todos' || p.miRol === filtro) &&
-        (!q || p.nombre.toLowerCase().includes(q) || p.tecnologias.some((t) => t.nombre.toLowerCase().includes(q))),
-    );
+    const lista = proyectos.filter((p) => coincideProyecto(p, { rol: filtro, estado: filtroEstado, busqueda }));
     const porFecha = (p) => (p.fechaEntrega ? parseFecha(p.fechaEntrega).getTime() : Infinity);
     if (orden === 'entrega') lista.sort((a, b) => porFecha(a) - porFecha(b));
     else if (orden === 'nombre') lista.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
     else lista.sort((a, b) => b.id - a.id);
     return lista;
-  }, [proyectos, filtro, busqueda, orden]);
+  }, [proyectos, filtro, filtroEstado, busqueda, orden]);
 
   const conteo = (f) => (f === 'todos' ? proyectos.length : proyectos.filter((p) => p.miRol === f).length);
 
@@ -187,6 +187,10 @@ export default function Proyectos() {
               ))}
             </div>
             <div className="filtros__derecha">
+              <select className="selector" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} aria-label="Filtrar por estado del proyecto">
+                <option value="">Todos los estados</option>
+                {Object.entries(ESTADOS_PROYECTO).map(([valor, { etiqueta }]) => <option key={valor} value={valor}>{etiqueta}</option>)}
+              </select>
               <label className="busqueda">
                 <IconSearch />
                 <input
@@ -206,7 +210,7 @@ export default function Proyectos() {
           </div>
 
           {visibles.length === 0 ? (
-            <p className="vacio">Ningún proyecto coincide con tu búsqueda.</p>
+            <p className="vacio">Ningún proyecto coincide con los filtros o la búsqueda.</p>
           ) : (
             <ul className="grilla grilla--proyectos">
               {visibles.map((p) => <TarjetaProyecto key={p.id} proyecto={p} />)}
