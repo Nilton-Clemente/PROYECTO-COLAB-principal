@@ -1,0 +1,46 @@
+.metricas { display: grid; gap: 16px; min-width: 0; }
+.metricas__cabecera h2 { font-size: 22px; letter-spacing: -0.02em; }
+.metricas__cabecera .seccion__sub { margin-bottom: 0; }
+.metricas__resumen, .metricas__detalle { display: grid; gap: 16px; }
+.metricas__resumen { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+.metricas__detalle { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; }
+.metricas__panel { padding: clamp(14px, 3vw, 22px); min-width: 0; }
+.metricas__panel h3 { font-size: 16px; }
+.metricas__resumen .metricas__panel { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.metricas__resumen-principal {
+  background: radial-gradient(ellipse at top right, var(--indigo-suave), transparent 65%), #fff;
+}
+.metricas__valor { color: var(--indigo-oscuro); font-size: clamp(30px, 5vw, 42px); line-height: 1.1; }
+.metricas__resumen p, .metricas__subdato { color: var(--apagado); font-size: 13px; }
+.metricas__entrega > strong { font-size: 18px; }
+.metricas__etiquetas { display: flex; flex-wrap: wrap; gap: 6px; }
+.metricas__progreso { display: block; width: 100%; height: 8px; accent-color: var(--indigo); }
+.metricas__distribucion { display: flex; height: 12px; overflow: hidden; border-radius: 999px; background: var(--fondo); }
+.metricas__distribucion span { flex: 0 0 auto; }
+.metricas__color--completadas { background: var(--verde); }
+.metricas__color--enProgreso { background: var(--indigo); }
+.metricas__color--pendientes { background: var(--apagado); }
+.metricas__color--bloqueadas { background: var(--rojo); }
+.metricas__punto { width: 8px; height: 8px; flex: none; border-radius: 50%; }
+.metricas__estados {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+  margin: 12px 0 0;
+}
+.metricas__estados > div, .metricas__integrantes > li { padding: 10px; border-radius: 10px; background: var(--fondo); }
+.metricas__estados dt, .metricas__estados dd { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.metricas__estados dt { color: var(--apagado); font-size: 12px; font-weight: 600; }
+.metricas__estados dd { margin: 2px 0 0; }
+.metricas__estados strong { font-size: 20px; }
+.metricas__estados small { color: var(--apagado); }
+.metricas__integrantes { display: grid; gap: 8px; list-style: none; padding: 0; margin: 0; }
+.metricas__integrante-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.metricas__identidad { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.metricas__identidad small { display: block; color: var(--apagado); }
+.metricas__porcentaje { color: var(--indigo-oscuro); white-space: nowrap; }
+.metricas__subdato { margin: 6px 0; }
+.metricas__error { display: grid; gap: 8px; justify-items: start; }
+.metricas .vacio-grande .btn { margin-top: 8px; }
+
+@media (max-width: 700px) {
+  .metricas__resumen, .metricas__detalle { grid-template-columns: minmax(0, 1fr); }
+}

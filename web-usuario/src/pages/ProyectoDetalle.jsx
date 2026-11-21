@@ -11,10 +11,11 @@ import { IconPlus } from '../components/Icons.jsx';
 import Informacion from './proyecto/Informacion.jsx';
 import Equipo from './proyecto/Equipo.jsx';
 import Planificacion from './proyecto/Planificacion.jsx';
+import MetricasProyecto from './proyecto/MetricasProyecto.jsx';
 import { formatearFecha, requisitosPlanificacion } from '../utils.js';
 import { accionesProyecto, proyectoCerrado } from '../cicloProyecto.js';
 
-const TABS = ['equipo', 'planificacion'];
+const TABS = ['equipo', 'planificacion', 'metricas'];
 
 const MENSAJES_GENERAR = {
   400: 'No se pudo generar: faltan datos del proyecto, la IA devolvió un resultado inválido o menos de dos integrantes activos tienen habilidades en su perfil.',
@@ -218,6 +219,7 @@ function Detalle({ id, tab }) {
           {pestana('info', 'Información')}
           {pestana('equipo', 'Equipo', <span className="tab__n">{activos}</span>)}
           {pestana('planificacion', 'Planificación', <span className={plan ? 'chip chip--verde' : 'chip chip--gris'}>{plan ? 'Generada' : 'Pendiente'}</span>)}
+          {pestana('metricas', 'Métricas')}
         </div>
       </section>
 
@@ -226,6 +228,7 @@ function Detalle({ id, tab }) {
       {activa === 'planificacion' && (
         <Planificacion proyecto={proyecto} plan={plan} equipo={equipo} requisitos={requisitos} soyCreador={soyCreador} generando={generando} error={errorGenerar} onGenerar={generar} />
       )}
+      {activa === 'metricas' && <MetricasProyecto proyecto={proyecto} equipo={equipo} tienePlanificacion={Boolean(plan)} />}
 
       {invitando && <ModalInvitar proyecto={proyecto} onCerrar={() => setInvitando(false)} onInvitado={alInvitar} />}
       {editando && <ModalProyecto proyecto={proyecto} onCerrar={() => setEditando(false)} onGuardado={alGuardar} />}
