@@ -36,22 +36,26 @@ public class ConfirmacionService {
     private final IntegranteRepository integranteRepository;
     private final UsuarioRepository usuarioRepository;
     private final NotificacionService notificacionService;
+    private final CicloProyectoService cicloProyecto;
 
     public ConfirmacionService(PlanificacionRepository planificacionRepository,
                                ConfirmacionRepository confirmacionRepository,
                                IntegranteRepository integranteRepository,
                                UsuarioRepository usuarioRepository,
-                               NotificacionService notificacionService) {
+                               NotificacionService notificacionService,
+                               CicloProyectoService cicloProyecto) {
         this.planificacionRepository = planificacionRepository;
         this.confirmacionRepository = confirmacionRepository;
         this.integranteRepository = integranteRepository;
         this.usuarioRepository = usuarioRepository;
         this.notificacionService = notificacionService;
+        this.cicloProyecto = cicloProyecto;
     }
 
     @Transactional
     public ConfirmacionResponse confirmar(Long proyectoId) {
         Usuario u = usuarioActual();
+        cicloProyecto.bloquearProyecto(proyectoId);
         Planificacion plan = planificacion(proyectoId);
         Integrante integrante = integranteActivo(u, proyectoId);
 
@@ -81,6 +85,7 @@ public class ConfirmacionService {
     @Transactional
     public ConfirmacionResponse solicitarCambios(Long proyectoId, String comentario) {
         Usuario u = usuarioActual();
+        cicloProyecto.bloquearProyecto(proyectoId);
         Planificacion plan = planificacion(proyectoId);
         Integrante integrante = integranteActivo(u, proyectoId);
 
@@ -140,11 +145,12 @@ public class ConfirmacionService {
         if (todos) {
             plan.setEstado("ACTIVA");
             planificacionRepository.save(plan);
+            cicloProyecto.finalizarSiCompleto(plan);
 
             // RN-22: notificar a todos los integrantes que la planificación se activó.
             for (Integrante i : conTareas) {
                 notificacionService.crear(i.getUsuario(), "PLANIFICACION",
-                        "La planificación del proyecto quedó ACTIVA.");
+                        "La planificación del proyecto quedó " + plan.getEstado() + ".");
             }
         }
     }

@@ -24,7 +24,8 @@ class AvanceServiceTest {
     private final UsuarioRepository usuarios = mock(UsuarioRepository.class);
     private final IntegranteRepository integrantes = mock(IntegranteRepository.class);
     private final TareaService tareaService = mock(TareaService.class);
-    private final AvanceService service = new AvanceService(registros, tareas, usuarios, integrantes, tareaService);
+    private final CicloProyectoService cicloProyecto = mock(CicloProyectoService.class);
+    private final AvanceService service = new AvanceService(registros, tareas, usuarios, integrantes, tareaService, cicloProyecto);
     private final Usuario usuario = new Usuario();
     private final Integrante integrante = new Integrante();
     private final Tarea tarea = new Tarea();

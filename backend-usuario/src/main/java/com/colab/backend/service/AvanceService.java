@@ -20,24 +20,29 @@ public class AvanceService {
     private final UsuarioRepository usuarios;
     private final IntegranteRepository integrantes;
     private final TareaService tareaService;
+    private final CicloProyectoService cicloProyecto;
 
     public AvanceService(RegistroAvanceRepository registros, TareaRepository tareas,
-                         UsuarioRepository usuarios, IntegranteRepository integrantes, TareaService tareaService) {
+                         UsuarioRepository usuarios, IntegranteRepository integrantes, TareaService tareaService,
+                         CicloProyectoService cicloProyecto) {
         this.registros = registros;
         this.tareas = tareas;
         this.usuarios = usuarios;
         this.integrantes = integrantes;
         this.tareaService = tareaService;
+        this.cicloProyecto = cicloProyecto;
     }
 
     @Transactional
     public RegistroAvanceResponse registrar(Long proyectoId, Long tareaId, RegistroAvanceRequest request) {
+        cicloProyecto.bloquearProyecto(proyectoId);
         Integrante integrante = integranteActual(proyectoId);
         Tarea tarea = tareaDe(proyectoId, tareaId);
         if (!"CREADOR".equals(integrante.getRol()) && (tarea.getResponsable() == null
                 || !integrante.getId().equals(tarea.getResponsable().getId()))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo el responsable o el creador pueden registrar avances");
         }
+        cicloProyecto.verificarEnDesarrollo(tarea.getEtapa().getPlanificacion());
         RegistroAvance registro = new RegistroAvance();
         registro.setTarea(tarea);
         registro.setUsuario(integrante.getUsuario());
