@@ -1,7 +1,9 @@
 package com.colab.backend.service;
 
 import com.colab.backend.domain.CasoUso;
+import com.colab.backend.domain.EstadoProyecto;
 import com.colab.backend.domain.Integrante;
+import com.colab.backend.domain.Planificacion;
 import com.colab.backend.domain.Proyecto;
 import com.colab.backend.domain.RequerimientoFuncional;
 import com.colab.backend.domain.RequerimientoNoFuncional;
@@ -73,7 +75,7 @@ public class ProyectoService {
         creador.setFechaUnion(LocalDateTime.now());
         integranteRepository.save(creador);
 
-        return aResponse(p);
+        return aResponse(p, null);
     }
 
     @Transactional
@@ -86,7 +88,7 @@ public class ProyectoService {
 
         aplicarRequest(p, request);
         proyectoRepository.save(p);
-        return aResponse(p);
+        return aResponse(p, null);
     }
 
     @Transactional
@@ -101,9 +103,15 @@ public class ProyectoService {
     @Transactional(readOnly = true)
     public List<ProyectoResponse> listarMisProyectos() {
         Usuario u = usuarioActual();
-        return integranteRepository.findByUsuarioId(u.getId()).stream()
-                .map(Integrante::getProyecto)
-                .map(this::aResponse)
+        List<Integrante> membresias = integranteRepository.findByUsuarioId(u.getId());
+        if (membresias.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Planificacion> planes = new HashMap<>();
+        planificacionRepository.findByProyectoIdIn(membresias.stream().map(i -> i.getProyecto().getId()).toList())
+                .forEach(plan -> planes.put(plan.getProyecto().getId(), plan));
+        return membresias.stream()
+                .map(i -> aResponse(i.getProyecto(), planes.get(i.getProyecto().getId())))
                 .toList();
     }
 
@@ -116,7 +124,7 @@ public class ProyectoService {
         if (!integranteRepository.existsByUsuarioIdAndProyectoId(u.getId(), id)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No perteneces a este proyecto");
         }
-        return aResponse(p);
+        return aResponse(p, planificacionRepository.findByProyectoId(id).orElse(null));
     }
 
     @Transactional(readOnly = true)
@@ -305,7 +313,8 @@ public class ProyectoService {
         }
     }
 
-    private ProyectoResponse aResponse(Proyecto p) {
+    private ProyectoResponse aResponse(Proyecto p, Planificacion plan) {
+        EstadoProyecto estado = EstadoProyecto.desde(plan);
         return new ProyectoResponse(
                 p.getId(),
                 p.getNombre(),
@@ -332,7 +341,9 @@ public class ProyectoService {
                                 cu.getActores(), cu.getPrecondiciones(), cu.getDisparador(),
                                 cu.getFlujoPrincipal(), cu.getFlujosAlternativos(), cu.getExcepciones(),
                                 cu.getPostcondiciones(), cu.getReglasDeNegocio()))
-                        .toList());
+                        .toList(),
+                estado,
+                plan == null ? null : plan.getFechaFinalizacion());
     }
 
     private void verificarCreador(Usuario u, Long proyectoId) {
