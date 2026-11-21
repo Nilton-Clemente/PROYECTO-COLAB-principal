@@ -126,6 +126,13 @@ public class PlanificacionService {
         List<String> orden = ordenTopologico(pc.tareaPorId(), pc.dependencias());
         calcularFechas(orden, pc.tareaPorId(), pc.dependencias(), p.getFechaEntrega());
 
+        // No mantener un bloqueo durante la llamada a la IA. Revalidar antes de persistir.
+        proyectoRepository.findByIdForUpdate(proyectoId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
+        verificarCreador(u, proyectoId);
+        if (planificacionRepository.existsByProyectoId(proyectoId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La planificación ya fue generada (RN-02)");
+        }
         Planificacion plan = pc.planificacion();
         planificacionRepository.saveAndFlush(plan);
 
@@ -157,7 +164,7 @@ public class PlanificacionService {
     public PlanificacionResponse actualizar(Long proyectoId, PlanificacionUpdateRequest request) {
         Usuario u = usuarioActual();
         verificarCreador(u, proyectoId);
-        Proyecto p = proyectoRepository.findById(proyectoId)
+        Proyecto p = proyectoRepository.findByIdForUpdate(proyectoId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El proyecto no existe"));
         Planificacion plan = planificacionRepository.findByProyectoId(proyectoId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El proyecto no tiene planificación"));

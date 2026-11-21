@@ -1,7 +1,10 @@
 # Iconos locales de catálogos
 
 El backend incluye una selección de SVG de Devicon v2.17.0: `java`, `kotlin`,
-`react`, `spring` y `postgresql`. Sus archivos originales y la licencia MIT
+`react`, `spring`, `postgresql`, `python`, `django`, `javascript`, `typescript`,
+`nodejs`, `docker`, `git`, `github`, `flutter`, `android`, `mysql` y `mongodb`.
+Se usa la variante original salvo `django`, para la que se usa `plain`.
+Sus archivos originales y la licencia MIT
 del proyecto están en `src/main/resources/static/iconos/devicon/`. Los logotipos
 son marcas de sus respectivos titulares; revisar sus condiciones de uso.
 
@@ -10,11 +13,10 @@ el campo opcional `icono`. Si tiene valor, los clientes pueden solicitar el SVG
 con `GET /iconos/devicon/{icono}.svg`; esta ruta de imágenes es pública. Si no
 hay icono o la descarga falla, los clientes deben mostrar una alternativa.
 
-Flyway V13 agrega columnas anulables sin modificar los datos existentes. Esta
-fase no asigna iconos automáticamente ni ofrece una API de escritura o selector:
-la validación y administración de identificadores se implementarán en la etapa
-de backend-admin. Hasta entonces, solo deben utilizarse identificadores de los
-archivos incluidos. Los clientes deben tratar la referencia como identificador,
+Flyway V13 agrega columnas anulables sin modificar los datos existentes. No se
+asignan iconos automáticamente. La lista autorizada de backend-admin debe
+actualizarse por separado y coincidir con estos archivos antes de seleccionarlos
+desde administración. Los clientes deben tratar la referencia como identificador,
 no como una URL o una ruta arbitraria.
 
 Para desarrollo, la URL base es la del backend configurada por cada cliente.

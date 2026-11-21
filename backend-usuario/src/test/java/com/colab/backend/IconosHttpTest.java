@@ -22,7 +22,9 @@ class IconosHttpTest {
 
     @Test
     void iconosSvgDisponiblesSinAutenticacion() throws Exception {
-        for (String icono : new String[]{"java", "kotlin", "react", "spring", "postgresql"}) {
+        for (String icono : new String[]{"java", "kotlin", "react", "spring", "postgresql",
+                "python", "django", "javascript", "typescript", "nodejs", "docker",
+                "git", "github", "flutter", "android", "mysql", "mongodb"}) {
             mvc.perform(get("/iconos/devicon/" + icono + ".svg"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentTypeCompatibleWith("image/svg+xml"))
