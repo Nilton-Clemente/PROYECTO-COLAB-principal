@@ -23,36 +23,25 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.Event
-import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Memory
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.PendingActions
-import androidx.compose.material.icons.outlined.Psychology
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Smartphone
-import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material.icons.outlined.Terminal
-import androidx.compose.material.icons.outlined.Verified
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.filled.Star as StarFilled
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,12 +53,16 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.prieto.colab_movil.data.model.EstadoProyecto
+import com.prieto.colab_movil.data.model.estadoProyecto
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
 import com.prieto.colab_movil.ui.components.ColabTopBar
 import com.prieto.colab_movil.ui.components.ColabActualizar
@@ -79,57 +72,37 @@ import com.prieto.colab_movil.ui.components.SeccionPrincipal
 /* ───────────── Colores (tomados del DESIGN.md) ───────────── */
 private val Surface = Color(0xFFFAF8FF)
 private val SurfaceLowest = Color(0xFFFFFFFF)
-private val SurfaceLow = Color(0xFFF2F3FF)
 private val SurfaceContainer = Color(0xFFEAEDFF)
-private val SurfaceHigh = Color(0xFFE2E7FF)
 private val SurfaceDim = Color(0xFFD2D9F4)
 private val OnSurface = Color(0xFF131B2E)
 private val OnSurfaceVariant = Color(0xFF464555)
 private val Primary = Color(0xFF3525CD)
-private val PrimaryContainer = Color(0xFF4F46E5)
-private val PrimaryFixed = Color(0xFFE2DFFF)
 private val Secondary = Color(0xFF006C49)
-private val SecondaryFixed = Color(0xFF6FFBBE)
-private val OnSecondaryFixed = Color(0xFF002113)
-private val OnSecondaryFixedVariant = Color(0xFF005236)
-private val ErrorContainer = Color(0xFFFFDAD6)
 private val OnErrorContainer = Color(0xFF93000A)
 
 /* ───────────── Modelos ───────────── */
-enum class EstadoProyecto { EN_CURSO, PLANIFICACION, FINALIZADO }
+enum class Filtro(val estado: EstadoProyecto? = null) {
+    TODOS, SIN_PLANIFICACION(EstadoProyecto.SIN_PLANIFICACION), PROPUESTA(EstadoProyecto.PLANIFICACION_PROPUESTA),
+    EN_DESARROLLO(EstadoProyecto.EN_DESARROLLO), FINALIZADOS(EstadoProyecto.FINALIZADO), CANCELADOS(EstadoProyecto.CANCELADO);
 
-enum class Filtro(val label: String) {
-    TODOS("Todos"), EN_PROGRESO("En progreso"), FINALIZADOS("Finalizados")
+    val label: String get() = estado?.titulo ?: "Todos"
+    fun coincide(valor: EstadoProyecto) = estado == null || estado == valor
 }
 
 data class Tecnologia(val nombre: String, val icono: ImageVector)
-
-sealed interface Insignia {
-    data class Fecha(val texto: String) : Insignia
-    data class Sprint(val texto: String) : Insignia
-    data class Nota(val texto: String) : Insignia
-}
 
 data class Proyecto(
     val id: Long = 0L,
     val codigo: String,
     val titulo: String,
     val estado: EstadoProyecto,
-    val etapaTexto: String,
-    val etapaIcono: ImageVector,
-    val progreso: Float,
+    val descripcion: String?,
     val tecnologias: List<Tecnologia>,
-    val iniciales: List<String>,
-    val miembros: Int,
-    val insignia: Insignia
+    val fechaEntrega: String?
 )
 
 private fun mapToProyecto(dto: ProyectoResponseDto): Proyecto {
     val codigo = "TEC-${dto.id}"
-    val estado = EstadoProyecto.EN_CURSO
-    val etapaTexto = dto.descripcion?.takeIf { it.isNotBlank() } ?: "En desarrollo"
-    val etapaIcono = Icons.Outlined.Flag
-    val progreso = 0.75f
     val tecnologias = dto.tecnologias?.map { t ->
         Tecnologia(
             nombre = t.nombre,
@@ -145,22 +118,14 @@ private fun mapToProyecto(dto: ProyectoResponseDto): Proyecto {
         )
     } ?: emptyList()
 
-    val iniciales = listOf("AL", "TC")
-    val miembros = 2
-    val insignia = Insignia.Fecha(dto.fechaEntrega ?: "Por definir")
-
     return Proyecto(
         id = dto.id,
         codigo = codigo,
         titulo = dto.nombre,
-        estado = estado,
-        etapaTexto = etapaTexto,
-        etapaIcono = etapaIcono,
-        progreso = progreso,
+        estado = dto.estadoProyecto,
+        descripcion = dto.descripcion?.takeIf { it.isNotBlank() },
         tecnologias = tecnologias,
-        iniciales = iniciales,
-        miembros = miembros,
-        insignia = insignia
+        fechaEntrega = dto.fechaEntrega
     )
 }
 
@@ -172,13 +137,25 @@ fun ProyectosScreen(
     onNotificacionesClick: () -> Unit = {},
     onPerfilClick: () -> Unit = {},
     onProyectoClick: (Proyecto) -> Unit = {},
-    onOpcionesClick: (Proyecto) -> Unit = {},
-    onInvitacionesClick: () -> Unit = {}
+    onInvitacionesClick: () -> Unit = {},
+    proyectoEliminado: Long? = null,
+    onEliminacionConsumida: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(Unit) {
-        viewModel.cargarDatos()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(proyectoEliminado) {
+        proyectoEliminado?.let {
+            viewModel.retirarEliminado(it)
+            onEliminacionConsumida()
+        }
+    }
+    DisposableEffect(lifecycle, viewModel) {
+        val observer = LifecycleEventObserver { _, evento ->
+            if (evento == Lifecycle.Event.ON_RESUME) viewModel.cargarDatos()
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
     }
 
     when (val state = uiState) {
@@ -209,7 +186,8 @@ fun ProyectosScreen(
             }
         }
         is ProyectosUiState.Success -> {
-            val proyectos = state.proyectos.map { mapToProyecto(it) }
+            val pendientes = state.invitaciones.map { it.proyectoId }.toSet()
+            val proyectos = state.proyectos.filterNot { it.id == proyectoEliminado || it.id in pendientes }.map(::mapToProyecto)
             val hayInvitaciones = state.invitaciones.isNotEmpty()
             ProyectosContent(
                 nombre = state.nombre,
@@ -218,7 +196,6 @@ fun ProyectosScreen(
                 onNotificacionesClick = onNotificacionesClick,
                 onPerfilClick = onPerfilClick,
                 onProyectoClick = onProyectoClick,
-                onOpcionesClick = onOpcionesClick,
                 onInvitacionesClick = onInvitacionesClick,
                 hayInvitaciones = hayInvitaciones,
                 actualizando = state.actualizando,
@@ -237,25 +214,16 @@ fun ProyectosContent(
     onNotificacionesClick: () -> Unit = {},
     onPerfilClick: () -> Unit = {},
     onProyectoClick: (Proyecto) -> Unit = {},
-    onOpcionesClick: (Proyecto) -> Unit = {},
     onInvitacionesClick: () -> Unit = {},
     hayInvitaciones: Boolean = false,
     actualizando: Boolean = false,
     aviso: String? = null,
     onActualizar: () -> Unit = {}
 ) {
-    var filtro by remember { mutableStateOf(Filtro.TODOS) }
+    var filtro by rememberSaveable { mutableStateOf(Filtro.TODOS) }
 
-    val visibles = when (filtro) {
-        Filtro.TODOS -> proyectos
-        Filtro.EN_PROGRESO -> proyectos.filter { it.estado != EstadoProyecto.FINALIZADO }
-        Filtro.FINALIZADOS -> proyectos.filter { it.estado == EstadoProyecto.FINALIZADO }
-    }
-    val conteos = mapOf(
-        Filtro.TODOS to proyectos.size,
-        Filtro.EN_PROGRESO to proyectos.count { it.estado != EstadoProyecto.FINALIZADO },
-        Filtro.FINALIZADOS to proyectos.count { it.estado == EstadoProyecto.FINALIZADO }
-    )
+    val visibles = proyectos.filter { filtro.coincide(it.estado) }
+    val conteos = Filtro.entries.associateWith { f -> proyectos.count { f.coincide(it.estado) } }
 
     Scaffold(
         containerColor = Surface,
@@ -274,7 +242,6 @@ fun ProyectosContent(
         ) {
             if (aviso != null) item { Text(aviso, color = OnErrorContainer, fontSize = 13.sp) }
             item { Saludo(nombre, proyectos.size, onCrearClick) }
-            item { Metricas(sprintsActivos = 2, entregasPendientes = 1) }
             item {
                 FiltrosRow(filtro, conteos) { filtro = it }
             }
@@ -286,12 +253,12 @@ fun ProyectosContent(
                             .padding(vertical = 32.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("No hay proyectos disponibles", color = OnSurfaceVariant, fontSize = 14.sp)
+                        Text(if (filtro == Filtro.TODOS) "No hay proyectos disponibles" else "No hay proyectos con este estado", color = OnSurfaceVariant, fontSize = 14.sp)
                     }
                 }
             } else {
                 items(visibles, key = { it.codigo }) { p ->
-                    ProyectoCard(p, onClick = { onProyectoClick(p) }, onOpciones = { onOpcionesClick(p) })
+                    ProyectoCard(p, onClick = { onProyectoClick(p) })
                 }
             }
             item { Spacer(Modifier.height(8.dp)) }
@@ -300,7 +267,7 @@ fun ProyectosContent(
     }
 }
 
-/* ───────────── Cabecera, métricas y filtros ───────────── */
+/* ───────────── Cabecera y filtros ───────────── */
 @Composable
 private fun Saludo(nombre: String, total: Int, onCrear: () -> Unit) {
     Row(
@@ -343,37 +310,6 @@ private fun Saludo(nombre: String, total: Int, onCrear: () -> Unit) {
 }
 
 @Composable
-private fun Metricas(sprintsActivos: Int, entregasPendientes: Int) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceContainer)
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        MetricaItem("Sprints Activos", sprintsActivos, Secondary)
-        MetricaItem("Entregas Pend.", entregasPendientes, Primary)
-    }
-}
-
-@Composable
-private fun MetricaItem(titulo: String, valor: Int, punto: Color) {
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(SurfaceLowest)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-    ) {
-        Text(titulo, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = OnSurfaceVariant)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(punto))
-            Text("$valor", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = OnSurface)
-        }
-    }
-}
-
-@Composable
 private fun FiltrosRow(seleccionado: Filtro, conteos: Map<Filtro, Int>, onSelect: (Filtro) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(Filtro.entries) { f ->
@@ -410,10 +346,7 @@ private fun FiltrosRow(seleccionado: Filtro, conteos: Map<Filtro, Int>, onSelect
 
 /* ───────────── Tarjeta de proyecto ───────────── */
 @Composable
-private fun ProyectoCard(p: Proyecto, onClick: () -> Unit, onOpciones: () -> Unit) {
-    val finalizado = p.estado == EstadoProyecto.FINALIZADO
-    val colorProgreso = if (finalizado) Secondary else Primary
-
+private fun ProyectoCard(p: Proyecto, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -424,42 +357,19 @@ private fun ProyectoCard(p: Proyecto, onClick: () -> Unit, onOpciones: () -> Uni
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Row(verticalAlignment = Alignment.Top) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         p.codigo, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                         fontFamily = FontFamily.Monospace, color = OnSurfaceVariant
                     )
-                    EstadoBadge(p.estado)
+                    EstadoProyectoBadge(p.estado)
                 }
                 Text(
                     p.titulo, fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold,
                     color = OnSurface, maxLines = 2, overflow = TextOverflow.Ellipsis
                 )
-            }
-            IconButton(onClick = onOpciones, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Outlined.MoreVert, "Opciones de proyecto", tint = OnSurfaceVariant, modifier = Modifier.size(20.dp))
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(SurfaceLow)
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                if (finalizado) "100%" else "${(p.progreso * 100).toInt()}% completado",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colorProgreso,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.End
-            )
-            BarraProgreso(p.progreso, colorProgreso)
+                p.descripcion?.let { Text(it, color = OnSurfaceVariant, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }
         }
 
         FlowRow(
@@ -469,60 +379,7 @@ private fun ProyectoCard(p: Proyecto, onClick: () -> Unit, onOpciones: () -> Uni
             p.tecnologias.forEach { TechChip(it) }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AvatarStack(p.iniciales)
-                Text("${p.miembros} miembros", fontSize = 13.sp, color = OnSurfaceVariant)
-            }
-            InsigniaPie(p.insignia)
-        }
-    }
-}
-
-@Composable
-private fun BarraProgreso(progreso: Float, color: Color) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(6.dp)
-            .clip(CircleShape)
-            .background(SurfaceHigh)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(progreso.coerceIn(0f, 1f))
-                .height(6.dp)
-                .clip(CircleShape)
-                .background(color)
-        )
-    }
-}
-
-@Composable
-private fun EstadoBadge(estado: EstadoProyecto) {
-    val (texto, fondo, fg) = when (estado) {
-        EstadoProyecto.EN_CURSO -> Triple("En curso", SecondaryFixed, OnSecondaryFixedVariant)
-        EstadoProyecto.PLANIFICACION -> Triple("Planificación", PrimaryFixed, Primary)
-        EstadoProyecto.FINALIZADO -> Triple("Finalizado", SecondaryFixed, OnSecondaryFixedVariant)
-    }
-    Row(
-        modifier = Modifier
-            .clip(CircleShape)
-            .background(fondo)
-            .padding(horizontal = 8.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        if (estado == EstadoProyecto.FINALIZADO) {
-            Icon(Icons.Outlined.Verified, null, tint = fg, modifier = Modifier.size(14.dp))
-        } else {
-            Box(Modifier.size(6.dp).clip(CircleShape).background(if (estado == EstadoProyecto.EN_CURSO) Secondary else Primary))
-        }
-        Text(texto, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = fg)
+        FechaEntrega(p.fechaEntrega)
     }
 }
 
@@ -542,55 +399,17 @@ private fun TechChip(t: Tecnologia) {
 }
 
 @Composable
-private fun AvatarStack(iniciales: List<String>) {
-    Row(horizontalArrangement = Arrangement.spacedBy((-10).dp)) {
-        iniciales.forEachIndexed { i, texto ->
-            val (bg, fg) = when {
-                texto.startsWith("+") -> PrimaryFixed to Primary
-                texto == "AL" -> SecondaryFixed to OnSecondaryFixed
-                else -> listOf(
-                    Color(0xFFC3C0FF) to Primary,
-                    Color(0xFFB8E6D4) to Secondary,
-                    Color(0xFFDAE2FD) to OnSurface
-                )[i % 3]
-            }
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(SurfaceLowest)
-                    .padding(2.dp)
-                    .clip(CircleShape)
-                    .background(bg),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(texto, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = fg)
-            }
-        }
-    }
-}
-
-@Composable
-private fun InsigniaPie(insignia: Insignia) {
-    when (insignia) {
-        is Insignia.Fecha -> PieChip(Icons.Outlined.Event, insignia.texto, ErrorContainer, OnErrorContainer)
-        is Insignia.Sprint -> PieChip(Icons.Outlined.Schedule, insignia.texto, SurfaceHigh, OnSurfaceVariant)
-        is Insignia.Nota -> PieChip(Icons.Filled.StarFilled, insignia.texto, SecondaryFixed, OnSecondaryFixed, bold = true)
-    }
-}
-
-@Composable
-private fun PieChip(icono: ImageVector, texto: String, fondo: Color, fg: Color, bold: Boolean = false) {
+private fun FechaEntrega(fecha: String?) {
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(fondo)
+            .background(SurfaceContainer)
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Icon(icono, null, tint = fg, modifier = Modifier.size(16.dp))
-        Text(texto, fontSize = 13.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.SemiBold, color = fg)
+        Icon(Icons.Outlined.Event, null, tint = Primary, modifier = Modifier.size(16.dp))
+        Text("Entrega: ${fecha ?: "Por definir"}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = OnSurfaceVariant)
     }
 }
 

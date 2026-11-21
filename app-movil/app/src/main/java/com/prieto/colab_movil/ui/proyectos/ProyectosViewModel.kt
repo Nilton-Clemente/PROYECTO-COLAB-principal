@@ -18,6 +18,15 @@ class ProyectosViewModel(
     val uiState: StateFlow<ProyectosUiState> = _uiState.asStateFlow()
 
     private var operacion: Job? = null
+    private val eliminados = mutableSetOf<Long>()
+
+    fun retirarEliminado(id: Long) {
+        eliminados.add(id)
+        (_uiState.value as? ProyectosUiState.Success)?.let { anterior ->
+            _uiState.value = anterior.copy(proyectos = anterior.proyectos.filterNot { it.id == id })
+        }
+        cargarDatos()
+    }
 
     fun cargarDatos() {
         if (operacion?.isActive == true) return
@@ -31,7 +40,7 @@ class ProyectosViewModel(
             if (anterior != null || (perfilRes.isSuccess && proyectosRes.isSuccess && invitacionesRes.isSuccess)) {
                 _uiState.value = ProyectosUiState.Success(
                     nombre = perfilRes.getOrNull()?.nombre ?: anterior!!.nombre,
-                    proyectos = proyectosRes.getOrNull() ?: anterior!!.proyectos,
+                    proyectos = (proyectosRes.getOrNull() ?: anterior!!.proyectos).filterNot { it.id in eliminados },
                     invitaciones = invitacionesRes.getOrNull() ?: anterior!!.invitaciones,
                     aviso = if (perfilRes.isFailure || proyectosRes.isFailure || invitacionesRes.isFailure)
                         "No se pudieron actualizar todos los datos. Inténtalo de nuevo." else null

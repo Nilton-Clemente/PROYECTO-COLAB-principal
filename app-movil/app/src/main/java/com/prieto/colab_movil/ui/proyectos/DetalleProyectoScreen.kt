@@ -1,6 +1,7 @@
 package com.prieto.colab_movil.ui.proyectos
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,17 +28,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.prieto.colab_movil.ui.components.ColabBarraSecundaria
 import com.prieto.colab_movil.ui.components.ColabActualizar
 import com.prieto.colab_movil.data.model.IntegranteResponseDto
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
+import com.prieto.colab_movil.data.model.EstadoProyecto
+import com.prieto.colab_movil.data.model.estadoProyecto
 
 /* ───────────── Colores (DESIGN.md) ───────────── */
 private val Surface = Color(0xFFFAF8FF)
 private val SurfaceLowest = Color(0xFFFFFFFF)
 private val SurfaceLow = Color(0xFFF2F3FF)
 private val SurfaceContainer = Color(0xFFEAEDFF)
-private val SurfaceHigh = Color(0xFFE2E7FF)
 private val SurfaceHighest = Color(0xFFDAE2FD)
 private val OnSurface = Color(0xFF131B2E)
 private val OnSurfaceVariant = Color(0xFF464555)
@@ -70,17 +76,35 @@ fun DetalleProyectoScreen(
     onBack: () -> Unit = {},
     onEditar: () -> Unit = {},
     onGenerarPlanificacion: () -> Unit = {},
-    onMisTareas: () -> Unit = {}
+    onMisTareas: () -> Unit = {},
+    onEliminado: (Long) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val detalle = uiState as? DetalleProyectoUiState.Success
+    val ocupado = detalle?.accionEnCurso != null
+    var confirmando by rememberSaveable(proyectoId) { mutableStateOf<AccionProyecto?>(null) }
 
-    LaunchedEffect(proyectoId) {
-        viewModel.cargarDetalle(proyectoId)
+    DisposableEffect(lifecycle, proyectoId, viewModel) {
+        val observer = LifecycleEventObserver { _, evento ->
+            if (evento == Lifecycle.Event.ON_RESUME) viewModel.cargarDetalle(proyectoId)
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
     }
+    val eliminado = uiState as? DetalleProyectoUiState.Eliminado
+    LaunchedEffect(eliminado) { eliminado?.let { onEliminado(it.proyectoId) } }
+    BackHandler(enabled = ocupado) { }
 
     Scaffold(
         containerColor = Surface,
-        topBar = { ColabBarraSecundaria("Detalle De Proyecto", onVolver = onBack, descripcionVolver = "Regresar") }
+        topBar = {
+            ColabBarraSecundaria("Detalle de proyecto", onVolver = onBack, habilitado = !ocupado, descripcionVolver = "Regresar") {
+                if (detalle != null) MenuProyecto(detalle.acciones, detalle.puedeModificar) { accion ->
+                    if (accion == AccionProyecto.EDITAR) onEditar() else confirmando = accion
+                }
+            }
+        }
     ) { padding ->
         Box(
             modifier = Modifier
@@ -117,21 +141,29 @@ fun DetalleProyectoScreen(
                     }
                 }
                 is DetalleProyectoUiState.Success -> {
-                    ColabActualizar(actualizando = state.actualizando, habilitado = !state.actualizando,
+                    ColabActualizar(actualizando = state.actualizando, habilitado = !state.actualizando && !ocupado,
                         onActualizar = { viewModel.cargarDetalle(proyectoId) }) {
                     DetalleProyectoContenido(
                         proyectoDto = state.proyecto,
                         equipoDto = state.equipo,
                         tienePlanificacion = state.tienePlanificacion,
-                        onEditar = onEditar,
                         onGenerarPlanificacion = onGenerarPlanificacion,
                         onMisTareas = onMisTareas,
-                        habilitarAcciones = !state.actualizando && !state.datosDesactualizados,
+                        habilitarAcciones = state.puedeModificar,
+                        puedeGenerar = state.soyCreador && state.proyecto.estadoProyecto == EstadoProyecto.SIN_PLANIFICACION,
+                        ocupado = ocupado,
                         aviso = state.aviso
                     )
                     }
                 }
+                is DetalleProyectoUiState.Eliminado -> Unit
             }
+        }
+    }
+    confirmando?.takeIf { detalle?.puedeModificar == true && it in detalle.acciones }?.let { accion ->
+        ConfirmarCicloProyecto(proyectoId, detalle!!.proyecto.nombre, accion, onCerrar = { confirmando = null }) { texto ->
+            confirmando = null
+            viewModel.cambiarCiclo(proyectoId, accion, texto)
         }
     }
 }
@@ -141,10 +173,11 @@ private fun DetalleProyectoContenido(
     proyectoDto: ProyectoResponseDto,
     equipoDto: List<IntegranteResponseDto>,
     tienePlanificacion: Boolean,
-    onEditar: () -> Unit,
     onGenerarPlanificacion: () -> Unit,
     onMisTareas: () -> Unit,
     habilitarAcciones: Boolean,
+    puedeGenerar: Boolean,
+    ocupado: Boolean,
     aviso: String?
 ) {
     var pestana by remember { mutableStateOf(Pestana.INFO) }
@@ -159,7 +192,7 @@ private fun DetalleProyectoContenido(
         ?.split("\n")
         ?.map { it.trim('-').trim() }
         ?.filter { it.isNotBlank() }
-        ?: listOf("Análisis de requerimientos", "Diseño e implementación de interfaz", "Integración y pruebas")
+        .orEmpty()
 
     val stack = proyectoDto.tecnologias?.map { t ->
         Tech(
@@ -215,8 +248,11 @@ private fun DetalleProyectoContenido(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (aviso != null) Text(aviso, color = OnErrorContainer, fontSize = 13.sp)
-        Cabecera(codigo, titulo, descripcion, tienePlanificacion, onEditar, onGenerarPlanificacion, habilitarAcciones)
-        OutlinedButton(
+        if (ocupado) LinearProgressIndicator(Modifier.fillMaxWidth())
+        val estado = proyectoDto.estadoProyecto
+        Cabecera(codigo, titulo, descripcion, estado, tienePlanificacion, puedeGenerar, onGenerarPlanificacion, habilitarAcciones)
+        if (estado.cerrado) Text("Proyecto en modo de solo lectura. Puedes consultar la planificación, las tareas y el historial.", color = OnSurfaceVariant)
+        if (tienePlanificacion) OutlinedButton(
             onClick = onMisTareas,
             enabled = habilitarAcciones,
             modifier = Modifier.fillMaxWidth(),
@@ -224,14 +260,14 @@ private fun DetalleProyectoContenido(
         ) {
             Icon(Icons.Outlined.Checklist, null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Mis tareas y confirmaciones", fontWeight = FontWeight.SemiBold)
+            Text(if (estado.cerrado) "Mis tareas e historial" else "Mis tareas y confirmaciones", fontWeight = FontWeight.SemiBold)
         }
         Tabs(pestana, equipo.size) { pestana = it }
-        ResumenCard(hitoActual = 3, hitosTotal = 4, progreso = 0.75f, entregaFinal = proyectoDto.fechaEntrega ?: "15 Dic, 2024")
+        ResumenCard(proyectoDto)
 
         when (pestana) {
             Pestana.INFO -> InfoTab(problematica, objetivoGeneral, objetivosEspecificos, stack, requerimientos)
-            Pestana.EQUIPO -> EquipoProyectoContent(equipoDto = equipoDto)
+            Pestana.EQUIPO -> EquipoProyectoContent(equipoDto = equipoDto, puedeInvitar = puedeGenerar && habilitarAcciones && !tienePlanificacion)
         }
         Spacer(Modifier.height(16.dp))
     }
@@ -239,43 +275,16 @@ private fun DetalleProyectoContenido(
 
 /* ───────────── Cabecera, tabs y resumen ───────────── */
 @Composable
-private fun Cabecera(codigo: String, titulo: String, descripcion: String, tienePlanificacion: Boolean, onEditar: () -> Unit, onGenerarPlanificacion: () -> Unit, habilitarAcciones: Boolean) {
+@OptIn(ExperimentalLayoutApi::class)
+private fun Cabecera(codigo: String, titulo: String, descripcion: String, estado: EstadoProyecto, tienePlanificacion: Boolean, puedeGenerar: Boolean, onGenerarPlanificacion: () -> Unit, habilitarAcciones: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(codigo, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace, color = OnSurfaceVariant)
-                Row(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(SecondaryContainer)
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Box(Modifier.size(6.dp).clip(CircleShape).background(Secondary))
-                    Text("Activo", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = OnSecondaryContainer)
-                }
-            }
-            Row(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(PrimaryFixed)
-                    .clickable(enabled = habilitarAcciones, onClick = onEditar)
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(Icons.Outlined.Edit, null, tint = Primary, modifier = Modifier.size(16.dp))
-                Text("Editar", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Primary)
-            }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(codigo, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace, color = OnSurfaceVariant)
+            EstadoProyectoBadge(estado)
         }
         Text(titulo, fontSize = 26.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold, color = OnSurface)
         Text(descripcion, fontSize = 13.sp, lineHeight = 19.sp, color = OnSurfaceVariant)
-        Button(
+        if (tienePlanificacion || puedeGenerar) Button(
             onClick = onGenerarPlanificacion,
             enabled = habilitarAcciones,
             modifier = Modifier.fillMaxWidth(),
@@ -351,61 +360,14 @@ private fun TituloSeccion(icono: ImageVector, texto: String) {
 }
 
 @Composable
-private fun ResumenCard(hitoActual: Int, hitosTotal: Int, progreso: Float, entregaFinal: String) {
+private fun ResumenCard(proyecto: ProyectoResponseDto) {
     Tarjeta {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(
-                    modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(PrimaryFixed),
-                    contentAlignment = Alignment.Center
-                ) { Icon(Icons.Outlined.Verified, null, tint = Primary, modifier = Modifier.size(20.dp)) }
-                Column {
-                    Text("SUPERVISIÓN ACADÉMICA", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = OnSurfaceVariant)
-                    Text("Evaluación Docente", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnSurface)
-                }
-            }
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(PrimaryFixed)
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    "Hito $hitoActual / $hitosTotal",
-                    fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                    fontFamily = FontFamily.Monospace, color = Primary
-                )
-            }
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Progreso de Entrega", fontSize = 13.sp, color = OnSurface)
-                Text("${(progreso * 100).toInt()}%", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Primary)
-            }
-            Box(Modifier.fillMaxWidth().height(8.dp).clip(CircleShape).background(SurfaceHigh)) {
-                Box(Modifier.fillMaxWidth(progreso.coerceIn(0f, 1f)).height(8.dp).clip(CircleShape).background(Primary))
-            }
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(SurfaceLow)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(Icons.Outlined.Event, null, tint = Primary, modifier = Modifier.size(16.dp))
-                Text("Entrega final:", fontSize = 12.sp, color = OnSurfaceVariant)
-            }
-            Text(entregaFinal, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnSurface)
+        TituloSeccion(Icons.Outlined.Event, "Fechas del proyecto")
+        Text("Entrega: ${proyecto.fechaEntrega ?: "Por definir"}", color = OnSurfaceVariant)
+        when (proyecto.estadoProyecto) {
+            EstadoProyecto.FINALIZADO -> proyecto.fechaFinalizacion?.let { Text("Finalización: ${it.substringBefore('T')}", color = OnSurfaceVariant) }
+            EstadoProyecto.CANCELADO -> proyecto.fechaCancelacion?.let { Text("Cancelación: ${it.substringBefore('T')}", color = OnSurfaceVariant) }
+            else -> Unit
         }
     }
 }

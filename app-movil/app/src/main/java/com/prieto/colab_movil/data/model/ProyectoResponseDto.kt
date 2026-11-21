@@ -16,5 +16,10 @@ data class ProyectoResponseDto(
     @SerializedName("tecnologias") val tecnologias: List<TecnologiaDto>?,
     @SerializedName("requerimientosFuncionales") val requerimientosFuncionales: List<RequerimientoFuncionalDto>?,
     @SerializedName("requerimientosNoFuncionales") val requerimientosNoFuncionales: List<RequerimientoNoFuncionalDto>?,
-    @SerializedName("casosDeUso") val casosDeUso: List<CasoUsoDto>?
+    @SerializedName("casosDeUso") val casosDeUso: List<CasoUsoDto>?,
+    @SerializedName("estado") val estado: String? = null,
+    @SerializedName("fechaFinalizacion") val fechaFinalizacion: String? = null,
+    @SerializedName("fechaCancelacion") val fechaCancelacion: String? = null,
+    @SerializedName("puedeCancelar") val puedeCancelar: Boolean = false,
+    @SerializedName("puedeEliminar") val puedeEliminar: Boolean = false
 )

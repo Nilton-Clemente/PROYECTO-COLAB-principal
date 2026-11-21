@@ -36,6 +36,7 @@ private val RedBackground = Color(0xFFFFDAD6)
 @Composable
 fun EquipoProyectoContent(
     equipoDto: List<IntegranteResponseDto>,
+    puedeInvitar: Boolean = true,
     onInvitar: (String) -> Unit = {}
 ) {
     var mostrarInvitar by remember { mutableStateOf(false) }
@@ -64,7 +65,7 @@ fun EquipoProyectoContent(
 
         CapacidadSquad(equipoDto.size)
 
-        Button(
+        if (puedeInvitar) Button(
             onClick = { mostrarInvitar = true },
             modifier = Modifier
                 .fillMaxWidth()
@@ -95,7 +96,7 @@ fun EquipoProyectoContent(
         }
     }
 
-    if (mostrarInvitar) {
+    if (mostrarInvitar && puedeInvitar) {
         InvitarIntegranteSheet(
             onDismiss = { mostrarInvitar = false },
             onInvitar = { email ->

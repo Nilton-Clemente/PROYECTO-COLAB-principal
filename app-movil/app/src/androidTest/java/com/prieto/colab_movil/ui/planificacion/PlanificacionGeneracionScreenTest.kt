@@ -192,6 +192,8 @@ class PlanificacionGeneracionScreenTest {
         override suspend fun listarTecnologias(): Result<List<TecnologiaDto>> = error("No se usa")
         override suspend fun crearProyecto(request: ProyectoRequest): Result<ProyectoResponseDto> = error("No se usa")
         override suspend fun editarProyecto(id: Long, request: ProyectoRequest): Result<ProyectoResponseDto> = error("No se usa")
+        override suspend fun cancelarProyecto(id: Long): Result<ProyectoResponseDto> = error("No se usa")
+        override suspend fun eliminarProyecto(id: Long): Result<Unit> = error("No se usa")
     }
 
     companion object { private val ids = AtomicLong(100_000) }

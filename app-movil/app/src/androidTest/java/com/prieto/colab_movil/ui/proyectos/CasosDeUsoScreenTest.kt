@@ -346,6 +346,8 @@ class CasosDeUsoScreenTest {
             ultimoRequest = request
             return Result.success(proyecto.copy(casosDeUso = request.casosDeUso))
         }
+        override suspend fun cancelarProyecto(id: Long): Result<ProyectoResponseDto> = error("No se usa")
+        override suspend fun eliminarProyecto(id: Long): Result<Unit> = error("No se usa")
         override suspend fun editarProyecto(id: Long, request: ProyectoRequest): Result<ProyectoResponseDto> {
             assertEquals(7L, id)
             ediciones++

@@ -2,6 +2,8 @@ package com.prieto.colab_movil.navigation
 
 import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -99,8 +101,11 @@ fun AppNavigation(
             )
         }
 
-        composable(Screen.Proyectos.route) {
+        composable(Screen.Proyectos.route) { entrada ->
+            val eliminado by entrada.savedStateHandle.getStateFlow<Long?>("proyecto_eliminado", null).collectAsState()
             ProyectosScreen(
+                proyectoEliminado = eliminado,
+                onEliminacionConsumida = { entrada.savedStateHandle["proyecto_eliminado"] = null as Long? },
                 onProyectoClick = { proyecto ->
                     navController.navigate(Screen.DetalleProyecto.createRoute(proyecto.id))
                 },
@@ -141,7 +146,20 @@ fun AppNavigation(
                 onBack = { navController.popBackStack() },
                 onEditar = { navController.navigate(Screen.EditarProyecto.createRoute(proyectoId)) },
                 onGenerarPlanificacion = { navController.navigate(Screen.Planificacion.createRoute(proyectoId)) },
-                onMisTareas = { navController.navigate(Screen.MisTareas.createRoute(proyectoId)) }
+                onMisTareas = { navController.navigate(Screen.MisTareas.createRoute(proyectoId)) },
+                onEliminado = { id ->
+                    Toast.makeText(context, "Proyecto eliminado definitivamente", Toast.LENGTH_SHORT).show()
+                    val listado = runCatching { navController.getBackStackEntry(Screen.Proyectos.route) }.getOrNull()
+                    if (listado != null) {
+                        listado.savedStateHandle["proyecto_eliminado"] = id
+                        navController.popBackStack(Screen.Proyectos.route, inclusive = false)
+                    } else {
+                        navController.navigate(Screen.Proyectos.route) {
+                            popUpTo(Screen.DetalleProyecto.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                }
             )
         }
 

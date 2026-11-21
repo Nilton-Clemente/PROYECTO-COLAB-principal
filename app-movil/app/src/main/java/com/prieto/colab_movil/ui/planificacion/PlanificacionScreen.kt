@@ -207,6 +207,7 @@ private fun buildPhases(
 private fun estadoPlanLabel(estado: String?): String = when (estado?.trim()?.uppercase()) {
     "ACTIVA" -> "Planificación activa"
     "FINALIZADA" -> "Planificación finalizada"
+    "CANCELADA" -> "Planificación cancelada"
     "BORRADOR" -> "Borrador de planificación"
     "PROPUESTA" -> "Propuesta validada por IA y Backend"
     else -> "Planificación generada por IA"

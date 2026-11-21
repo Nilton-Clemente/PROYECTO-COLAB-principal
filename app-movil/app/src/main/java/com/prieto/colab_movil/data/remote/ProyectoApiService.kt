@@ -7,6 +7,7 @@ import com.prieto.colab_movil.data.model.ProyectoResponseDto
 import com.prieto.colab_movil.data.model.TecnologiaDto
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -39,4 +40,10 @@ interface ProyectoApiService {
 
     @PUT("api/proyectos/{id}")
     suspend fun editarProyecto(@Path("id") id: Long, @Body request: ProyectoRequest): Response<ProyectoResponseDto>
+
+    @POST("api/proyectos/{id}/cancelar")
+    suspend fun cancelarProyecto(@Path("id") id: Long): Response<ProyectoResponseDto>
+
+    @DELETE("api/proyectos/{id}")
+    suspend fun eliminarProyecto(@Path("id") id: Long): Response<Unit>
 }

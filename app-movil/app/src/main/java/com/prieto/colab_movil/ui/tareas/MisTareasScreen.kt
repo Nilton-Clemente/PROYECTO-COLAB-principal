@@ -1,5 +1,8 @@
 package com.prieto.colab_movil.ui.tareas
 
+import com.prieto.colab_movil.data.model.estadoProyecto
+import com.prieto.colab_movil.ui.proyectos.EstadoProyectoBadge
+
 import androidx.compose.ui.platform.testTag
 
 import androidx.activity.compose.BackHandler
@@ -105,9 +108,9 @@ fun MisTareasScreen(
             ColabBarraSecundaria("Mis tareas", onVolver = onBack, habilitado = !ocupado, descripcionVolver = "Volver al proyecto")
         },
         bottomBar = {
-            Surface(color = SurfaceBg, shadowElevation = 8.dp) {
+            if (estado != null && !estado.cerrado) Surface(color = SurfaceBg, shadowElevation = 8.dp) {
                 Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    if (estado != null && estado.datos.tareas.isNotEmpty()) {
+                    if (estado.datos.tareas.isNotEmpty()) {
                         Text(
                             if (estado.activa) "Planificación activa · ${estado.datos.tareas.size} tareas asignadas"
                             else if (estado.confirmadas) "Esperando confirmaciones del equipo"
@@ -116,7 +119,7 @@ fun MisTareasScreen(
                         )
                     }
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        if (estado?.activa != true && estado?.puedeSolicitarCambios == true) {
+                        if (!estado.activa && estado.puedeSolicitarCambios) {
                             OutlinedButton(
                                 onClick = { pedirCambios = true },
                                 enabled = !ocupado,
@@ -129,15 +132,15 @@ fun MisTareasScreen(
                         }
                         Button(
                             onClick = {
-                                if (estado?.activa == true) seleccionarTarea = true else confirmarTodas = true
+                                if (estado.activa) seleccionarTarea = true else confirmarTodas = true
                             },
-                            enabled = if (estado?.activa == true) estado.puedeRegistrarAvance else estado?.puedeConfirmar == true,
+                            enabled = if (estado.activa) estado.puedeRegistrarAvance else estado.puedeConfirmar,
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = Indigo)
                         ) {
                             Icon(Icons.Default.Checklist, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text(if (estado?.activa == true) "Registrar avance" else "Confirmar todas", fontSize = 12.sp)
+                            Text(if (estado.activa) "Registrar avance" else "Confirmar todas", fontSize = 12.sp)
                         }
                     }
                 }
@@ -182,7 +185,7 @@ fun MisTareasScreen(
             confirmButton = { TextButton(onClick = { seleccionarTarea = false }) { Text("Cerrar") } }
         )
     }
-    if (confirmarTodas && estado != null && !estado.activa) {
+    if (confirmarTodas && estado != null && !estado.activa && !estado.cerrado) {
         AlertDialog(
             onDismissRequest = { confirmarTodas = false },
             title = { Text("Confirmar tus tareas") },
@@ -196,7 +199,7 @@ fun MisTareasScreen(
             dismissButton = { TextButton(onClick = { confirmarTodas = false }) { Text("Cancelar") } }
         )
     }
-    if (pedirCambios && estado != null && !estado.activa) {
+    if (pedirCambios && estado != null && !estado.activa && !estado.cerrado) {
         AlertDialog(
             onDismissRequest = { if (!ocupado) pedirCambios = false },
             title = { Text("Solicitar cambios") },
@@ -267,8 +270,8 @@ private fun MisTareasContenido(
                 Text("Hola, ${datos.perfil.nombre}", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Text(if (state.activa) "Registra el trabajo realizado en tus ${datos.tareas.size} tareas asignadas."
                 else "Revisa la estimación y el alcance de tus ${datos.tareas.size} tareas asignadas.", color = Muted, fontSize = 13.sp)
-                Text("Planificación: ${datos.planificacion?.estado ?: "Sin generar"}", color = Muted, fontSize = 12.sp)
-                if (!state.activa) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                EstadoProyectoBadge(datos.proyecto.estadoProyecto)
+                if (!state.activa && !state.cerrado) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     FiltroTareas.entries.forEach { opcion ->
                         FilterChip(
                             selected = filtro == opcion,
@@ -287,12 +290,13 @@ private fun MisTareasContenido(
                 state.datosDesactualizados -> "No se pudo verificar el estado actual. Actualiza los datos antes de confirmar o solicitar cambios."
                 datos.planificacion == null -> "El proyecto aún no tiene una planificación. Las tareas aparecerán cuando se genere y se te asigne trabajo."
                 datos.tareas.isEmpty() -> "No tienes tareas asignadas en este proyecto."
+                state.cerrado -> "El proyecto está cerrado. Puedes consultar el historial de tus tareas en modo de solo lectura."
                 state.activa -> "El equipo confirmó la planificación. Ya puedes registrar sesiones de trabajo y actualizar el estado de cada tarea."
                 datos.planificacion.estado != "PROPUESTA" -> "La planificación no está en estado PROPUESTA. Puedes consultar tus tareas, pero no confirmar ni solicitar cambios."
                 else -> "La confirmación abarca todas tus tareas. Solicitar cambios notifica al creador y reinicia las confirmaciones del resto del equipo."
             })
         }
-        datos.confirmacion?.takeUnless { state.activa }?.let { confirmacion ->
+        datos.confirmacion?.takeUnless { state.activa || state.cerrado }?.let { confirmacion ->
             item {
                 AvisoTareas(
                     when (confirmacion.estado) {
@@ -303,10 +307,10 @@ private fun MisTareasContenido(
                 )
             }
         }
-        if (!state.activa && datos.tareas.isNotEmpty() && state.tareasVisibles(filtro).isEmpty()) {
+        if (!state.activa && !state.cerrado && datos.tareas.isNotEmpty() && state.tareasVisibles(filtro).isEmpty()) {
             item { Text("No hay tareas en esta categoría.", color = Muted) }
         }
-        items(if (state.activa) datos.tareas else state.tareasVisibles(filtro), key = { it.id }) { tarea ->
+        items(if (state.activa || state.cerrado) datos.tareas else state.tareasVisibles(filtro), key = { it.id }) { tarea ->
             TareaAsignadaCard(
                 tarea = tarea,
                 confirmada = state.confirmadas,
@@ -315,6 +319,7 @@ private fun MisTareasContenido(
                 }.ifBlank { "Sin dependencias previas" },
                 onDetalles = { detallesId = tarea.id },
                 activa = state.activa,
+                cerrado = state.cerrado,
                 puedeRegistrarAvance = state.puedeRegistrarAvance,
                 onRegistrarAvance = { onRegistrarAvance(tarea.id) }
             )
@@ -356,6 +361,7 @@ private fun TareaAsignadaCard(
     dependencias: String,
     onDetalles: () -> Unit,
     activa: Boolean,
+    cerrado: Boolean,
     puedeRegistrarAvance: Boolean,
     onRegistrarAvance: () -> Unit
 ) {
@@ -389,10 +395,12 @@ private fun TareaAsignadaCard(
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             if (confirmada) Icon(Icons.Default.CheckCircle, "Asignación confirmada", tint = Green)
-            else Text("Confirma con «Confirmar todas»", Modifier.weight(1f), color = Muted, fontSize = 11.sp)
+            else if (!cerrado) Text("Confirma con «Confirmar todas»", Modifier.weight(1f), color = Muted, fontSize = 11.sp)
             TextButton(onClick = onDetalles) { Text("Ver detalles", fontSize = 12.sp) }
         }
-        if (activa) {
+        if (cerrado) {
+            OutlinedButton(onClick = onRegistrarAvance, modifier = Modifier.fillMaxWidth()) { Text("Ver historial de avances") }
+        } else if (activa) {
             Button(onClick = onRegistrarAvance, enabled = puedeRegistrarAvance, modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Indigo)) {
                 Icon(Icons.Default.EditNote, null, modifier = Modifier.size(18.dp))

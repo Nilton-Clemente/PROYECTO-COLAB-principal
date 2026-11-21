@@ -158,6 +158,20 @@ class RegistrarAvanceScreenTest {
     }
 
     @Test
+    fun completarUltimaTareaRecargaElProyectoYDejaElHistorialEnSoloLectura() {
+        val repo = RepositorioPrueba().apply { finalizarProyectoAlCompletar = true }
+        mostrar(repo)
+        desplazarA("Completada")
+        compose.onNodeWithText("Completada").performClick()
+        compose.onNodeWithText("Actualizar estado").performClick()
+        compose.onNodeWithText("Historial de avances").assertIsDisplayed()
+        compose.onNodeWithText("Guardar avance").assertDoesNotExist()
+        desplazarA("Historial de sesiones", substring = true)
+        compose.onNodeWithText("Historial de sesiones", substring = true).assertIsDisplayed()
+        compose.runOnIdle { assertEquals(1, repo.cambiosEstado); assertEquals(0, repo.registros) }
+    }
+
+    @Test
     fun tareaBloqueadaNoPermiteCambiarEstadoManualmente() {
         val repo = RepositorioPrueba()
         repo.datos = repo.datos.copy(tarea = repo.datos.tarea.copy(estado = "BLOQUEADA"))
@@ -259,7 +273,12 @@ class RegistrarAvanceScreenTest {
         override suspend fun cambiarEstado(proyectoId: Long, tareaId: Long, nuevoEstado: String): Result<TareaDetalleResponseDto> {
             cambiosEstado++
             datos = datos.copy(tarea = datos.tarea.copy(estado = nuevoEstado))
+            if (finalizarProyectoAlCompletar && nuevoEstado == "COMPLETADA") {
+                datos = datos.copy(proyecto = datos.proyecto.copy(estado = "FINALIZADO"), planificacion = datos.planificacion.copy(estado = "FINALIZADA"))
+            }
             return Result.success(datos.tarea)
         }
+
+        var finalizarProyectoAlCompletar = false
     }
 }

@@ -1,5 +1,7 @@
 package com.prieto.colab_movil.ui.tareas
 
+import com.prieto.colab_movil.data.model.estadoProyecto
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.prieto.colab_movil.data.model.RegistroAvanceRequestDto
@@ -38,7 +40,8 @@ sealed interface RegistrarAvanceUiState {
         val registroIncierto: Boolean = false,
         val mensaje: String? = null
     ) : RegistrarAvanceUiState {
-        val puedeGestionar: Boolean get() = !ocupado && !desactualizado && datos.planificacion.estado == "ACTIVA"
+        val cerrado: Boolean get() = datos.proyecto.estadoProyecto.cerrado || datos.planificacion.estado in setOf("FINALIZADA", "CANCELADA")
+        val puedeGestionar: Boolean get() = !cerrado && !ocupado && !desactualizado && datos.planificacion.estado == "ACTIVA"
         val puedeRegistrar: Boolean get() = puedeGestionar && !registroIncierto
         val transiciones: List<EstadoTarea> get() = EstadoTarea.transiciones(datos.tarea.estado)
     }

@@ -1,6 +1,7 @@
 package com.prieto.colab_movil.ui.proyectos
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.gson.Gson
 import com.prieto.colab_movil.data.model.*
@@ -13,6 +14,9 @@ import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import okhttp3.ResponseBody.Companion.toResponseBody
+import retrofit2.HttpException
+import retrofit2.Response
 
 @RunWith(AndroidJUnit4::class)
 class ActualizarProyectosTest {
@@ -47,6 +51,54 @@ class ActualizarProyectosTest {
     }
 
     @Test
+    fun cancelarMantieneElDetalleYEliminarRequiereElNombre() {
+        val repo = Repositorio()
+        val vm = DetalleProyectoViewModel(repo, PlanRepository())
+        var eliminado = 0L
+        compose.setContent { DetalleProyectoScreen(proyectoId = 7, viewModel = vm, onEliminado = { eliminado = it }) }
+        compose.waitUntil(5_000) { vm.uiState.value is DetalleProyectoUiState.Success }
+        compose.onNodeWithContentDescription("Más acciones del proyecto").performClick()
+        compose.onNodeWithText("Cancelar proyecto").performClick()
+        compose.onNodeWithText("Confirmar cancelación").performClick()
+        compose.onNodeWithText("Cancelado").assertIsDisplayed()
+        compose.onNodeWithText("Mis tareas e historial").assertExists()
+        compose.onNodeWithContentDescription("Más acciones del proyecto").performClick()
+        compose.onNodeWithText("Eliminar proyecto").performClick()
+        compose.onNodeWithText("Eliminar definitivamente").assertIsNotEnabled()
+        compose.onNodeWithText("Escribe el nombre del proyecto").performTextInput("Proyecto")
+        compose.onNodeWithText("Eliminar definitivamente").assertIsEnabled().performClick()
+        compose.runOnIdle { assertEquals(7L, eliminado) }
+    }
+
+    @Test
+    fun conflictoRefrescaElEstadoSinRepetirLaCancelacionNiMostrarEditar() {
+        val repo = Repositorio().apply { conflicto = true }
+        val vm = DetalleProyectoViewModel(repo, PlanRepository())
+        compose.runOnIdle { vm.cargarDetalle(7) }
+        compose.waitUntil(5_000) { vm.uiState.value is DetalleProyectoUiState.Success }
+        compose.runOnIdle {
+            vm.cambiarCiclo(7, AccionProyecto.CANCELAR)
+            vm.cambiarCiclo(7, AccionProyecto.CANCELAR)
+        }
+        compose.waitUntil(5_000) { (vm.uiState.value as? DetalleProyectoUiState.Success)?.aviso?.contains("estado del proyecto cambió") == true }
+        val estado = vm.uiState.value as DetalleProyectoUiState.Success
+        assertEquals("FINALIZADO", estado.proyecto.estado)
+        assertEquals(listOf(AccionProyecto.ELIMINAR), estado.acciones)
+        assertEquals(1, repo.cancelaciones)
+    }
+
+    @Test
+    fun eliminarNoReapareceSiFallaLaRecargaDelListado() {
+        val repo = Repositorio()
+        val vm = ProyectosViewModel(repo)
+        compose.runOnIdle { vm.cargarDatos() }
+        compose.waitUntil(5_000) { vm.uiState.value is ProyectosUiState.Success }
+        compose.runOnIdle { repo.fallarProyectos = true; vm.retirarEliminado(7) }
+        compose.waitUntil(5_000) { (vm.uiState.value as? ProyectosUiState.Success)?.aviso != null }
+        assertTrue((vm.uiState.value as ProyectosUiState.Success).proyectos.isEmpty())
+    }
+
+    @Test
     fun invitacionesNoDuplicaOperacionesYRecuperaDespuesDeFallo() {
         val repo = Repositorio()
         val vm = InvitacionesViewModel(repo)
@@ -66,6 +118,9 @@ class ActualizarProyectosTest {
     }
 
     private class Repositorio : ProyectoRepository {
+        var proyecto = Gson().fromJson("""{"id":7,"nombre":"Proyecto","estado":"EN_DESARROLLO","puedeCancelar":true}""", ProyectoResponseDto::class.java)
+        var conflicto = false
+        var cancelaciones = 0
         var fallarProyectos = false
         var fallarInvitaciones = false
         var fallarEquipo = false
@@ -77,11 +132,19 @@ class ActualizarProyectosTest {
         override suspend fun listarInvitaciones(): Result<List<InvitacionResponseDto>> = if (fallarInvitaciones) Result.failure(Exception("Error")) else Result.success(emptyList())
         override suspend fun aceptarInvitacion(id: Long): Result<Unit> { aceptaciones++; return aceptacion?.await() ?: Result.success(Unit) }
         override suspend fun rechazarInvitacion(id: Long): Result<Unit> = error("No se usa")
-        override suspend fun verProyecto(id: Long): Result<ProyectoResponseDto> = Result.success(Gson().fromJson("""{"id":7,"nombre":"Proyecto"}""", ProyectoResponseDto::class.java))
-        override suspend fun verEquipo(id: Long): Result<List<IntegranteResponseDto>> = if (fallarEquipo) Result.failure(Exception("Error")) else Result.success(listOf(Gson().fromJson("""{"id":1}""", IntegranteResponseDto::class.java)))
+        override suspend fun verProyecto(id: Long): Result<ProyectoResponseDto> = Result.success(proyecto)
+        override suspend fun verEquipo(id: Long): Result<List<IntegranteResponseDto>> =
+            if (fallarEquipo) Result.failure(Exception("Error"))
+            else Result.success(listOf(IntegranteResponseDto(1, "a@tecsup.edu.pe", "Alex", "CREADOR", "ACTIVO")))
         override suspend fun listarTecnologias(): Result<List<TecnologiaDto>> = error("No se usa")
         override suspend fun crearProyecto(request: ProyectoRequest): Result<ProyectoResponseDto> = error("No se usa")
         override suspend fun editarProyecto(id: Long, request: ProyectoRequest): Result<ProyectoResponseDto> = error("No se usa")
+        override suspend fun cancelarProyecto(id: Long): Result<ProyectoResponseDto> {
+            cancelaciones++
+            proyecto = proyecto.copy(estado = if (conflicto) "FINALIZADO" else "CANCELADO", puedeCancelar = false, puedeEliminar = true)
+            return if (conflicto) Result.failure(HttpException(Response.error<ProyectoResponseDto>(409, "".toResponseBody()))) else Result.success(proyecto)
+        }
+        override suspend fun eliminarProyecto(id: Long): Result<Unit> = Result.success(Unit)
     }
 
     private class PlanRepository : PlanificacionRepository {
