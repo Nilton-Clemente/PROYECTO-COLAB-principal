@@ -10,8 +10,8 @@ export const registro = (nombre, email, contrasena) =>
 export const obtenerPerfil = (token) => request('/api/usuario/perfil', { token });
 export const listarCatalogo = (token) => request('/api/habilidades', { token });
 
-export const agregarHabilidad = (token, id) =>
-  request(`/api/usuario/habilidades/${id}`, { method: 'PUT', token });
+export const agregarHabilidad = (token, id, nivel) =>
+  request(`/api/usuario/habilidades/${id}?${new URLSearchParams({ nivel })}`, { method: 'PUT', token });
 
 export const eliminarHabilidad = (token, id) =>
   request(`/api/usuario/habilidades/${id}`, { method: 'DELETE', token });

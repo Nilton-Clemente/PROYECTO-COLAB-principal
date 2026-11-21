@@ -10,6 +10,7 @@ import MisTareas from './pages/MisTareas.jsx';
 import RegistrarAvance from './pages/RegistrarAvance.jsx';
 import Invitaciones from './pages/Invitaciones.jsx';
 import Perfil from './pages/Perfil.jsx';
+import CatalogoHabilidades from './pages/CatalogoHabilidades.jsx';
 
 function Privada({ children }) {
   const { token } = useAuth();
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/proyectos/:id/:tab?" element={<ProyectoDetalle />} />
         <Route path="/invitaciones" element={<Invitaciones />} />
         <Route path="/perfil" element={<Perfil />} />
+        <Route path="/perfil/habilidades" element={<CatalogoHabilidades />} />
       </Route>
       <Route path="*" element={<Navigate to="/proyectos" replace />} />
     </Routes>

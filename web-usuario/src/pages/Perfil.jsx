@@ -1,27 +1,26 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import * as api from '../api/colab.js';
-import { IconPlus, IconSearch, IconTrash } from '../components/Icons.jsx';
+import { IconTrash } from '../components/Icons.jsx';
+import IconoHabilidad from '../components/IconoHabilidad.jsx';
+import { etiquetaNivel, LIMITE_HABILIDADES_PERFIL, ordenarHabilidades } from '../habilidades.js';
 import { etiqueta, iniciales } from '../utils.js';
 
-function TarjetaHabilidad({ habilidad, accion, ocupada, onAccion }) {
-  const agregar = accion === 'agregar';
+function TarjetaHabilidad({ habilidad, ocupada, onEliminar }) {
   return (
-    <li className="habilidad">
-      <div>
-        <span className="chip">{etiqueta(habilidad.area ?? 'General')}</span>
-        <h3>{etiqueta(habilidad.nombre)}</h3>
-      </div>
+    <li className="perfil-habilidades__tarjeta">
+      <IconoHabilidad habilidad={habilidad} />
+      <h3>{etiqueta(habilidad.nombre)}</h3>
+      <span className="perfil-habilidades__nivel">{etiquetaNivel(habilidad.nivel)}</span>
       <button
         type="button"
-        className={`btn ${agregar ? 'btn--verde' : 'btn--peligro'} btn--bloque`}
+        className="btn perfil-habilidades__quitar"
         disabled={ocupada}
-        onClick={() => onAccion(habilidad)}
-        aria-label={`${agregar ? 'Agregar' : 'Eliminar'} ${etiqueta(habilidad.nombre)}`}
+        onClick={() => onEliminar(habilidad)}
+        aria-label={`Quitar ${etiqueta(habilidad.nombre)} de mi perfil`}
       >
-        {agregar ? <IconPlus /> : <IconTrash />}
-        {agregar ? 'Agregar' : 'Eliminar'}
+        <IconTrash aria-hidden="true" /> Quitar
       </button>
     </li>
   );
@@ -33,17 +32,14 @@ export default function Perfil() {
   const [estado, setEstado] = useState('cargando'); // cargando | ok | error
   const [errorCarga, setErrorCarga] = useState('');
   const [perfil, setPerfil] = useState(null);
-  const [catalogo, setCatalogo] = useState([]);
   const [ocupadas, setOcupadas] = useState(() => new Set());
-  const [area, setArea] = useState('Todas');
-  const [busqueda, setBusqueda] = useState('');
+  const [mostrarTodas, setMostrarTodas] = useState(false);
+  const verTodasRef = useRef(null);
 
   const cargar = useCallback(async () => {
     setEstado('cargando');
     try {
-      const [p, c] = await Promise.all([api.obtenerPerfil(token), api.listarCatalogo(token)]);
-      setPerfil(p);
-      setCatalogo(c);
+      setPerfil(await api.obtenerPerfil(token));
       setEstado('ok');
     } catch (err) {
       setErrorCarga(err.message);
@@ -63,23 +59,12 @@ export default function Perfil() {
       return sig;
     });
 
-  async function agregar(h) {
-    marcar(h.id, true);
-    try {
-      await api.agregarHabilidad(token, h.id);
-      setPerfil((p) => ({ ...p, habilidades: [...p.habilidades, h] }));
-    } catch (err) {
-      avisar(`No se pudo agregar ${etiqueta(h.nombre)}. ${err.message}`);
-    } finally {
-      marcar(h.id, false);
-    }
-  }
-
   async function eliminar(h) {
     marcar(h.id, true);
     try {
       await api.eliminarHabilidad(token, h.id);
       setPerfil((p) => ({ ...p, habilidades: p.habilidades.filter((x) => x.id !== h.id) }));
+      avisar(`${etiqueta(h.nombre)} se quitó de tu perfil.`, 'ok');
     } catch (err) {
       avisar(`No se pudo eliminar ${etiqueta(h.nombre)}. ${err.message}`);
     } finally {
@@ -87,21 +72,9 @@ export default function Perfil() {
     }
   }
 
-  const areas = useMemo(() => ['Todas', ...new Set(catalogo.map((h) => h.area).filter(Boolean))], [catalogo]);
-
-  const disponibles = useMemo(() => {
-    if (!perfil) return [];
-    const mias = new Set(perfil.habilidades.map((h) => h.id));
-    const q = busqueda.trim().toLowerCase();
-    return catalogo.filter(
-      (h) =>
-        !mias.has(h.id) &&
-        (area === 'Todas' || h.area === area) &&
-        (!q || etiqueta(h.nombre).toLowerCase().includes(q)),
-    );
-  }, [catalogo, perfil, area, busqueda]);
-
-  const totalDisponibles = perfil ? catalogo.length - perfil.habilidades.length : 0;
+  const habilidades = ordenarHabilidades(perfil?.habilidades ?? []);
+  const restantes = Math.max(0, habilidades.length - LIMITE_HABILIDADES_PERFIL);
+  const visibles = mostrarTodas ? habilidades : habilidades.slice(0, LIMITE_HABILIDADES_PERFIL);
 
   return (
     <>
@@ -129,70 +102,51 @@ export default function Perfil() {
               </div>
             </section>
 
-            <section aria-labelledby="mis-habilidades">
-              <div className="seccion__cab">
-                <h2 id="mis-habilidades">Mis habilidades</h2>
-                <span className="contador">{perfil.habilidades.length}</span>
+            <section className="tarjeta perfil-habilidades" aria-labelledby="mis-habilidades">
+              <div className="perfil-habilidades__cab">
+                <div>
+                  <div className="seccion__cab">
+                    <h2 id="mis-habilidades">Mis habilidades</h2>
+                    <span className="contador">{habilidades.length} {habilidades.length === 1 ? 'habilidad' : 'habilidades'}</span>
+                  </div>
+                  <p className="seccion__sub">Tecnologías y competencias que has registrado en tu perfil.</p>
+                </div>
+                {restantes > 0 && (
+                  <button ref={verTodasRef} type="button" className="btn perfil-habilidades__ver" aria-expanded={mostrarTodas}
+                    aria-controls="lista-mis-habilidades" onClick={() => setMostrarTodas((valor) => !valor)}>
+                    {mostrarTodas ? 'Ver menos' : 'Ver todas'} <span aria-hidden="true">›</span>
+                  </button>
+                )}
               </div>
-              <p className="seccion__sub">Tecnologías y competencias asignadas para tus proyectos de sprint.</p>
-
-              {perfil.habilidades.length === 0 ? (
-                <p className="vacio">Aún no tienes habilidades. Elige las que domines en el catálogo de abajo.</p>
+              {habilidades.length === 0 ? (
+                <p className="vacio">Aún no tienes habilidades. Explora el catálogo para agregar tus competencias.</p>
               ) : (
-                <ul className="grilla">
-                  {perfil.habilidades.map((h) => (
-                    <TarjetaHabilidad key={h.id} habilidad={h} accion="eliminar" ocupada={ocupadas.has(h.id)} onAccion={eliminar} />
+                <ul className="perfil-habilidades__grilla" id="lista-mis-habilidades">
+                  {visibles.map((h) => (
+                    <TarjetaHabilidad key={h.id} habilidad={h} ocupada={ocupadas.has(h.id)} onEliminar={eliminar} />
                   ))}
+                  {!mostrarTodas && restantes > 0 && (
+                    <li className="perfil-habilidades__mas">
+                      <button type="button" className="btn" onClick={() => {
+                        setMostrarTodas(true);
+                        verTodasRef.current?.focus();
+                      }} aria-label={`Ver ${restantes} habilidades más`}>
+                        <strong aria-hidden="true">+{restantes}</strong> Ver más
+                      </button>
+                    </li>
+                  )}
                 </ul>
               )}
             </section>
 
-            <section aria-labelledby="catalogo">
-              <div className="seccion__cab">
-                <h2 id="catalogo">Catálogo disponible</h2>
-                <span className="contador contador--verde">{totalDisponibles}</span>
+            <section className="tarjeta perfil-habilidades__acceso" aria-labelledby="catalogo">
+              <div>
+                <h2 id="catalogo">Explorar catálogo de habilidades</h2>
+                <p className="seccion__sub">Descubre habilidades y añade a tu perfil las que dominas.</p>
               </div>
-              <p className="seccion__sub">Explora y añade nuevas tecnologías a tu perfil de estudiante.</p>
-
-              <div className="filtros">
-                <div className="filtros__tabs" role="group" aria-label="Filtrar por área">
-                  {areas.map((a) => (
-                    <button
-                      key={a}
-                      type="button"
-                      className={a === area ? 'tab tab--activa' : 'tab'}
-                      aria-pressed={a === area}
-                      onClick={() => setArea(a)}
-                    >
-                      {etiqueta(a)}
-                    </button>
-                  ))}
-                </div>
-                <label className="busqueda">
-                  <IconSearch />
-                  <input
-                    type="search"
-                    placeholder="Buscar en catálogo…"
-                    value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
-                    aria-label="Buscar en catálogo"
-                  />
-                </label>
-              </div>
-
-              {disponibles.length === 0 ? (
-                <p className="vacio">
-                  {totalDisponibles === 0
-                    ? 'Ya agregaste todas las habilidades del catálogo.'
-                    : 'Ninguna habilidad coincide con tu búsqueda.'}
-                </p>
-              ) : (
-                <ul className="grilla">
-                  {disponibles.map((h) => (
-                    <TarjetaHabilidad key={h.id} habilidad={h} accion="agregar" ocupada={ocupadas.has(h.id)} onAccion={agregar} />
-                  ))}
-                </ul>
-              )}
+              <Link to="/perfil/habilidades" className="btn btn--primario">
+                Ir al catálogo <span aria-hidden="true">→</span>
+              </Link>
             </section>
           </>
         )}
