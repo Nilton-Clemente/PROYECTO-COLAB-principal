@@ -27,12 +27,33 @@ class ActualizarProyectosTest {
         val repo = Repositorio()
         val vm = ProyectosViewModel(repo)
         compose.runOnIdle { vm.cargarDatos() }
-        compose.waitUntil(5_000) { vm.uiState.value is ProyectosUiState.Success }
+        compose.waitUntil(5_000) { (vm.uiState.value as? ProyectosUiState.Success)?.actualizando == false }
         compose.runOnIdle { repo.fallarProyectos = true; vm.cargarDatos() }
-        compose.waitUntil(5_000) { (vm.uiState.value as? ProyectosUiState.Success)?.aviso != null }
+        compose.waitUntil(5_000) { (vm.uiState.value as? ProyectosUiState.Success)?.let { !it.actualizando && it.aviso != null } == true }
         val estado = vm.uiState.value as ProyectosUiState.Success
         assertEquals("Proyecto", estado.proyectos.single().nombre)
         assertFalse(estado.actualizando)
+    }
+
+    @Test
+    fun tarjetaMuestraAvataresActivosJuntoALaEntregaYLosConservaSiFallaElEquipo() {
+        val repo = Repositorio().apply {
+            equipo = listOf(
+                IntegranteResponseDto(1, "a@tecsup.edu.pe", "Alex Torres", "CREADOR", "ACTIVO"),
+                IntegranteResponseDto(2, "b@tecsup.edu.pe", "Beatriz Vega", "INTEGRANTE", "ACTIVO"),
+                IntegranteResponseDto(3, "c@tecsup.edu.pe", "Camila Luna", "INTEGRANTE", "PENDIENTE")
+            )
+        }
+        val vm = ProyectosViewModel(repo)
+        compose.setContent { ProyectosScreen(viewModel = vm) }
+        compose.waitUntil(5_000) { (vm.uiState.value as? ProyectosUiState.Success)?.actualizando == false }
+        compose.onNodeWithText("Entrega: Por definir").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Creador: Alex Torres").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Integrante: Beatriz Vega").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Integrante: Camila Luna").assertDoesNotExist()
+        compose.runOnIdle { repo.fallarEquipo = true; vm.cargarDatos() }
+        compose.waitUntil(5_000) { (vm.uiState.value as? ProyectosUiState.Success)?.aviso?.contains("actualizar todos los equipos") == true }
+        compose.onNodeWithContentDescription("Integrante: Beatriz Vega").assertIsDisplayed()
     }
 
     @Test
@@ -92,7 +113,7 @@ class ActualizarProyectosTest {
         val repo = Repositorio()
         val vm = ProyectosViewModel(repo)
         compose.runOnIdle { vm.cargarDatos() }
-        compose.waitUntil(5_000) { vm.uiState.value is ProyectosUiState.Success }
+        compose.waitUntil(5_000) { (vm.uiState.value as? ProyectosUiState.Success)?.actualizando == false }
         compose.runOnIdle { repo.fallarProyectos = true; vm.retirarEliminado(7) }
         compose.waitUntil(5_000) { (vm.uiState.value as? ProyectosUiState.Success)?.aviso != null }
         assertTrue((vm.uiState.value as ProyectosUiState.Success).proyectos.isEmpty())
@@ -124,6 +145,7 @@ class ActualizarProyectosTest {
         var fallarProyectos = false
         var fallarInvitaciones = false
         var fallarEquipo = false
+        var equipo = listOf(IntegranteResponseDto(1, "a@tecsup.edu.pe", "Alex", "CREADOR", "ACTIVO"))
         var aceptaciones = 0
         var aceptacion: CompletableDeferred<Result<Unit>>? = null
         override suspend fun obtenerPerfil() = Result.success(PerfilResponseDto("a@tecsup.edu.pe", "Alex", emptyList()))
@@ -135,7 +157,7 @@ class ActualizarProyectosTest {
         override suspend fun verProyecto(id: Long): Result<ProyectoResponseDto> = Result.success(proyecto)
         override suspend fun verEquipo(id: Long): Result<List<IntegranteResponseDto>> =
             if (fallarEquipo) Result.failure(Exception("Error"))
-            else Result.success(listOf(IntegranteResponseDto(1, "a@tecsup.edu.pe", "Alex", "CREADOR", "ACTIVO")))
+            else Result.success(equipo)
         override suspend fun listarTecnologias(): Result<List<TecnologiaDto>> = error("No se usa")
         override suspend fun crearProyecto(request: ProyectoRequest): Result<ProyectoResponseDto> = error("No se usa")
         override suspend fun editarProyecto(id: Long, request: ProyectoRequest): Result<ProyectoResponseDto> = error("No se usa")

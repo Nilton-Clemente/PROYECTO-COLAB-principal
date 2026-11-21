@@ -77,13 +77,12 @@ class ProyectoRepositoryImpl(
     override suspend fun verEquipo(id: Long): Result<List<IntegranteResponseDto>> = withContext(Dispatchers.IO) {
         try {
             val response = proyectoApiService.verEquipo(id)
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.success(emptyList())
-            }
+            if (!response.isSuccessful) throw HttpException(response)
+            Result.success(checkNotNull(response.body()) { "El servidor no devolvió el equipo." })
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Result.success(emptyList())
+            Result.failure(e)
         }
     }
 

@@ -336,7 +336,7 @@ private fun EtiquetaEstado(texto: String, fondo: Color, textoColor: Color) {
     }
 }
 
-private fun iniciales(nombre: String): String {
+internal fun iniciales(nombre: String): String {
     val partes = nombre.trim().split(" ").filter { it.isNotBlank() }
     return when {
         partes.isEmpty() -> "US"

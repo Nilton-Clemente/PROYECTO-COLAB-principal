@@ -49,6 +49,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -62,6 +64,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.prieto.colab_movil.data.model.EstadoProyecto
+import com.prieto.colab_movil.data.model.IntegranteResponseDto
 import com.prieto.colab_movil.data.model.estadoProyecto
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
 import com.prieto.colab_movil.ui.components.ColabTopBar
@@ -98,10 +101,11 @@ data class Proyecto(
     val estado: EstadoProyecto,
     val descripcion: String?,
     val tecnologias: List<Tecnologia>,
-    val fechaEntrega: String?
+    val fechaEntrega: String?,
+    val integrantes: List<IntegranteResponseDto> = emptyList()
 )
 
-private fun mapToProyecto(dto: ProyectoResponseDto): Proyecto {
+private fun mapToProyecto(dto: ProyectoResponseDto, equipo: List<IntegranteResponseDto>): Proyecto {
     val codigo = "TEC-${dto.id}"
     val tecnologias = dto.tecnologias?.map { t ->
         Tecnologia(
@@ -125,7 +129,9 @@ private fun mapToProyecto(dto: ProyectoResponseDto): Proyecto {
         estado = dto.estadoProyecto,
         descripcion = dto.descripcion?.takeIf { it.isNotBlank() },
         tecnologias = tecnologias,
-        fechaEntrega = dto.fechaEntrega
+        fechaEntrega = dto.fechaEntrega,
+        integrantes = equipo.filter { it.estado == "ACTIVO" }
+            .sortedWith(compareBy({ it.rol != "CREADOR" }, { it.integranteId }))
     )
 }
 
@@ -187,7 +193,8 @@ fun ProyectosScreen(
         }
         is ProyectosUiState.Success -> {
             val pendientes = state.invitaciones.map { it.proyectoId }.toSet()
-            val proyectos = state.proyectos.filterNot { it.id == proyectoEliminado || it.id in pendientes }.map(::mapToProyecto)
+            val proyectos = state.proyectos.filterNot { it.id == proyectoEliminado || it.id in pendientes }
+                .map { mapToProyecto(it, state.equipos[it.id].orEmpty()) }
             val hayInvitaciones = state.invitaciones.isNotEmpty()
             ProyectosContent(
                 nombre = state.nombre,
@@ -379,7 +386,22 @@ private fun ProyectoCard(p: Proyecto, onClick: () -> Unit) {
             p.tecnologias.forEach { TechChip(it) }
         }
 
-        FechaEntrega(p.fechaEntrega)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FechaEntrega(p.fechaEntrega)
+            if (p.integrantes.isNotEmpty()) {
+                FlowRow(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    p.integrantes.forEach { integrante -> AvatarIntegranteProyecto(integrante) }
+                }
+            }
+        }
     }
 }
 
@@ -395,6 +417,24 @@ private fun TechChip(t: Tecnologia) {
     ) {
         Icon(t.icono, null, tint = Secondary, modifier = Modifier.size(14.dp))
         Text(t.nombre, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = OnSurfaceVariant)
+    }
+}
+
+@Composable
+private fun AvatarIntegranteProyecto(integrante: IntegranteResponseDto) {
+    val creador = integrante.rol == "CREADOR"
+    Box(
+        modifier = Modifier
+            .size(30.dp)
+            .clip(CircleShape)
+            .background(if (creador) Color(0xFFE2DFFF) else SurfaceContainer)
+            .clearAndSetSemantics {
+                contentDescription = "${if (creador) "Creador" else "Integrante"}: ${integrante.nombre}"
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(iniciales(integrante.nombre), fontSize = 11.sp, fontWeight = FontWeight.Bold,
+            color = if (creador) Primary else OnSurfaceVariant)
     }
 }
 
