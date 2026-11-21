@@ -22,6 +22,8 @@ public record ProyectoResponse(
         List<RequerimientoNoFuncionalDto> requerimientosNoFuncionales,
         List<CasoUsoDto> casosDeUso,
         EstadoProyecto estado,
-        LocalDateTime fechaFinalizacion
+        LocalDateTime fechaFinalizacion,
+        LocalDateTime fechaCancelacion,
+        boolean puedeCancelar
 ) {}
 

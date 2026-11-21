@@ -75,7 +75,7 @@ public class ProyectoService {
         creador.setFechaUnion(LocalDateTime.now());
         integranteRepository.save(creador);
 
-        return aResponse(p, null);
+        return aResponse(p, null, true);
     }
 
     @Transactional
@@ -88,7 +88,22 @@ public class ProyectoService {
 
         aplicarRequest(p, request);
         proyectoRepository.save(p);
-        return aResponse(p, null);
+        return aResponse(p, null, true);
+    }
+
+    @Transactional
+    public ProyectoResponse cancelarProyecto(Long id) {
+        Usuario u = usuarioActual();
+        Proyecto p = proyectoRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
+        verificarCreador(u, id);
+        Planificacion plan = planificacionRepository.findByProyectoId(id).orElse(null);
+        if (!EstadoProyecto.desde(plan).permiteCancelar()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se puede cancelar un proyecto en desarrollo");
+        }
+        plan.setEstado("CANCELADA");
+        plan.setFechaCancelacion(LocalDateTime.now());
+        return aResponse(p, plan, true);
     }
 
     @Transactional
@@ -111,7 +126,7 @@ public class ProyectoService {
         planificacionRepository.findByProyectoIdIn(membresias.stream().map(i -> i.getProyecto().getId()).toList())
                 .forEach(plan -> planes.put(plan.getProyecto().getId(), plan));
         return membresias.stream()
-                .map(i -> aResponse(i.getProyecto(), planes.get(i.getProyecto().getId())))
+                .map(i -> aResponse(i.getProyecto(), planes.get(i.getProyecto().getId()), "CREADOR".equals(i.getRol())))
                 .toList();
     }
 
@@ -121,10 +136,9 @@ public class ProyectoService {
         Proyecto p = proyectoRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
 
-        if (!integranteRepository.existsByUsuarioIdAndProyectoId(u.getId(), id)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No perteneces a este proyecto");
-        }
-        return aResponse(p, planificacionRepository.findByProyectoId(id).orElse(null));
+        Integrante integrante = integranteRepository.findByUsuarioIdAndProyectoId(u.getId(), id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "No perteneces a este proyecto"));
+        return aResponse(p, planificacionRepository.findByProyectoId(id).orElse(null), "CREADOR".equals(integrante.getRol()));
     }
 
     @Transactional(readOnly = true)
@@ -144,6 +158,8 @@ public class ProyectoService {
     @Transactional
     public void invitar(Long proyectoId, String email) {
         Usuario u = usuarioActual();
+        Proyecto p = proyectoRepository.findByIdForUpdate(proyectoId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
         verificarCreador(u, proyectoId);
         verificarSinPlanificacion(proyectoId);
 
@@ -152,9 +168,6 @@ public class ProyectoService {
         if (integranteRepository.existsByUsuarioIdAndProyectoId(invitado.getId(), proyectoId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El usuario ya pertenece a este proyecto");
         }
-        Proyecto p = proyectoRepository.findById(proyectoId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
-
         Integrante i = new Integrante();
         i.setUsuario(invitado);
         i.setProyecto(p);
@@ -166,6 +179,8 @@ public class ProyectoService {
     @Transactional
     public void eliminarIntegrante(Long proyectoId, Long integranteId) {
         Usuario u = usuarioActual();
+        proyectoRepository.findByIdForUpdate(proyectoId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
         verificarCreador(u, proyectoId);
         verificarSinPlanificacion(proyectoId);
         Integrante i = integranteRepository.findById(integranteId)
@@ -190,14 +205,7 @@ public class ProyectoService {
     @Transactional
     public void aceptarInvitacion(Long integranteId) {
         Usuario u = usuarioActual();
-        Integrante i = integranteRepository.findById(integranteId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitación no existe"));
-        if (!i.getUsuario().getId().equals(u.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Esta invitación no es tuya");
-        }
-        if (!"PENDIENTE".equals(i.getEstado())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "La invitación ya fue procesada");
-        }
+        Integrante i = invitacionPendienteParaActualizar(integranteId, u);
         i.setEstado("ACTIVO");
         i.setFechaUnion(LocalDateTime.now());
         integranteRepository.save(i);
@@ -206,12 +214,26 @@ public class ProyectoService {
     @Transactional
     public void rechazarInvitacion(Long integranteId) {
         Usuario u = usuarioActual();
+        integranteRepository.delete(invitacionPendienteParaActualizar(integranteId, u));
+    }
+
+    private Integrante invitacionPendienteParaActualizar(Long integranteId, Usuario u) {
+        Long proyectoId = integranteRepository.buscarProyectoId(integranteId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitación no existe"));
+        proyectoRepository.findByIdForUpdate(proyectoId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
         Integrante i = integranteRepository.findById(integranteId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitación no existe"));
         if (!i.getUsuario().getId().equals(u.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Esta invitación no es tuya");
         }
-        integranteRepository.delete(i);
+        if (!"PENDIENTE".equals(i.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La invitación ya fue procesada");
+        }
+        if (EstadoProyecto.desde(planificacionRepository.findByProyectoId(proyectoId).orElse(null)).esTerminal()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El proyecto está cerrado");
+        }
+        return i;
     }
 
     private void aplicarRequest(Proyecto p, ProyectoRequest request) {
@@ -313,7 +335,7 @@ public class ProyectoService {
         }
     }
 
-    private ProyectoResponse aResponse(Proyecto p, Planificacion plan) {
+    private ProyectoResponse aResponse(Proyecto p, Planificacion plan, boolean esCreador) {
         EstadoProyecto estado = EstadoProyecto.desde(plan);
         return new ProyectoResponse(
                 p.getId(),
@@ -343,7 +365,9 @@ public class ProyectoService {
                                 cu.getPostcondiciones(), cu.getReglasDeNegocio()))
                         .toList(),
                 estado,
-                plan == null ? null : plan.getFechaFinalizacion());
+                plan == null ? null : plan.getFechaFinalizacion(),
+                plan == null ? null : plan.getFechaCancelacion(),
+                esCreador && estado.permiteCancelar());
     }
 
     private void verificarCreador(Usuario u, Long proyectoId) {
