@@ -3,6 +3,8 @@ package com.colab.backend.repository;
 import com.colab.backend.domain.Planificacion;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface PlanificacionRepository extends JpaRepository<Planificacion, Long> {
@@ -10,4 +12,6 @@ public interface PlanificacionRepository extends JpaRepository<Planificacion, Lo
     boolean existsByProyectoId(Long proyectoId);
 
     Optional<Planificacion> findByProyectoId(Long proyectoId);
+
+    List<Planificacion> findByProyectoIdIn(Collection<Long> proyectoIds);
 }

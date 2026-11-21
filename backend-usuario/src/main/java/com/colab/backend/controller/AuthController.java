@@ -45,6 +45,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return usuarioRepository.findByEmail(request.email())
+                .filter(u -> !u.isBloqueada())
                 .filter(u -> passwordEncoder.matches(request.contrasena(), u.getContrasenaHash()))
                 .map(u -> ResponseEntity.ok(new AuthResponse(jwtService.generarToken(u.getEmail()))))
                 .orElseGet(() -> ResponseEntity.status(401).build());

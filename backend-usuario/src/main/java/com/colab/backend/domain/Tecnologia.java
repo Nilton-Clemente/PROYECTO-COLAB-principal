@@ -26,4 +26,7 @@ public class Tecnologia {
 
     @Column(nullable = false, unique = true)
     private String nombre;
+
+    @Column(length = 64)
+    private String icono;
 }

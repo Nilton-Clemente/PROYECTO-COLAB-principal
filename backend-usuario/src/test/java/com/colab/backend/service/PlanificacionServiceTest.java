@@ -54,6 +54,7 @@ class PlanificacionServiceTest {
         Integrante segundo = integrante(3L, "luis@example.com");
         when(usuarios.findByEmail("ana@example.com")).thenReturn(Optional.of(creador.getUsuario()));
         when(proyectos.findById(1L)).thenReturn(Optional.of(proyecto));
+        when(proyectos.findByIdForUpdate(1L)).thenReturn(Optional.of(proyecto));
         when(integrantes.findByUsuarioIdAndProyectoId(2L, 1L)).thenReturn(Optional.of(creador));
         when(integrantes.findByProyectoId(1L)).thenReturn(List.of(creador, segundo));
         when(ia.generarPlanificacionJson(anyString(), anyString(), anyList())).thenReturn("""

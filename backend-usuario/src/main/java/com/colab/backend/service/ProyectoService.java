@@ -1,7 +1,9 @@
 package com.colab.backend.service;
 
 import com.colab.backend.domain.CasoUso;
+import com.colab.backend.domain.EstadoProyecto;
 import com.colab.backend.domain.Integrante;
+import com.colab.backend.domain.Planificacion;
 import com.colab.backend.domain.Proyecto;
 import com.colab.backend.domain.RequerimientoFuncional;
 import com.colab.backend.domain.RequerimientoNoFuncional;
@@ -16,6 +18,7 @@ import com.colab.backend.dto.RequerimientoFuncionalDto;
 import com.colab.backend.dto.RequerimientoNoFuncionalDto;
 import com.colab.backend.dto.TecnologiaDto;
 import com.colab.backend.repository.IntegranteRepository;
+import com.colab.backend.repository.PlanificacionRepository;
 import com.colab.backend.repository.ProyectoRepository;
 import com.colab.backend.repository.TecnologiaRepository;
 import com.colab.backend.repository.UsuarioRepository;
@@ -41,15 +44,18 @@ public class ProyectoService {
     private final IntegranteRepository integranteRepository;
     private final UsuarioRepository usuarioRepository;
     private final TecnologiaRepository tecnologiaRepository;
+    private final PlanificacionRepository planificacionRepository;
 
     public ProyectoService(ProyectoRepository proyectoRepository,
                            IntegranteRepository integranteRepository,
                            UsuarioRepository usuarioRepository,
-                           TecnologiaRepository tecnologiaRepository) {
+                           TecnologiaRepository tecnologiaRepository,
+                           PlanificacionRepository planificacionRepository) {
         this.proyectoRepository = proyectoRepository;
         this.integranteRepository = integranteRepository;
         this.usuarioRepository = usuarioRepository;
         this.tecnologiaRepository = tecnologiaRepository;
+        this.planificacionRepository = planificacionRepository;
     }
 
     @Transactional
@@ -69,7 +75,7 @@ public class ProyectoService {
         creador.setFechaUnion(LocalDateTime.now());
         integranteRepository.save(creador);
 
-        return aResponse(p);
+        return aResponse(p, null, true);
     }
 
     @Transactional
@@ -78,27 +84,53 @@ public class ProyectoService {
         Proyecto p = proyectoRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
         verificarCreador(u, id);
+        verificarSinPlanificacion(id);
 
         aplicarRequest(p, request);
         proyectoRepository.save(p);
-        return aResponse(p);
+        return aResponse(p, null, true);
+    }
+
+    @Transactional
+    public ProyectoResponse cancelarProyecto(Long id) {
+        Usuario u = usuarioActual();
+        Proyecto p = proyectoRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
+        verificarCreador(u, id);
+        Planificacion plan = planificacionRepository.findByProyectoId(id).orElse(null);
+        if (!EstadoProyecto.desde(plan).permiteCancelar()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se puede cancelar un proyecto en desarrollo");
+        }
+        plan.setEstado("CANCELADA");
+        plan.setFechaCancelacion(LocalDateTime.now());
+        return aResponse(p, plan, true);
     }
 
     @Transactional
     public void eliminarProyecto(Long id) {
         Usuario u = usuarioActual();
-        Proyecto p = proyectoRepository.findById(id)
+        proyectoRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
         verificarCreador(u, id);
-        proyectoRepository.delete(p);
+        if (!EstadoProyecto.desde(planificacionRepository.findByProyectoId(id).orElse(null)).permiteEliminar()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cancela el proyecto en desarrollo antes de eliminarlo");
+        }
+        proyectoRepository.eliminarEnCascada(id);
     }
 
     @Transactional(readOnly = true)
     public List<ProyectoResponse> listarMisProyectos() {
         Usuario u = usuarioActual();
-        return integranteRepository.findByUsuarioId(u.getId()).stream()
-                .map(Integrante::getProyecto)
-                .map(this::aResponse)
+        List<Integrante> membresias = integranteRepository.findByUsuarioId(u.getId());
+        if (membresias.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Planificacion> planes = new HashMap<>();
+        planificacionRepository.findByProyectoIdIn(membresias.stream().map(i -> i.getProyecto().getId()).toList())
+                .forEach(plan -> planes.put(plan.getProyecto().getId(), plan));
+        return membresias.stream()
+                .map(i -> aResponse(i.getProyecto(), planes.get(i.getProyecto().getId()), "CREADOR".equals(i.getRol())))
                 .toList();
     }
 
@@ -108,10 +140,9 @@ public class ProyectoService {
         Proyecto p = proyectoRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
 
-        if (!integranteRepository.existsByUsuarioIdAndProyectoId(u.getId(), id)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No perteneces a este proyecto");
-        }
-        return aResponse(p);
+        Integrante integrante = integranteRepository.findByUsuarioIdAndProyectoId(u.getId(), id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "No perteneces a este proyecto"));
+        return aResponse(p, planificacionRepository.findByProyectoId(id).orElse(null), "CREADOR".equals(integrante.getRol()));
     }
 
     @Transactional(readOnly = true)
@@ -131,16 +162,16 @@ public class ProyectoService {
     @Transactional
     public void invitar(Long proyectoId, String email) {
         Usuario u = usuarioActual();
+        Proyecto p = proyectoRepository.findByIdForUpdate(proyectoId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
         verificarCreador(u, proyectoId);
+        verificarSinPlanificacion(proyectoId);
 
         Usuario invitado = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El correo no corresponde a un usuario registrado"));
         if (integranteRepository.existsByUsuarioIdAndProyectoId(invitado.getId(), proyectoId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El usuario ya pertenece a este proyecto");
         }
-        Proyecto p = proyectoRepository.findById(proyectoId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
-
         Integrante i = new Integrante();
         i.setUsuario(invitado);
         i.setProyecto(p);
@@ -152,7 +183,10 @@ public class ProyectoService {
     @Transactional
     public void eliminarIntegrante(Long proyectoId, Long integranteId) {
         Usuario u = usuarioActual();
+        proyectoRepository.findByIdForUpdate(proyectoId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
         verificarCreador(u, proyectoId);
+        verificarSinPlanificacion(proyectoId);
         Integrante i = integranteRepository.findById(integranteId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Integrante no existe"));
         if (!i.getProyecto().getId().equals(proyectoId)) {
@@ -175,14 +209,7 @@ public class ProyectoService {
     @Transactional
     public void aceptarInvitacion(Long integranteId) {
         Usuario u = usuarioActual();
-        Integrante i = integranteRepository.findById(integranteId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitación no existe"));
-        if (!i.getUsuario().getId().equals(u.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Esta invitación no es tuya");
-        }
-        if (!"PENDIENTE".equals(i.getEstado())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "La invitación ya fue procesada");
-        }
+        Integrante i = invitacionPendienteParaActualizar(integranteId, u);
         i.setEstado("ACTIVO");
         i.setFechaUnion(LocalDateTime.now());
         integranteRepository.save(i);
@@ -191,12 +218,26 @@ public class ProyectoService {
     @Transactional
     public void rechazarInvitacion(Long integranteId) {
         Usuario u = usuarioActual();
+        integranteRepository.delete(invitacionPendienteParaActualizar(integranteId, u));
+    }
+
+    private Integrante invitacionPendienteParaActualizar(Long integranteId, Usuario u) {
+        Long proyectoId = integranteRepository.buscarProyectoId(integranteId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitación no existe"));
+        proyectoRepository.findByIdForUpdate(proyectoId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
         Integrante i = integranteRepository.findById(integranteId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitación no existe"));
         if (!i.getUsuario().getId().equals(u.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Esta invitación no es tuya");
         }
-        integranteRepository.delete(i);
+        if (!"PENDIENTE".equals(i.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La invitación ya fue procesada");
+        }
+        if (EstadoProyecto.desde(planificacionRepository.findByProyectoId(proyectoId).orElse(null)).esTerminal()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El proyecto está cerrado");
+        }
+        return i;
     }
 
     private void aplicarRequest(Proyecto p, ProyectoRequest request) {
@@ -298,7 +339,8 @@ public class ProyectoService {
         }
     }
 
-    private ProyectoResponse aResponse(Proyecto p) {
+    private ProyectoResponse aResponse(Proyecto p, Planificacion plan, boolean esCreador) {
+        EstadoProyecto estado = EstadoProyecto.desde(plan);
         return new ProyectoResponse(
                 p.getId(),
                 p.getNombre(),
@@ -312,7 +354,7 @@ public class ProyectoService {
                 p.getTipo(),
                 p.getTecnologias().stream()
                         .sorted((a, b) -> Long.compare(a.getId(), b.getId()))
-                        .map(t -> new TecnologiaDto(t.getId(), t.getNombre()))
+                        .map(t -> new TecnologiaDto(t.getId(), t.getNombre(), t.getIcono()))
                         .toList(),
                 p.getRequerimientosFuncionales().stream()
                         .map(rf -> new RequerimientoFuncionalDto(rf.getCodigo(), rf.getDescripcion()))
@@ -325,7 +367,12 @@ public class ProyectoService {
                                 cu.getActores(), cu.getPrecondiciones(), cu.getDisparador(),
                                 cu.getFlujoPrincipal(), cu.getFlujosAlternativos(), cu.getExcepciones(),
                                 cu.getPostcondiciones(), cu.getReglasDeNegocio()))
-                        .toList());
+                        .toList(),
+                estado,
+                plan == null ? null : plan.getFechaFinalizacion(),
+                plan == null ? null : plan.getFechaCancelacion(),
+                esCreador && estado.permiteCancelar(),
+                esCreador && estado.permiteEliminar());
     }
 
     private void verificarCreador(Usuario u, Long proyectoId) {
@@ -337,6 +384,14 @@ public class ProyectoService {
     private void verificarMiembro(Usuario u, Long proyectoId) {
         if (!integranteRepository.existsByUsuarioIdAndProyectoId(u.getId(), proyectoId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No perteneces a este proyecto");
+        }
+    }
+
+    /** Una vez generada la planificación, el proyecto y su equipo quedan bloqueados. */
+    private void verificarSinPlanificacion(Long proyectoId) {
+        if (planificacionRepository.existsByProyectoId(proyectoId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El proyecto ya tiene una planificación y no se puede modificar.");
         }
     }
 

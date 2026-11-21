@@ -1,6 +1,9 @@
 package com.colab.backend.dto;
 
+import com.colab.backend.domain.EstadoProyecto;
+
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record ProyectoResponse(
@@ -17,6 +20,11 @@ public record ProyectoResponse(
         List<TecnologiaDto> tecnologias,
         List<RequerimientoFuncionalDto> requerimientosFuncionales,
         List<RequerimientoNoFuncionalDto> requerimientosNoFuncionales,
-        List<CasoUsoDto> casosDeUso
+        List<CasoUsoDto> casosDeUso,
+        EstadoProyecto estado,
+        LocalDateTime fechaFinalizacion,
+        LocalDateTime fechaCancelacion,
+        boolean puedeCancelar,
+        boolean puedeEliminar
 ) {}
 
