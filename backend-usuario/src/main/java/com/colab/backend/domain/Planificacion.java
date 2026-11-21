@@ -37,12 +37,18 @@ public class Planificacion {
     @JoinColumn(name = "proyecto_id", nullable = false, unique = true)
     private Proyecto proyecto;
 
-    /** BORRADOR / PROPUESTA / ACTIVA / FINALIZADA */
+    /** BORRADOR / PROPUESTA / ACTIVA / FINALIZADA / CANCELADA */
     @Column(nullable = false)
     private String estado;
 
     @Column(name = "fecha_generacion")
     private LocalDateTime fechaGeneracion;
+
+    @Column(name = "fecha_finalizacion")
+    private LocalDateTime fechaFinalizacion;
+
+    @Column(name = "fecha_cancelacion")
+    private LocalDateTime fechaCancelacion;
 
     @OneToMany(mappedBy = "planificacion", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Etapa> etapas = new ArrayList<>();
