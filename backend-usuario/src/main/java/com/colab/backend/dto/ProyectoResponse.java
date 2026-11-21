@@ -24,6 +24,7 @@ public record ProyectoResponse(
         EstadoProyecto estado,
         LocalDateTime fechaFinalizacion,
         LocalDateTime fechaCancelacion,
-        boolean puedeCancelar
+        boolean puedeCancelar,
+        boolean puedeEliminar
 ) {}
 

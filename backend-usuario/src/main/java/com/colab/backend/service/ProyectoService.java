@@ -109,10 +109,14 @@ public class ProyectoService {
     @Transactional
     public void eliminarProyecto(Long id) {
         Usuario u = usuarioActual();
-        Proyecto p = proyectoRepository.findById(id)
+        proyectoRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proyecto no existe"));
         verificarCreador(u, id);
-        proyectoRepository.delete(p);
+        if (!EstadoProyecto.desde(planificacionRepository.findByProyectoId(id).orElse(null)).permiteEliminar()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cancela el proyecto en desarrollo antes de eliminarlo");
+        }
+        proyectoRepository.eliminarEnCascada(id);
     }
 
     @Transactional(readOnly = true)
@@ -367,7 +371,8 @@ public class ProyectoService {
                 estado,
                 plan == null ? null : plan.getFechaFinalizacion(),
                 plan == null ? null : plan.getFechaCancelacion(),
-                esCreador && estado.permiteCancelar());
+                esCreador && estado.permiteCancelar(),
+                esCreador && estado.permiteEliminar());
     }
 
     private void verificarCreador(Usuario u, Long proyectoId) {
