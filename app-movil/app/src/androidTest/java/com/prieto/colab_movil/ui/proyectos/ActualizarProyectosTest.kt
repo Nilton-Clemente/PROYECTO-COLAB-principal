@@ -72,6 +72,17 @@ class ActualizarProyectosTest {
     }
 
     @Test
+    fun detalleAbreMetricasInclusoSinPlanificacion() {
+        val repo = Repositorio().apply { proyecto = proyecto.copy(estado = "SIN_PLANIFICACION") }
+        val vm = DetalleProyectoViewModel(repo, PlanRepository().apply { sinPlan = true })
+        var abierto = false
+        compose.setContent { DetalleProyectoScreen(proyectoId = 7, viewModel = vm, onMetricas = { abierto = true }) }
+        compose.waitUntil(5_000) { vm.uiState.value is DetalleProyectoUiState.Success }
+        compose.onNodeWithText("Ver métricas").performClick()
+        compose.runOnIdle { assertTrue(abierto) }
+    }
+
+    @Test
     fun cancelarMantieneElDetalleYEliminarRequiereElNombre() {
         val repo = Repositorio()
         val vm = DetalleProyectoViewModel(repo, PlanRepository())
@@ -171,8 +182,11 @@ class ActualizarProyectosTest {
 
     private class PlanRepository : PlanificacionRepository {
         var fallar = false
+        var sinPlan = false
         override suspend fun verPlanificacion(proyectoId: Long): Result<PlanificacionResponseDto?> =
-            if (fallar) Result.failure(Exception("Error")) else Result.success(PlanificacionResponseDto(3, proyectoId, "PROPUESTA", emptyList()))
+            if (fallar) Result.failure(Exception("Error")) else Result.success(
+                if (sinPlan) null else PlanificacionResponseDto(3, proyectoId, "PROPUESTA", emptyList())
+            )
         override suspend fun generarPlanificacion(proyectoId: Long): Result<PlanificacionResponseDto> = error("No se usa")
         override suspend fun guardarPlanificacion(proyectoId: Long, request: PlanificacionUpdateRequestDto): Result<PlanificacionResponseDto> = error("No se usa")
         override suspend fun crearEtapa(proyectoId: Long, request: EtapaRequestDto): Result<EtapaResponseDto> = error("No se usa")

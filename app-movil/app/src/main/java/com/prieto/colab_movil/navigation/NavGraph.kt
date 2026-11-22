@@ -25,6 +25,7 @@ import com.prieto.colab_movil.ui.proyectos.ProyectosScreen
 import com.prieto.colab_movil.ui.register.RegisterScreen
 import com.prieto.colab_movil.ui.tareas.MisTareasScreen
 import com.prieto.colab_movil.ui.tareas.RegistrarAvanceScreen
+import com.prieto.colab_movil.ui.metricas.MetricasProyectoScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -48,6 +49,9 @@ sealed class Screen(val route: String) {
     }
     object MisTareas : Screen("mis_tareas/{proyectoId}") {
         fun createRoute(proyectoId: Long) = "mis_tareas/$proyectoId"
+    }
+    object Metricas : Screen("metricas/{proyectoId}") {
+        fun createRoute(proyectoId: Long) = "metricas/$proyectoId"
     }
     object RegistrarAvance : Screen("registrar_avance/{proyectoId}/{tareaId}") {
         fun createRoute(proyectoId: Long, tareaId: Long) = "registrar_avance/$proyectoId/$tareaId"
@@ -147,6 +151,7 @@ fun AppNavigation(
                 onEditar = { navController.navigate(Screen.EditarProyecto.createRoute(proyectoId)) },
                 onGenerarPlanificacion = { navController.navigate(Screen.Planificacion.createRoute(proyectoId)) },
                 onMisTareas = { navController.navigate(Screen.MisTareas.createRoute(proyectoId)) },
+                onMetricas = { navController.navigate(Screen.Metricas.createRoute(proyectoId)) },
                 onEliminado = { id ->
                     Toast.makeText(context, "Proyecto eliminado definitivamente", Toast.LENGTH_SHORT).show()
                     val listado = runCatching { navController.getBackStackEntry(Screen.Proyectos.route) }.getOrNull()
@@ -213,6 +218,16 @@ fun AppNavigation(
                 onRegistrarAvance = { tareaId ->
                     navController.navigate(Screen.RegistrarAvance.createRoute(proyectoId, tareaId))
                 }
+            )
+        }
+
+        composable(
+            route = Screen.Metricas.route,
+            arguments = listOf(navArgument("proyectoId") { type = NavType.LongType })
+        ) { entrada ->
+            MetricasProyectoScreen(
+                proyectoId = requireNotNull(entrada.arguments).getLong("proyectoId"),
+                onBack = { navController.popBackStack() }
             )
         }
 

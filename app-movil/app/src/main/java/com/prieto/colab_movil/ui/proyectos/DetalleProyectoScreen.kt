@@ -77,7 +77,8 @@ fun DetalleProyectoScreen(
     onEditar: () -> Unit = {},
     onGenerarPlanificacion: () -> Unit = {},
     onMisTareas: () -> Unit = {},
-    onEliminado: (Long) -> Unit = {}
+    onEliminado: (Long) -> Unit = {},
+    onMetricas: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -149,6 +150,7 @@ fun DetalleProyectoScreen(
                         tienePlanificacion = state.tienePlanificacion,
                         onGenerarPlanificacion = onGenerarPlanificacion,
                         onMisTareas = onMisTareas,
+                        onMetricas = onMetricas,
                         habilitarAcciones = state.puedeModificar,
                         puedeGenerar = state.soyCreador && state.proyecto.estadoProyecto == EstadoProyecto.SIN_PLANIFICACION,
                         ocupado = ocupado,
@@ -175,6 +177,7 @@ private fun DetalleProyectoContenido(
     tienePlanificacion: Boolean,
     onGenerarPlanificacion: () -> Unit,
     onMisTareas: () -> Unit,
+    onMetricas: () -> Unit,
     habilitarAcciones: Boolean,
     puedeGenerar: Boolean,
     ocupado: Boolean,
@@ -261,6 +264,16 @@ private fun DetalleProyectoContenido(
             Icon(Icons.Outlined.Checklist, null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(if (estado.cerrado) "Mis tareas e historial" else "Mis tareas y confirmaciones", fontWeight = FontWeight.SemiBold)
+        }
+        OutlinedButton(
+            onClick = onMetricas,
+            enabled = !ocupado,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Outlined.BarChart, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Ver métricas", fontWeight = FontWeight.SemiBold)
         }
         Tabs(pestana, equipo.size) { pestana = it }
         ResumenCard(proyectoDto)
