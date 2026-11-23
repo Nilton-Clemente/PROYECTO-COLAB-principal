@@ -27,6 +27,21 @@ La app usa Coil con soporte SVG y caché; un icono nunca descargado requiere
 conexión. La prueba automática de error funciona sin el backend; para comprobar
 la carga real, iniciar `backend-usuario` y asignar un icono desde administración.
 
+## Invitaciones a proyectos
+
+Desde **Detalle de proyecto → Equipo → Invitar integrante**, el creador puede
+invitar por correo a una cuenta registrada, mientras el proyecto no tenga
+planificación. La app envía `POST /api/proyectos/{id}/invitaciones`, informa el
+resultado y vuelve a consultar el equipo para mostrar el estado `PENDIENTE`.
+El botón evita envíos simultáneos y muestra errores de usuario no registrado,
+permisos o invitación existente. Si no puede confirmarse el envío, se debe revisar
+el equipo antes de reintentar.
+
+El destinatario debe iniciar sesión y abrir **Invitaciones → Pendientes**; puede
+deslizar hacia abajo para actualizar. Las invitaciones son internas de la app,
+no notificaciones push ni correos electrónicos. Se pueden usar ambas cuentas
+en el mismo teléfono cerrando sesión entre ellas.
+
 ## Catálogo de habilidades
 
 Desde **Mi perfil → Explorar catálogo de habilidades** se consultan el catálogo

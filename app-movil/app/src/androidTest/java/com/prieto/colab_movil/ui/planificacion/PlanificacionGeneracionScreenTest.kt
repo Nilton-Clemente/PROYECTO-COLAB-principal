@@ -181,6 +181,7 @@ class PlanificacionGeneracionScreenTest {
     }
 
     private class RepositorioProyecto : ProyectoRepository {
+        override suspend fun invitarIntegrante(proyectoId: Long, email: String): Result<Unit> = error("No se usa")
         override suspend fun verProyecto(id: Long) = Result.success(
             Gson().fromJson("""{"id":$id,"nombre":"Proyecto IA"}""", ProyectoResponseDto::class.java))
         override suspend fun verEquipo(id: Long): Result<List<IntegranteResponseDto>> = Result.success(emptyList())

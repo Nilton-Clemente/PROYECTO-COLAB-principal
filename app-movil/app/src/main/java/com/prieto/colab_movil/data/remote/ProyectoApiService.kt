@@ -2,6 +2,7 @@ package com.prieto.colab_movil.data.remote
 
 import com.prieto.colab_movil.data.model.IntegranteResponseDto
 import com.prieto.colab_movil.data.model.InvitacionResponseDto
+import com.prieto.colab_movil.data.model.InvitacionRequestDto
 import com.prieto.colab_movil.data.model.MetricasProyectoDto
 import com.prieto.colab_movil.data.model.ProyectoRequest
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
@@ -26,6 +27,9 @@ interface ProyectoApiService {
 
     @GET("api/proyectos/{id}/integrantes")
     suspend fun verEquipo(@Path("id") id: Long): Response<List<IntegranteResponseDto>>
+
+    @POST("api/proyectos/{id}/invitaciones")
+    suspend fun invitarIntegrante(@Path("id") id: Long, @Body request: InvitacionRequestDto): Response<Unit>
 
     @GET("api/invitaciones")
     suspend fun listarInvitaciones(): Response<List<InvitacionResponseDto>>

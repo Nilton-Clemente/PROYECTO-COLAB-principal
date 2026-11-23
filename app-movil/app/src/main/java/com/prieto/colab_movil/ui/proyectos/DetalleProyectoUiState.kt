@@ -23,14 +23,15 @@ sealed interface DetalleProyectoUiState {
         val datosDesactualizados: Boolean = false,
         val aviso: String? = null,
         val soyCreador: Boolean = false,
-        val accionEnCurso: AccionProyecto? = null
+        val accionEnCurso: AccionProyecto? = null,
+        val enviandoInvitacion: Boolean = false
     ) : DetalleProyectoUiState {
         val acciones: List<AccionProyecto> get() = buildList {
             if (soyCreador && !tienePlanificacion && proyecto.estadoProyecto == EstadoProyecto.SIN_PLANIFICACION) add(AccionProyecto.EDITAR)
             if (proyecto.puedeCancelar) add(AccionProyecto.CANCELAR)
             if (proyecto.puedeEliminar) add(AccionProyecto.ELIMINAR)
         }
-        val puedeModificar: Boolean get() = !actualizando && !datosDesactualizados && accionEnCurso == null
+        val puedeModificar: Boolean get() = !actualizando && !datosDesactualizados && accionEnCurso == null && !enviandoInvitacion
     }
     data class Error(val message: String) : DetalleProyectoUiState
 }

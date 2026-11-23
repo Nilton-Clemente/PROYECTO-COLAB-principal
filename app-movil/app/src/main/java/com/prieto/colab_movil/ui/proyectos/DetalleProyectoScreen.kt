@@ -83,7 +83,7 @@ fun DetalleProyectoScreen(
     val uiState by viewModel.uiState.collectAsState()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val detalle = uiState as? DetalleProyectoUiState.Success
-    val ocupado = detalle?.accionEnCurso != null
+    val ocupado = detalle?.accionEnCurso != null || detalle?.enviandoInvitacion == true
     var confirmando by rememberSaveable(proyectoId) { mutableStateOf<AccionProyecto?>(null) }
 
     DisposableEffect(lifecycle, proyectoId, viewModel) {
@@ -154,7 +154,8 @@ fun DetalleProyectoScreen(
                         habilitarAcciones = state.puedeModificar,
                         puedeGenerar = state.soyCreador && state.proyecto.estadoProyecto == EstadoProyecto.SIN_PLANIFICACION,
                         ocupado = ocupado,
-                        aviso = state.aviso
+                        aviso = state.aviso,
+                        onInvitar = { email -> viewModel.invitarIntegrante(proyectoId, email) }
                     )
                     }
                 }
@@ -181,7 +182,8 @@ private fun DetalleProyectoContenido(
     habilitarAcciones: Boolean,
     puedeGenerar: Boolean,
     ocupado: Boolean,
-    aviso: String?
+    aviso: String?,
+    onInvitar: (String) -> Unit
 ) {
     var pestana by remember { mutableStateOf(Pestana.INFO) }
 
@@ -280,7 +282,11 @@ private fun DetalleProyectoContenido(
 
         when (pestana) {
             Pestana.INFO -> InfoTab(problematica, objetivoGeneral, objetivosEspecificos, stack, requerimientos)
-            Pestana.EQUIPO -> EquipoProyectoContent(equipoDto = equipoDto, puedeInvitar = puedeGenerar && habilitarAcciones && !tienePlanificacion)
+            Pestana.EQUIPO -> EquipoProyectoContent(
+                equipoDto = equipoDto,
+                puedeInvitar = puedeGenerar && habilitarAcciones && !tienePlanificacion,
+                onInvitar = onInvitar
+            )
         }
         Spacer(Modifier.height(16.dp))
     }

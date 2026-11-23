@@ -37,7 +37,7 @@ private val RedBackground = Color(0xFFFFDAD6)
 fun EquipoProyectoContent(
     equipoDto: List<IntegranteResponseDto>,
     puedeInvitar: Boolean = true,
-    onInvitar: (String) -> Unit = {}
+    onInvitar: (String) -> Unit
 ) {
     var mostrarInvitar by remember { mutableStateOf(false) }
 
@@ -158,7 +158,7 @@ private fun InvitarIntegranteSheet(
             Spacer(Modifier.height(16.dp))
             Button(
                 onClick = {
-                    if (correo.contains("@") && correo.contains(".")) {
+                    if (android.util.Patterns.EMAIL_ADDRESS.matcher(correo.trim()).matches()) {
                         onInvitar(correo.trim())
                     } else {
                         error = "Ingresa un correo válido."

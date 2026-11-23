@@ -334,6 +334,7 @@ class CasosDeUsoScreenTest {
     }
 
     private class RepositorioPrueba(casos: List<CasoUsoDto> = emptyList()) : ProyectoRepository {
+        override suspend fun invitarIntegrante(proyectoId: Long, email: String): Result<Unit> = error("No se usa")
         val proyecto = Gson().fromJson("""{"id":7,"nombre":"Proyecto"}""", ProyectoResponseDto::class.java)
             .copy(casosDeUso = casos)
         var ultimoRequest: ProyectoRequest? = null

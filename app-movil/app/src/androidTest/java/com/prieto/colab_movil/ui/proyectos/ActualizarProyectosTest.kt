@@ -149,6 +149,63 @@ class ActualizarProyectosTest {
         compose.waitUntil(5_000) { (vm.uiState.value as? InvitacionesUiState.Success)?.let { !it.desactualizado && !it.actualizando } == true }
     }
 
+    @Test
+    fun invitarDesdeEquipoEnviaElCorreoYActualizaElPendiente() {
+        val repo = Repositorio().apply { proyecto = proyecto.copy(estado = "SIN_PLANIFICACION") }
+        val vm = DetalleProyectoViewModel(repo, PlanRepository().apply { sinPlan = true })
+        compose.setContent { DetalleProyectoScreen(proyectoId = 7, viewModel = vm) }
+        compose.waitUntil(5_000) { vm.uiState.value is DetalleProyectoUiState.Success }
+        compose.onNodeWithText("Equipo (1)").performScrollTo().performClick()
+        compose.onNodeWithText("＋  Invitar integrante").performScrollTo().performClick()
+        compose.onNodeWithText("Correo institucional").performTextInput(" b@tecsup.edu.pe ")
+        compose.onNodeWithText("Invitar", substring = false).performClick()
+        compose.waitUntil(5_000) { (vm.uiState.value as? DetalleProyectoUiState.Success)?.equipo?.size == 2 }
+        compose.runOnIdle {
+            assertEquals(listOf(7L to "b@tecsup.edu.pe"), repo.envios)
+            val estado = vm.uiState.value as DetalleProyectoUiState.Success
+            assertEquals("PENDIENTE", estado.equipo.last().estado)
+            assertTrue(estado.aviso!!.contains("Invitación enviada"))
+            assertFalse(estado.enviandoInvitacion)
+        }
+    }
+
+    @Test
+    fun invitarNoDuplicaElEnvioMientrasEstaPendiente() {
+        val repo = Repositorio().apply { proyecto = proyecto.copy(estado = "SIN_PLANIFICACION") }
+        val vm = DetalleProyectoViewModel(repo, PlanRepository().apply { sinPlan = true })
+        compose.runOnIdle { vm.cargarDetalle(7) }
+        compose.waitUntil(5_000) { vm.uiState.value is DetalleProyectoUiState.Success }
+        val espera = CompletableDeferred<Result<Unit>>()
+        compose.runOnIdle {
+            repo.envio = espera
+            vm.invitarIntegrante(7, "b@tecsup.edu.pe")
+            vm.invitarIntegrante(7, "b@tecsup.edu.pe")
+        }
+        compose.runOnIdle {
+            assertEquals(1, repo.envios.size)
+            assertTrue((vm.uiState.value as DetalleProyectoUiState.Success).enviandoInvitacion)
+            espera.complete(Result.success(Unit))
+        }
+        compose.waitUntil(5_000) { (vm.uiState.value as? DetalleProyectoUiState.Success)?.aviso != null }
+    }
+
+    @Test
+    fun invitarMuestraUsuarioNoRegistradoSinSimularExito() {
+        val repo = Repositorio().apply {
+            proyecto = proyecto.copy(estado = "SIN_PLANIFICACION")
+            envio = CompletableDeferred(Result.failure(HttpException(Response.error<Unit>(404, "".toResponseBody()))))
+        }
+        val vm = DetalleProyectoViewModel(repo, PlanRepository().apply { sinPlan = true })
+        compose.runOnIdle { vm.cargarDetalle(7) }
+        compose.waitUntil(5_000) { vm.uiState.value is DetalleProyectoUiState.Success }
+        compose.runOnIdle { vm.invitarIntegrante(7, "b@tecsup.edu.pe") }
+        compose.waitUntil(5_000) { (vm.uiState.value as? DetalleProyectoUiState.Success)?.aviso != null }
+        val estado = vm.uiState.value as DetalleProyectoUiState.Success
+        assertTrue(estado.aviso!!.contains("no está registrado"))
+        assertEquals(1, estado.equipo.size)
+        assertTrue(estado.puedeModificar)
+    }
+
     private class Repositorio : ProyectoRepository {
         var proyecto = Gson().fromJson("""{"id":7,"nombre":"Proyecto","estado":"EN_DESARROLLO","puedeCancelar":true}""", ProyectoResponseDto::class.java)
         var conflicto = false
@@ -159,6 +216,14 @@ class ActualizarProyectosTest {
         var equipo = listOf(IntegranteResponseDto(1, "a@tecsup.edu.pe", "Alex", "CREADOR", "ACTIVO"))
         var aceptaciones = 0
         var aceptacion: CompletableDeferred<Result<Unit>>? = null
+        val envios = mutableListOf<Pair<Long, String>>()
+        var envio: CompletableDeferred<Result<Unit>>? = null
+        override suspend fun invitarIntegrante(proyectoId: Long, email: String): Result<Unit> {
+            envios.add(proyectoId to email)
+            val resultado = envio?.await() ?: Result.success(Unit)
+            if (resultado.isSuccess) equipo = equipo + IntegranteResponseDto(2, email, "Beatriz", "INTEGRANTE", "PENDIENTE")
+            return resultado
+        }
         override suspend fun obtenerPerfil() = Result.success(PerfilResponseDto("a@tecsup.edu.pe", "Alex", emptyList()))
         override suspend fun listarProyectos(): Result<List<ProyectoResponseDto>> =
             if (fallarProyectos) Result.failure(Exception("Error")) else Result.success(listOf(Gson().fromJson("""{"id":7,"nombre":"Proyecto"}""", ProyectoResponseDto::class.java)))

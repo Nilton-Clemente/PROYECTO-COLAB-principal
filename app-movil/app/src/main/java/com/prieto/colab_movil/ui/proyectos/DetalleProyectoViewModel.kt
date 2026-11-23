@@ -2,6 +2,8 @@ package com.prieto.colab_movil.ui.proyectos
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.prieto.colab_movil.data.model.EstadoProyecto
+import com.prieto.colab_movil.data.model.estadoProyecto
 import com.prieto.colab_movil.data.repository.PlanificacionRepository
 import com.prieto.colab_movil.data.repository.PlanificacionRepositoryImpl
 import com.prieto.colab_movil.data.repository.ProyectoRepository
@@ -28,6 +30,36 @@ class DetalleProyectoViewModel(
         val anterior = (_uiState.value as? DetalleProyectoUiState.Success)?.takeIf { it.proyecto.id == proyectoId }
         _uiState.value = anterior?.copy(actualizando = true, aviso = null) ?: DetalleProyectoUiState.Loading
         operacion = viewModelScope.launch { consultar(proyectoId, anterior) }
+    }
+
+    fun invitarIntegrante(proyectoId: Long, email: String) {
+        val anterior = _uiState.value as? DetalleProyectoUiState.Success ?: return
+        if (anterior.proyecto.id != proyectoId || !anterior.puedeModificar || !anterior.soyCreador ||
+            anterior.tienePlanificacion || anterior.proyecto.estadoProyecto != EstadoProyecto.SIN_PLANIFICACION ||
+            operacion?.isActive == true) return
+        val correo = email.trim()
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(correo).matches()) {
+            _uiState.value = anterior.copy(aviso = "Ingresa un correo válido.")
+            return
+        }
+        _uiState.value = anterior.copy(enviandoInvitacion = true, aviso = null)
+        operacion = viewModelScope.launch {
+            val resultado = repository.invitarIntegrante(proyectoId, correo)
+            val aviso = if (resultado.isSuccess) {
+                "Invitación enviada a $correo. Aparecerá en Invitaciones de esa cuenta."
+            } else {
+                when ((resultado.exceptionOrNull() as? HttpException)?.code()) {
+                    400 -> "El servidor rechazó el correo. Revisa los datos del invitado."
+                    401 -> "Tu sesión expiró. Vuelve a iniciar sesión."
+                    403 -> "No tienes permiso para invitar a este proyecto."
+                    404 -> "El usuario invitado no está registrado o el proyecto ya no existe."
+                    409 -> "El usuario ya pertenece al proyecto, tiene una invitación pendiente o el proyecto ya no admite invitaciones."
+                    else -> "No se pudo confirmar el envío. Revisa el equipo y la conexión antes de reintentar."
+                }
+            }
+            _uiState.value = anterior.copy(actualizando = true)
+            consultar(proyectoId, anterior, aviso)
+        }
     }
 
     fun cambiarCiclo(proyectoId: Long, accion: AccionProyecto, confirmacion: String = "") {

@@ -2,6 +2,7 @@ package com.prieto.colab_movil.data.repository
 
 import com.prieto.colab_movil.data.model.IntegranteResponseDto
 import com.prieto.colab_movil.data.model.InvitacionResponseDto
+import com.prieto.colab_movil.data.model.InvitacionRequestDto
 import com.prieto.colab_movil.data.model.PerfilResponseDto
 import com.prieto.colab_movil.data.model.ProyectoRequest
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
@@ -20,6 +21,7 @@ interface ProyectoRepository {
     suspend fun verProyecto(id: Long): Result<ProyectoResponseDto>
     suspend fun verEquipo(id: Long): Result<List<IntegranteResponseDto>>
     suspend fun listarInvitaciones(): Result<List<InvitacionResponseDto>>
+    suspend fun invitarIntegrante(proyectoId: Long, email: String): Result<Unit>
     suspend fun aceptarInvitacion(id: Long): Result<Unit>
     suspend fun rechazarInvitacion(id: Long): Result<Unit>
     suspend fun listarTecnologias(): Result<List<TecnologiaDto>>
@@ -97,6 +99,11 @@ class ProyectoRepositoryImpl(
         } catch (e: Exception) {
             Result.failure(Exception("No se pudo conectar con el servidor backend. Verifica tu conexión."))
         }
+    }
+
+    override suspend fun invitarIntegrante(proyectoId: Long, email: String): Result<Unit> = ejecutarCambio {
+        val respuesta = cicloApiService.invitarIntegrante(proyectoId, InvitacionRequestDto(email.trim()))
+        if (!respuesta.isSuccessful) throw HttpException(respuesta)
     }
 
     override suspend fun listarTecnologias(): Result<List<TecnologiaDto>> = withContext(Dispatchers.IO) {
