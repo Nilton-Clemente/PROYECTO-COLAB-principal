@@ -54,6 +54,31 @@ class CasosDeUsoScreenTest {
     }
 
     @Test
+    fun requerimientosFuncionalesSeAgreganYEliminanSinCasillas() {
+        val repo = RepositorioPrueba()
+        mostrar(repo, inicial = null)
+        compose.onNodeWithText("Nombre del proyecto").performScrollTo().performTextInput("Proyecto de prueba")
+        compose.onNodeWithText("Requerimientos Funcionales").performScrollTo().performClick()
+        compose.onNodeWithText("Nuevo requerimiento funcional").performScrollTo().performTextInput("Registrar productos")
+        Espresso.closeSoftKeyboard()
+        compose.onNodeWithText("+ Añadir requerimiento").performScrollTo().performClick()
+        compose.onNodeWithText("Registrar productos").assertExists()
+        compose.onAllNodes(SemanticsMatcher.expectValue(
+            androidx.compose.ui.semantics.SemanticsProperties.Role,
+            androidx.compose.ui.semantics.Role.Checkbox
+        )).assertCountEquals(0)
+        compose.onNodeWithText("×").performScrollTo().performClick()
+        compose.onNodeWithText("Registrar productos").assertDoesNotExist()
+        compose.onNodeWithText("Nuevo requerimiento funcional").performScrollTo().performTextInput("Consultar productos")
+        Espresso.closeSoftKeyboard()
+        compose.onNodeWithText("+ Añadir requerimiento").performScrollTo().performClick()
+        guardar()
+        compose.runOnIdle {
+            assertEquals(listOf(RequerimientoFuncionalDto(null, "Consultar productos")), repo.ultimoRequest!!.requerimientosFuncionales)
+        }
+    }
+
+    @Test
     fun creacionEnviaTodosLosCamposIntroducidos() {
         val repo = RepositorioPrueba()
         mostrar(repo)
