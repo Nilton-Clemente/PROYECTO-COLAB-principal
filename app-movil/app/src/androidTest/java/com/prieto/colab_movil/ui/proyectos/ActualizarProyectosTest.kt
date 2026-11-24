@@ -36,6 +36,22 @@ class ActualizarProyectosTest {
     }
 
     @Test
+    fun tarjetasMuestranIconosDeTecnologiasConDescripcionAccesible() {
+        val proyecto = Proyecto(
+            id = 7, codigo = "TEC-7", titulo = "Proyecto", estado = EstadoProyecto.SIN_PLANIFICACION,
+            descripcion = null, tecnologias = listOf(TecnologiaDto(1, "Kotlin", "kotlin"), TecnologiaDto(2, "Personalizada")),
+            fechaEntrega = null
+        )
+        var abierto: Proyecto? = null
+        compose.setContent { ProyectosContent(proyectos = listOf(proyecto), onProyectoClick = { abierto = it }) }
+        compose.onNodeWithContentDescription("Tecnología: Kotlin", useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription("Tecnología: Personalizada", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Kotlin", useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithText("Proyecto").performClick()
+        compose.runOnIdle { assertEquals(proyecto, abierto) }
+    }
+
+    @Test
     fun tarjetaMuestraAvataresActivosJuntoALaEntregaYLosConservaSiFallaElEquipo() {
         val repo = Repositorio().apply {
             equipo = listOf(

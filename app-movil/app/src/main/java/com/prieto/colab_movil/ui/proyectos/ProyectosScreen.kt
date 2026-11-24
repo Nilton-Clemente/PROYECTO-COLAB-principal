@@ -23,13 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.Event
-import androidx.compose.material.icons.outlined.Layers
-import androidx.compose.material.icons.outlined.Memory
-import androidx.compose.material.icons.outlined.Smartphone
-import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -48,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.SpanStyle
@@ -67,10 +60,12 @@ import com.prieto.colab_movil.data.model.EstadoProyecto
 import com.prieto.colab_movil.data.model.IntegranteResponseDto
 import com.prieto.colab_movil.data.model.estadoProyecto
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
+import com.prieto.colab_movil.data.model.TecnologiaDto
 import com.prieto.colab_movil.ui.components.ColabTopBar
 import com.prieto.colab_movil.ui.components.ColabActualizar
 import com.prieto.colab_movil.ui.components.ColabBottomBar
 import com.prieto.colab_movil.ui.components.SeccionPrincipal
+import com.prieto.colab_movil.ui.components.IconoHabilidad
 
 /* ───────────── Colores (tomados del DESIGN.md) ───────────── */
 private val Surface = Color(0xFFFAF8FF)
@@ -80,7 +75,6 @@ private val SurfaceDim = Color(0xFFD2D9F4)
 private val OnSurface = Color(0xFF131B2E)
 private val OnSurfaceVariant = Color(0xFF464555)
 private val Primary = Color(0xFF3525CD)
-private val Secondary = Color(0xFF006C49)
 private val OnErrorContainer = Color(0xFF93000A)
 
 /* ───────────── Modelos ───────────── */
@@ -92,35 +86,20 @@ enum class Filtro(val estado: EstadoProyecto? = null) {
     fun coincide(valor: EstadoProyecto) = estado == null || estado == valor
 }
 
-data class Tecnologia(val nombre: String, val icono: ImageVector)
-
 data class Proyecto(
     val id: Long = 0L,
     val codigo: String,
     val titulo: String,
     val estado: EstadoProyecto,
     val descripcion: String?,
-    val tecnologias: List<Tecnologia>,
+    val tecnologias: List<TecnologiaDto>,
     val fechaEntrega: String?,
     val integrantes: List<IntegranteResponseDto> = emptyList()
 )
 
 private fun mapToProyecto(dto: ProyectoResponseDto, equipo: List<IntegranteResponseDto>): Proyecto {
     val codigo = "TEC-${dto.id}"
-    val tecnologias = dto.tecnologias?.map { t ->
-        Tecnologia(
-            nombre = t.nombre,
-            icono = when {
-                t.nombre.contains("Java", true) -> Icons.Outlined.Terminal
-                t.nombre.contains("Spring", true) -> Icons.Outlined.Eco
-                t.nombre.contains("React", true) -> Icons.Outlined.Code
-                t.nombre.contains("Python", true) -> Icons.Outlined.Memory
-                t.nombre.contains("Flutter", true) -> Icons.Outlined.Smartphone
-                t.nombre.contains("Docker", true) -> Icons.Outlined.Layers
-                else -> Icons.Outlined.Code
-            }
-        )
-    } ?: emptyList()
+    val tecnologias = dto.tecnologias.orEmpty()
 
     return Proyecto(
         id = dto.id,
@@ -383,7 +362,7 @@ private fun ProyectoCard(p: Proyecto, onClick: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            p.tecnologias.forEach { TechChip(it) }
+            p.tecnologias.forEach { IconoTecnologia(it) }
         }
 
         Row(
@@ -406,17 +385,16 @@ private fun ProyectoCard(p: Proyecto, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TechChip(t: Tecnologia) {
-    Row(
+private fun IconoTecnologia(tecnologia: TecnologiaDto) {
+    Box(
         modifier = Modifier
+            .size(36.dp)
             .clip(CircleShape)
             .background(SurfaceContainer)
-            .padding(horizontal = 10.dp, vertical = 5.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+            .clearAndSetSemantics { contentDescription = "Tecnología: ${tecnologia.nombre}" },
+        contentAlignment = Alignment.Center
     ) {
-        Icon(t.icono, null, tint = Secondary, modifier = Modifier.size(14.dp))
-        Text(t.nombre, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = OnSurfaceVariant)
+        IconoHabilidad(tecnologia.nombre, tecnologia.icono, Modifier.size(24.dp), tamanoInicial = 14.sp)
     }
 }
 
