@@ -44,6 +44,7 @@ public class TareaService {
     private final PlanificacionRepository planificacionRepository;
     private final DependenciaTareaRepository dependenciaTareaRepository;
     private final NotificacionService notificacionService;
+    private final CicloProyectoService cicloProyecto;
 
     public TareaService(TareaRepository tareaRepository,
                         EtapaRepository etapaRepository,
@@ -51,7 +52,8 @@ public class TareaService {
                         UsuarioRepository usuarioRepository,
                         PlanificacionRepository planificacionRepository,
                         DependenciaTareaRepository dependenciaTareaRepository,
-                        NotificacionService notificacionService) {
+                        NotificacionService notificacionService,
+                        CicloProyectoService cicloProyecto) {
         this.tareaRepository = tareaRepository;
         this.etapaRepository = etapaRepository;
         this.integranteRepository = integranteRepository;
@@ -59,6 +61,7 @@ public class TareaService {
         this.planificacionRepository = planificacionRepository;
         this.dependenciaTareaRepository = dependenciaTareaRepository;
         this.notificacionService = notificacionService;
+        this.cicloProyecto = cicloProyecto;
     }
 
     /** RF-32 — Vista de todas las tareas del proyecto. */
@@ -85,6 +88,7 @@ public class TareaService {
     @Transactional
     public TareaDetalleResponse crear(Long proyectoId, TareaRequest request) {
         Usuario u = usuarioActual();
+        cicloProyecto.bloquearProyecto(proyectoId);
         verificarCreador(u, proyectoId);
         Planificacion plan = planificacion(proyectoId);
         verificarPlanEditable(plan);
@@ -112,6 +116,7 @@ public class TareaService {
     @Transactional
     public void eliminar(Long proyectoId, Long tareaId) {
         Usuario u = usuarioActual();
+        cicloProyecto.bloquearProyecto(proyectoId);
         verificarCreador(u, proyectoId);
         Tarea t = tareaDe(proyectoId, tareaId);
         verificarPlanEditable(t.getEtapa().getPlanificacion());
@@ -122,6 +127,7 @@ public class TareaService {
     @Transactional
     public TareaDetalleResponse editar(Long proyectoId, Long tareaId, TareaRequest request) {
         Usuario u = usuarioActual();
+        cicloProyecto.bloquearProyecto(proyectoId);
         verificarCreador(u, proyectoId);
         Tarea t = tareaDe(proyectoId, tareaId);
         verificarPlanEditable(t.getEtapa().getPlanificacion());
@@ -140,6 +146,7 @@ public class TareaService {
     @Transactional
     public TareaDetalleResponse reasignar(Long proyectoId, Long tareaId, Long responsableId) {
         Usuario u = usuarioActual();
+        cicloProyecto.bloquearProyecto(proyectoId);
         verificarCreador(u, proyectoId);
         Tarea t = tareaDe(proyectoId, tareaId);
         verificarPlanEditable(t.getEtapa().getPlanificacion());
@@ -168,10 +175,13 @@ public class TareaService {
     @Transactional
     public TareaDetalleResponse cambiarEstado(Long proyectoId, Long tareaId, String nuevoEstado) {
         Usuario u = usuarioActual();
+        cicloProyecto.bloquearProyecto(proyectoId);
         Tarea t = tareaDe(proyectoId, tareaId);
+        Planificacion plan = t.getEtapa().getPlanificacion();
         String estadoNormalizado = nuevoEstado.toUpperCase();
 
         verificarPuedeGestionar(u, proyectoId, t);
+        cicloProyecto.verificarEnDesarrollo(plan);
 
         String estadoActual = estadoEfectivo(t);
         if (!transicionValida(estadoActual, estadoNormalizado)) {
@@ -185,6 +195,7 @@ public class TareaService {
         // RN-10: al completar una tarea, desbloquear automáticamente sus dependientes.
         if ("COMPLETADA".equals(estadoNormalizado)) {
             desbloquearSucesoras(t);
+            cicloProyecto.finalizarSiCompleto(plan);
         }
 
         // RN-22: notificar al Creador el cambio de estado.
@@ -201,6 +212,7 @@ public class TareaService {
     @Transactional
     public TareaDetalleResponse agregarDependencia(Long proyectoId, Long tareaId, Long predecesoraId) {
         Usuario u = usuarioActual();
+        cicloProyecto.bloquearProyecto(proyectoId);
         verificarCreador(u, proyectoId);
         Tarea tarea = tareaDe(proyectoId, tareaId);
         Tarea predecesora = tareaDe(proyectoId, predecesoraId);
@@ -232,6 +244,7 @@ public class TareaService {
     @Transactional
     public TareaDetalleResponse quitarDependencia(Long proyectoId, Long tareaId, Long predecesoraId) {
         Usuario u = usuarioActual();
+        cicloProyecto.bloquearProyecto(proyectoId);
         verificarCreador(u, proyectoId);
         Tarea tarea = tareaDe(proyectoId, tareaId);
         verificarPlanEditable(tarea.getEtapa().getPlanificacion());

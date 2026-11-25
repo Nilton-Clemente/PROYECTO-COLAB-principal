@@ -53,6 +53,13 @@ object RetrofitClient {
         retrofit.create(ProyectoApiService::class.java)
     }
 
+    val cicloProyectoApiService: ProyectoApiService by lazy {
+        retrofit.newBuilder()
+            .client(okHttpClient.newBuilder().retryOnConnectionFailure(false).build())
+            .build()
+            .create(ProyectoApiService::class.java)
+    }
+
     val planificacionApiService: PlanificacionApiService by lazy {
         retrofit.create(PlanificacionApiService::class.java)
     }

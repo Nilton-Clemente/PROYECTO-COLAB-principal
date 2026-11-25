@@ -29,14 +29,14 @@ private val SurfaceLow = Color(0xFFF2F3FF)
 private val TextPrimary = Color(0xFF131B2E)
 private val TextSecondary = Color(0xFF464555)
 private val Green = Color(0xFF006C49)
-private val GreenBackground = Color(0xFF6CF8BB)
 private val Red = Color(0xFF93000A)
 private val RedBackground = Color(0xFFFFDAD6)
 
 @Composable
 fun EquipoProyectoContent(
     equipoDto: List<IntegranteResponseDto>,
-    onInvitar: (String) -> Unit = {}
+    puedeInvitar: Boolean = true,
+    onInvitar: (String) -> Unit
 ) {
     var mostrarInvitar by remember { mutableStateOf(false) }
 
@@ -64,7 +64,7 @@ fun EquipoProyectoContent(
 
         CapacidadSquad(equipoDto.size)
 
-        Button(
+        if (puedeInvitar) Button(
             onClick = { mostrarInvitar = true },
             modifier = Modifier
                 .fillMaxWidth()
@@ -95,7 +95,7 @@ fun EquipoProyectoContent(
         }
     }
 
-    if (mostrarInvitar) {
+    if (mostrarInvitar && puedeInvitar) {
         InvitarIntegranteSheet(
             onDismiss = { mostrarInvitar = false },
             onInvitar = { email ->
@@ -157,7 +157,7 @@ private fun InvitarIntegranteSheet(
             Spacer(Modifier.height(16.dp))
             Button(
                 onClick = {
-                    if (correo.contains("@") && correo.contains(".")) {
+                    if (android.util.Patterns.EMAIL_ADDRESS.matcher(correo.trim()).matches()) {
                         onInvitar(correo.trim())
                     } else {
                         error = "Ingresa un correo válido."
@@ -276,20 +276,14 @@ private fun TarjetaIntegrante(integrante: IntegranteResponseDto) {
             Spacer(Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        integrante.nombre,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (propietario) {
-                        Text(" ✓", color = Primary, fontWeight = FontWeight.Bold)
-                    }
-                }
+                Text(
+                    integrante.nombre,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
 
                 Text(
                     integrante.email,
@@ -300,18 +294,17 @@ private fun TarjetaIntegrante(integrante: IntegranteResponseDto) {
                 )
             }
 
-            Spacer(Modifier.width(6.dp))
-
-            Column(horizontalAlignment = Alignment.End) {
-                if (propietario) {
-                    EtiquetaEstado("Propietario", PrimaryContainer, Color.White)
-                    Spacer(Modifier.height(4.dp))
+            if (propietario || pendiente) {
+                Spacer(Modifier.width(6.dp))
+                Column(horizontalAlignment = Alignment.End) {
+                    if (propietario) {
+                        EtiquetaEstado("Propietario", PrimaryContainer, Color.White)
+                    }
+                    if (propietario && pendiente) Spacer(Modifier.height(4.dp))
+                    if (pendiente) {
+                        EtiquetaEstado("Pendiente", RedBackground, Red)
+                    }
                 }
-                EtiquetaEstado(
-                    texto = if (pendiente) "Pendiente" else "Activo",
-                    fondo = if (pendiente) RedBackground else GreenBackground,
-                    textoColor = if (pendiente) Red else Green
-                )
             }
         }
     }
@@ -335,7 +328,7 @@ private fun EtiquetaEstado(texto: String, fondo: Color, textoColor: Color) {
     }
 }
 
-private fun iniciales(nombre: String): String {
+internal fun iniciales(nombre: String): String {
     val partes = nombre.trim().split(" ").filter { it.isNotBlank() }
     return when {
         partes.isEmpty() -> "US"

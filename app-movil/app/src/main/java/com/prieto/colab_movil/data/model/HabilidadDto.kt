@@ -8,5 +8,9 @@ data class HabilidadDto(
     @SerializedName("nombre")
     val nombre: String,
     @SerializedName("area")
-    val area: String?
+    val area: String?,
+    @SerializedName("icono")
+    val icono: String? = null,
+    @SerializedName("nivel")
+    val nivel: String? = null
 )

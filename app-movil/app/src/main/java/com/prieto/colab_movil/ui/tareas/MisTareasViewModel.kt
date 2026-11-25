@@ -1,5 +1,7 @@
 package com.prieto.colab_movil.ui.tareas
 
+import com.prieto.colab_movil.data.model.estadoProyecto
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.prieto.colab_movil.data.model.ConfirmacionResponseDto
@@ -25,12 +27,13 @@ sealed interface MisTareasUiState {
         val datosDesactualizados: Boolean = false,
         val mensaje: String? = null
     ) : MisTareasUiState {
-        val activa: Boolean get() = datos.planificacion?.estado == "ACTIVA"
+        val cerrado: Boolean get() = datos.proyecto.estadoProyecto.cerrado || datos.planificacion?.estado in setOf("FINALIZADA", "CANCELADA")
+        val activa: Boolean get() = !cerrado && datos.planificacion?.estado == "ACTIVA"
         val confirmadas: Boolean get() = activa || datos.confirmacion?.estado == "ACEPTADA"
         val ocupado: Boolean get() = isSaving || isRefreshing
         val puedeRegistrarAvance: Boolean get() = activa && !ocupado && !datosDesactualizados && datos.tareas.isNotEmpty()
         val puedeConfirmar: Boolean get() = puedeSolicitarCambios && !confirmadas
-        val puedeSolicitarCambios: Boolean get() = !ocupado && !datosDesactualizados &&
+        val puedeSolicitarCambios: Boolean get() = !cerrado && !ocupado && !datosDesactualizados &&
             datos.planificacion?.estado == "PROPUESTA" && datos.tareas.isNotEmpty()
 
         fun tareasVisibles(filtro: FiltroTareas) = when (filtro) {

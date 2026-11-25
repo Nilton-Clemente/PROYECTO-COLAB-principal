@@ -7,8 +7,7 @@ sealed interface PerfilUiState {
     data class Success(
         val nombre: String,
         val email: String,
-        val habilidades: List<HabilidadDto>,
-        val catalogo: List<HabilidadDto>
+        val habilidades: List<HabilidadDto>
     ) : PerfilUiState
     data class Error(val message: String) : PerfilUiState
 }

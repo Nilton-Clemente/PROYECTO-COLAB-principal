@@ -2,6 +2,8 @@ package com.prieto.colab_movil.navigation
 
 import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -13,6 +15,7 @@ import com.prieto.colab_movil.data.session.SessionManager
 import com.prieto.colab_movil.ui.invitaciones.InvitacionesScreen
 import com.prieto.colab_movil.ui.login.LoginScreen
 import com.prieto.colab_movil.ui.perfil.PerfilScreen
+import com.prieto.colab_movil.ui.perfil.CatalogoScreen
 import com.prieto.colab_movil.ui.planificacion.PlanificacionScreen
 import com.prieto.colab_movil.ui.planificacion.EditarPlanificacionScreen
 import com.prieto.colab_movil.ui.proyectos.CrearProyectoScreen
@@ -22,12 +25,14 @@ import com.prieto.colab_movil.ui.proyectos.ProyectosScreen
 import com.prieto.colab_movil.ui.register.RegisterScreen
 import com.prieto.colab_movil.ui.tareas.MisTareasScreen
 import com.prieto.colab_movil.ui.tareas.RegistrarAvanceScreen
+import com.prieto.colab_movil.ui.metricas.MetricasProyectoScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
     object Proyectos : Screen("proyectos")
     object Perfil : Screen("perfil")
+    object CatalogoHabilidades : Screen("catalogo_habilidades")
     object DetalleProyecto : Screen("proyecto_detalle/{proyectoId}") {
         fun createRoute(proyectoId: Long) = "proyecto_detalle/$proyectoId"
     }
@@ -44,6 +49,9 @@ sealed class Screen(val route: String) {
     }
     object MisTareas : Screen("mis_tareas/{proyectoId}") {
         fun createRoute(proyectoId: Long) = "mis_tareas/$proyectoId"
+    }
+    object Metricas : Screen("metricas/{proyectoId}") {
+        fun createRoute(proyectoId: Long) = "metricas/$proyectoId"
     }
     object RegistrarAvance : Screen("registrar_avance/{proyectoId}/{tareaId}") {
         fun createRoute(proyectoId: Long, tareaId: Long) = "registrar_avance/$proyectoId/$tareaId"
@@ -97,8 +105,11 @@ fun AppNavigation(
             )
         }
 
-        composable(Screen.Proyectos.route) {
+        composable(Screen.Proyectos.route) { entrada ->
+            val eliminado by entrada.savedStateHandle.getStateFlow<Long?>("proyecto_eliminado", null).collectAsState()
             ProyectosScreen(
+                proyectoEliminado = eliminado,
+                onEliminacionConsumida = { entrada.savedStateHandle["proyecto_eliminado"] = null as Long? },
                 onProyectoClick = { proyecto ->
                     navController.navigate(Screen.DetalleProyecto.createRoute(proyecto.id))
                 },
@@ -137,10 +148,23 @@ fun AppNavigation(
             DetalleProyectoScreen(
                 proyectoId = proyectoId,
                 onBack = { navController.popBackStack() },
-                onPerfil = { navController.navigate(Screen.Perfil.route) },
                 onEditar = { navController.navigate(Screen.EditarProyecto.createRoute(proyectoId)) },
                 onGenerarPlanificacion = { navController.navigate(Screen.Planificacion.createRoute(proyectoId)) },
-                onMisTareas = { navController.navigate(Screen.MisTareas.createRoute(proyectoId)) }
+                onMisTareas = { navController.navigate(Screen.MisTareas.createRoute(proyectoId)) },
+                onMetricas = { navController.navigate(Screen.Metricas.createRoute(proyectoId)) },
+                onEliminado = { id ->
+                    Toast.makeText(context, "Proyecto eliminado definitivamente", Toast.LENGTH_SHORT).show()
+                    val listado = runCatching { navController.getBackStackEntry(Screen.Proyectos.route) }.getOrNull()
+                    if (listado != null) {
+                        listado.savedStateHandle["proyecto_eliminado"] = id
+                        navController.popBackStack(Screen.Proyectos.route, inclusive = false)
+                    } else {
+                        navController.navigate(Screen.Proyectos.route) {
+                            popUpTo(Screen.DetalleProyecto.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                }
             )
         }
 
@@ -191,10 +215,19 @@ fun AppNavigation(
             MisTareasScreen(
                 proyectoId = proyectoId,
                 onBack = { navController.popBackStack() },
-                onPerfil = { navController.navigate(Screen.Perfil.route) },
                 onRegistrarAvance = { tareaId ->
                     navController.navigate(Screen.RegistrarAvance.createRoute(proyectoId, tareaId))
                 }
+            )
+        }
+
+        composable(
+            route = Screen.Metricas.route,
+            arguments = listOf(navArgument("proyectoId") { type = NavType.LongType })
+        ) { entrada ->
+            MetricasProyectoScreen(
+                proyectoId = requireNotNull(entrada.arguments).getLong("proyectoId"),
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -209,13 +242,22 @@ fun AppNavigation(
             RegistrarAvanceScreen(
                 proyectoId = arguments.getLong("proyectoId"),
                 tareaId = arguments.getLong("tareaId"),
-                onBack = { navController.popBackStack() },
-                onPerfil = { navController.navigate(Screen.Perfil.route) }
+                onBack = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.Perfil.route) {
+        composable(Screen.Perfil.route) { backStackEntry ->
+            val perfilViewModel: com.prieto.colab_movil.ui.perfil.PerfilViewModel = androidx.lifecycle.viewmodel.compose.viewModel(backStackEntry)
+            androidx.compose.runtime.LaunchedEffect(backStackEntry) {
+                backStackEntry.savedStateHandle.getStateFlow("recargar_perfil", false).collect { recargar ->
+                    if (recargar) {
+                        perfilViewModel.cargar()
+                        backStackEntry.savedStateHandle["recargar_perfil"] = false
+                    }
+                }
+            }
             PerfilScreen(
+                viewModel = perfilViewModel,
                 onProyectosClick = {
                     navController.popBackStack(Screen.Proyectos.route, inclusive = false)
                 },
@@ -223,10 +265,25 @@ fun AppNavigation(
                     navController.navigate(Screen.Invitaciones.route) { launchSingleTop = true }
                 },
                 onPerfilClick = {},
+                onCatalogo = { navController.navigate(Screen.CatalogoHabilidades.route) },
                 onNotificacionesClick = {
                     Toast.makeText(context, "Notificaciones", Toast.LENGTH_SHORT).show()
+                },
+                onCerrarSesion = {
+                    SessionManager.token = null
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                        launchSingleTop = true
+                    }
                 }
             )
+        }
+
+        composable(Screen.CatalogoHabilidades.route) {
+            CatalogoScreen(onBack = {
+                navController.previousBackStackEntry?.savedStateHandle?.set("recargar_perfil", true)
+                navController.popBackStack()
+            })
         }
 
         composable(Screen.Invitaciones.route) {

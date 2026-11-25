@@ -49,6 +49,11 @@ public class ProyectoController {
         return proyectoService.editarProyecto(id, request);
     }
 
+    @PostMapping("/{id}/cancelar")
+    public ProyectoResponse cancelar(@PathVariable Long id) {
+        return proyectoService.cancelarProyecto(id);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         proyectoService.eliminarProyecto(id);

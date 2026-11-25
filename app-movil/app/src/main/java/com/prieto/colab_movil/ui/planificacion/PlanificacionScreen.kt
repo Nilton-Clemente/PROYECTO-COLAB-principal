@@ -62,6 +62,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.prieto.colab_movil.ui.components.ColabBarraSecundaria
 import com.prieto.colab_movil.data.model.IntegranteResponseDto
 import com.prieto.colab_movil.data.model.PlanificacionResponseDto
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
@@ -206,6 +207,7 @@ private fun buildPhases(
 private fun estadoPlanLabel(estado: String?): String = when (estado?.trim()?.uppercase()) {
     "ACTIVA" -> "Planificación activa"
     "FINALIZADA" -> "Planificación finalizada"
+    "CANCELADA" -> "Planificación cancelada"
     "BORRADOR" -> "Borrador de planificación"
     "PROPUESTA" -> "Propuesta validada por IA y Backend"
     else -> "Planificación generada por IA"
@@ -231,38 +233,7 @@ fun PlanificacionScreen(
     Scaffold(
         containerColor = AppBackground,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Planificación",
-                        color = OnSurface,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp
-                    )
-                },
-                navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = OnSurface
-                        )
-                    }
-                },
-                actions = {
-                    Box(
-                        modifier = Modifier
-                            .padding(end = 16.dp)
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(Primary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("P", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = AppBackground)
-            )
+            ColabBarraSecundaria("Planificación", onVolver = onBack)
         }
     ) { innerPadding ->
         Box(

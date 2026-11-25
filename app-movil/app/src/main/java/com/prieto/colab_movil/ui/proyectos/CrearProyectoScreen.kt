@@ -566,10 +566,6 @@ fun CrearProyectoScreen(
                         )
 
                         requerimientos.forEachIndexed { index, requerimiento ->
-                            var marcado by remember(requerimiento) {
-                                mutableStateOf(false)
-                            }
-
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -577,10 +573,6 @@ fun CrearProyectoScreen(
                                     .padding(horizontal = 8.dp, vertical = 5.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Checkbox(
-                                    checked = marcado,
-                                    onCheckedChange = { marcado = it }
-                                )
                                 Text(
                                     requerimiento.codigo?.takeIf { it.isNotBlank() }
                                         ?.let { "$it: ${requerimiento.descripcion}" } ?: requerimiento.descripcion,

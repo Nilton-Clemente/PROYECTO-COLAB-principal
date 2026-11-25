@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -17,10 +18,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Mail
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,6 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.prieto.colab_movil.data.model.HabilidadDto
+import com.prieto.colab_movil.ui.components.EstadoCarga
+import com.prieto.colab_movil.ui.components.EstadoError
+import com.prieto.colab_movil.ui.components.ColabTopBar
+import com.prieto.colab_movil.ui.components.ColabBottomBar
+import com.prieto.colab_movil.ui.components.SeccionPrincipal
 
 // ---------------------------------------------------------
 // COLORES INSPIRADOS EN EL DISEÑO ORIGINAL DE STITCH
@@ -71,68 +73,40 @@ fun PerfilScreen(
     onProyectosClick: () -> Unit = {},
     onInvitacionesClick: () -> Unit = {},
     onPerfilClick: () -> Unit = {},
-    onNotificacionesClick: () -> Unit = {}
+    onNotificacionesClick: () -> Unit = {},
+    onCerrarSesion: () -> Unit = {},
+    onCatalogo: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         containerColor = Fondo,
         topBar = {
-            EncabezadoColab(
+            ColabTopBar(
                 onNotificaciones = onNotificacionesClick,
                 onPerfil = onPerfilClick
             )
         },
         bottomBar = {
-            BarraNavegacion(
-                onProyectosClick = onProyectosClick,
-                onInvitacionesClick = onInvitacionesClick,
-                onPerfilClick = onPerfilClick
+            ColabBottomBar(
+                seleccionada = SeccionPrincipal.PERFIL, onProyectos = onProyectosClick,
+                onInvitaciones = onInvitacionesClick, onPerfil = onPerfilClick
             )
         }
     ) { paddingValues ->
         when (val state = uiState) {
-            is PerfilUiState.Loading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = Primario)
-                }
-            }
+            is PerfilUiState.Loading -> EstadoCarga(modifier = Modifier.padding(paddingValues))
 
-            is PerfilUiState.Error -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = state.message,
-                        color = TextoSecundario,
-                        fontSize = 14.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Button(
-                        onClick = { viewModel.cargar() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Primario)
-                    ) {
-                        Text("Reintentar")
-                    }
-                }
-            }
+            is PerfilUiState.Error -> EstadoError(
+                onReintentar = { viewModel.cargar() }, modifier = Modifier.padding(paddingValues)
+            )
 
             is PerfilUiState.Success -> {
                 ContenidoPerfil(
                     state = state,
-                    onAgregar = { viewModel.agregarHabilidad(it) },
                     onEliminar = { viewModel.eliminarHabilidad(it) },
+                    onCerrarSesion = onCerrarSesion,
+                    onCatalogo = onCatalogo,
                     paddingValues = paddingValues
                 )
             }
@@ -143,167 +117,12 @@ fun PerfilScreen(
 @Composable
 private fun ContenidoPerfil(
     state: PerfilUiState.Success,
-    onAgregar: (Long) -> Unit,
     onEliminar: (Long) -> Unit,
+    onCerrarSesion: () -> Unit,
+    onCatalogo: () -> Unit,
     paddingValues: PaddingValues
 ) {
-    var busqueda by remember { mutableStateOf("") }
-    var categoriaSeleccionada by remember { mutableStateOf("Todos") }
-
-    val idsHabilidades = state.habilidades.map { it.id }.toSet()
-    val catalogoDisponible = state.catalogo.filter { it.id !in idsHabilidades }
-
-    val categorias = remember(catalogoDisponible) {
-        listOf("Todos") + catalogoDisponible.map { it.area ?: "General" }.distinct()
-    }
-
-    val tecnologiasFiltradas = catalogoDisponible.filter { tecnologia ->
-        val coincideBusqueda = tecnologia.nombre.contains(
-            busqueda.trim(),
-            ignoreCase = true
-        )
-        val coincideCategoria = categoriaSeleccionada == "Todos" ||
-            (tecnologia.area ?: "General") == categoriaSeleccionada
-        coincideBusqueda && coincideCategoria
-    }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues),
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = 16.dp,
-            bottom = 24.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(22.dp)
-    ) {
-        item {
-            PerfilEstudiante(nombre = state.nombre, email = state.email)
-        }
-
-        item {
-            EncabezadoSeccion(
-                titulo = "Mis habilidades",
-                subtitulo = "Tecnologías que forman parte de tu perfil",
-                contador = "${state.habilidades.size}"
-            )
-        }
-
-        item {
-            if (state.habilidades.isEmpty()) {
-                MensajeVacio("Todavía no tienes habilidades agregadas.")
-            } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    state.habilidades.chunked(2).forEach { fila ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            fila.forEach { habilidad ->
-                                Box(modifier = Modifier.weight(1f)) {
-                                    TarjetaHabilidad(
-                                        habilidad = habilidad,
-                                        onEliminar = { onEliminar(habilidad.id) }
-                                    )
-                                }
-                            }
-
-                            if (fila.size == 1) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            HorizontalDivider(color = Lavanda.copy(alpha = 0.8f))
-        }
-
-        item {
-            EncabezadoSeccion(
-                titulo = "Catálogo disponible",
-                subtitulo = "Explora y añade tecnologías a tu perfil",
-                contador = "${catalogoDisponible.size}"
-            )
-        }
-
-        item {
-            Buscador(
-                texto = busqueda,
-                onTextoCambio = { busqueda = it }
-            )
-        }
-
-        item {
-            FiltrosCategorias(
-                categorias = categorias,
-                seleccionada = categoriaSeleccionada,
-                onSeleccionar = { categoriaSeleccionada = it }
-            )
-        }
-
-        if (tecnologiasFiltradas.isEmpty()) {
-            item {
-                MensajeVacio("No se encontraron tecnologías con esos criterios.")
-            }
-        } else {
-            items(
-                items = tecnologiasFiltradas,
-                key = { it.id }
-            ) { tecnologia ->
-                TarjetaCatalogo(
-                    habilidad = tecnologia,
-                    onAgregar = { onAgregar(tecnologia.id) }
-                )
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------
-// ENCABEZADO SUPERIOR
-// ---------------------------------------------------------
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun EncabezadoColab(onNotificaciones: () -> Unit, onPerfil: () -> Unit) {
-    TopAppBar(
-        title = {
-            Text("Colab", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal)
-        },
-        actions = {
-            IconButton(onClick = onNotificaciones) {
-                Icon(
-                    imageVector = Icons.Outlined.Notifications,
-                    contentDescription = "Notificaciones",
-                    tint = TextoSecundario
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .padding(end = 16.dp)
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(Primario)
-                    .clickable(onClick = onPerfil),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Person,
-                    contentDescription = "Mi perfil",
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Fondo)
-    )
+    ContenidoPerfilRedisenado(state, onEliminar, onCerrarSesion, paddingValues, onCatalogo)
 }
 
 // ---------------------------------------------------------
@@ -313,7 +132,8 @@ fun EncabezadoColab(onNotificaciones: () -> Unit, onPerfil: () -> Unit) {
 @Composable
 fun PerfilEstudiante(
     nombre: String,
-    email: String
+    email: String,
+    onCerrarSesion: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -344,22 +164,6 @@ fun PerfilEstudiante(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                Surface(
-                    color = VerdeSuave,
-                    shape = RoundedCornerShape(50)
-                ) {
-                    Text(
-                        text = "Activo",
-                        modifier = Modifier.padding(
-                            horizontal = 9.dp,
-                            vertical = 5.dp
-                        ),
-                        color = Color(0xFF00452E),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
                 Spacer(Modifier.height(8.dp))
 
                 Text(
@@ -377,6 +181,24 @@ fun PerfilEstudiante(
                     fontSize = 11.sp,
                     color = TextoSecundario
                 )
+
+                Spacer(Modifier.height(5.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+
+                ) {
+                    Text(text = "relleno intencional ._.")
+                    TextButton(
+                        onClick = onCerrarSesion,
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text("Cerrar sesión", color = Rojo)
+                    }
+                }
+
             }
         }
     }
@@ -717,49 +539,4 @@ fun MensajeVacio(mensaje: String) {
         )
     }
 }
-
-// ---------------------------------------------------------
-// BARRA DE NAVEGACIÓN INFERIOR
-// (por ahora solo muestra la opción "Mi Perfil")
-// ---------------------------------------------------------
-
-@Composable
-fun BarraNavegacion(
-    onProyectosClick: () -> Unit = {},
-    onInvitacionesClick: () -> Unit = {},
-    onPerfilClick: () -> Unit = {}
-) {
-    NavigationBar(containerColor = Superficie) {
-        val colores = NavigationBarItemDefaults.colors(
-            selectedIconColor = Primario,
-            selectedTextColor = Primario,
-            indicatorColor = Color.Transparent,
-            unselectedIconColor = TextoSecundario,
-            unselectedTextColor = TextoSecundario
-        )
-        NavigationBarItem(
-            selected = false,
-            onClick = onProyectosClick,
-            colors = colores,
-            icon = { Icon(Icons.Outlined.Folder, null) },
-            label = { Text("Proyectos", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-        )
-        NavigationBarItem(
-            selected = false,
-            onClick = onInvitacionesClick,
-            colors = colores,
-            icon = { Icon(Icons.Outlined.Mail, null) },
-            label = { Text("Invitaciones", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-        )
-        NavigationBarItem(
-            selected = true,
-            onClick = onPerfilClick,
-            colors = colores,
-            icon = { Icon(Icons.Outlined.Person, null) },
-            label = { Text("Mi Perfil", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-        )
-    }
-}
-
-
 

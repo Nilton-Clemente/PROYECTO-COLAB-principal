@@ -16,6 +16,43 @@ Pantallas de usuario: autenticación, proyectos, equipo, generación de planific
 
 Ver acuerdos en el [README raíz](../README.md).
 
+## Iconos de habilidades
+
+El perfil carga los SVG de habilidades desde `backend-usuario`, usando la
+misma `base.url` configurada en `local.properties` (por defecto
+`http://10.0.2.2:8081/` para el emulador). En un teléfono físico debe configurarse
+una dirección del backend alcanzable desde el dispositivo. La inicial de la
+habilidad se muestra si no tiene icono, mientras carga o si falla la descarga.
+La app usa Coil con soporte SVG y caché; un icono nunca descargado requiere
+conexión. La prueba automática de error funciona sin el backend; para comprobar
+la carga real, iniciar `backend-usuario` y asignar un icono desde administración.
+
+## Invitaciones a proyectos
+
+Desde **Detalle de proyecto → Equipo → Invitar integrante**, el creador puede
+invitar por correo a una cuenta registrada, mientras el proyecto no tenga
+planificación. La app envía `POST /api/proyectos/{id}/invitaciones`, informa el
+resultado y vuelve a consultar el equipo para mostrar el estado `PENDIENTE`.
+El botón evita envíos simultáneos y muestra errores de usuario no registrado,
+permisos o invitación existente. Si no puede confirmarse el envío, se debe revisar
+el equipo antes de reintentar.
+
+El destinatario debe iniciar sesión y abrir **Invitaciones → Pendientes**; puede
+deslizar hacia abajo para actualizar. Las invitaciones son internas de la app,
+no notificaciones push ni correos electrónicos. Se pueden usar ambas cuentas
+en el mismo teléfono cerrando sesión entre ellas.
+
+## Catálogo de habilidades
+
+Desde **Mi perfil → Explorar catálogo de habilidades** se consultan el catálogo
+y las habilidades actuales del usuario. Se puede buscar por nombre o área y
+seleccionar una habilidad no registrada. Para añadirla es obligatorio elegir
+Básico, Intermedio o Avanzado; el nivel se envía al backend y se consulta el
+perfil al terminar. Al volver, el perfil se recarga. Si no puede confirmarse el
+resultado de la operación, se debe reintentar la consulta antes de volver a
+añadirla. Los niveles anteriores no especificados aparecen como tales en la
+lista expandida del perfil. No se muestran descripciones ni cifras inventadas.
+
 ## Registro rápido mediante JSON
 
 En **Crear Proyecto → Importar JSON** puedes seleccionar un archivo JSON UTF-8

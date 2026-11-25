@@ -1,5 +1,10 @@
 package com.prieto.colab_movil.ui.tareas
 
+import com.prieto.colab_movil.ui.components.ColabActualizar
+import com.prieto.colab_movil.ui.components.ColabBarraSecundaria
+import com.prieto.colab_movil.data.model.estadoProyecto
+import com.prieto.colab_movil.ui.proyectos.EstadoProyectoBadge
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -41,7 +46,6 @@ fun RegistrarAvanceScreen(
     proyectoId: Long,
     tareaId: Long,
     onBack: () -> Unit,
-    onPerfil: () -> Unit,
     viewModel: RegistrarAvanceViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -50,18 +54,16 @@ fun RegistrarAvanceScreen(
     var minutos by rememberSaveable(proyectoId, tareaId) { mutableIntStateOf(30) }
     var descripcion by rememberSaveable(proyectoId, tareaId) { mutableStateOf("") }
     var descartar by remember { mutableStateOf(false) }
-    var salirAPerfil by remember { mutableStateOf(false) }
     var nuevoEstado by rememberSaveable(proyectoId, tareaId) { mutableStateOf<String?>(null) }
     val snackbar = remember { SnackbarHostState() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val descripcionValida = descripcion.trim().length in 20..1000
 
-    fun salir(perfil: Boolean = false) {
+    fun salir() {
         if (ocupado) return
-        if (descripcion.isNotBlank() || minutos != 30) {
-            salirAPerfil = perfil
+        if (estado?.cerrado != true && (descripcion.isNotBlank() || minutos != 30)) {
             descartar = true
-        } else if (perfil) onPerfil() else onBack()
+        } else onBack()
     }
     DisposableEffect(lifecycle, proyectoId, tareaId, viewModel) {
         val observer = LifecycleEventObserver { _, evento ->
@@ -82,26 +84,10 @@ fun RegistrarAvanceScreen(
         containerColor = AvanceBackground,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            TopAppBar(
-                title = { Text("Registrar avance", color = AvanceInk, fontSize = 18.sp) },
-                navigationIcon = {
-                    IconButton(onClick = { salir() }, enabled = !ocupado) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver a mis tareas", tint = AvancePrimary)
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.cargar(proyectoId, tareaId) }, enabled = !ocupado) {
-                        Icon(Icons.Default.Refresh, "Actualizar avance", tint = AvancePrimary)
-                    }
-                    IconButton(onClick = { salir(true) }, enabled = !ocupado) {
-                        Icon(Icons.Default.Person, "Mi perfil", tint = AvancePrimary)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = AvanceBackground)
-            )
+            ColabBarraSecundaria(if (estado?.cerrado == true) "Historial de avances" else "Registrar avance", onVolver = { salir() }, habilitado = !ocupado, descripcionVolver = "Volver a mis tareas")
         },
         bottomBar = {
-            Surface(color = AvanceBackground, shadowElevation = 8.dp) {
+            if (estado?.cerrado != true) Surface(color = AvanceBackground, shadowElevation = 8.dp) {
                 Row(
                     Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -140,8 +126,12 @@ fun RegistrarAvanceScreen(
             }
             is RegistrarAvanceUiState.Success -> {
                 val datos = state.datos
+                ColabActualizar(
+                    actualizando = state.actualizando, habilitado = !state.ocupado,
+                    onActualizar = { viewModel.cargar(proyectoId, tareaId) }, modifier = Modifier.padding(padding)
+                ) {
                 LazyColumn(
-                    Modifier.fillMaxSize().padding(padding).imePadding().testTag("avance-contenido"),
+                    Modifier.fillMaxSize().imePadding().testTag("avance-contenido"),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -150,19 +140,23 @@ fun RegistrarAvanceScreen(
                             Text("TK-${datos.tarea.id} · ${datos.tarea.etapaNombre}", color = AvancePrimary, fontSize = 12.sp)
                             Text(datos.tarea.nombre, color = AvanceInk, fontWeight = FontWeight.SemiBold, fontSize = 19.sp)
                             Text(datos.proyecto.nombre, color = AvanceMuted)
+                            EstadoProyectoBadge(datos.proyecto.estadoProyecto)
                             Text("Prioridad: ${datos.tarea.prioridad ?: "Sin prioridad"}", color = AvanceMuted, fontSize = 12.sp)
                             Text(datos.tarea.descripcion ?: "Sin descripción registrada.", color = AvanceMuted, fontSize = 13.sp)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 MetricaAvance("Duración estimada", datos.tarea.duracionDias?.let { "$it días" } ?: "Sin estimación", Modifier.weight(1f))
                                 MetricaAvance("Tiempo acumulado", horasAvance(datos.historial.totalMinutos), Modifier.weight(1f))
                             }
-                            Text("Con esta sesión: ${horasAvance(datos.historial.totalMinutos + minutos)}", color = AvancePrimary, fontSize = 12.sp)
-                            Text("El tiempo invertido no equivale al porcentaje de trabajo completado.", color = AvanceMuted, fontSize = 11.sp)
+                            if (!state.cerrado) {
+                                Text("Con esta sesión: ${horasAvance(datos.historial.totalMinutos + minutos)}", color = AvancePrimary, fontSize = 12.sp)
+                                Text("El tiempo invertido no equivale al porcentaje de trabajo completado.", color = AvanceMuted, fontSize = 11.sp)
+                            }
                         }
                     }
                     if (state.ocupado) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = AvancePrimary) }
-                    if (state.desactualizado || datos.planificacion.estado != "ACTIVA") item {
+                    if (state.desactualizado || state.cerrado || datos.planificacion.estado != "ACTIVA") item {
                         AvisoAvance(if (state.desactualizado) "No se pudo verificar el estado actual. Actualiza para continuar."
+                        else if (state.cerrado) "Proyecto cerrado. Historial en modo de solo lectura."
                         else "Solo se registran avances desde esta pantalla cuando la planificación está ACTIVA.")
                     }
                     if (state.registroIncierto) item {
@@ -175,7 +169,7 @@ fun RegistrarAvanceScreen(
                             ) { Text("Ya revisé el historial") }
                         }
                     }
-                    item {
+                    if (!state.cerrado) item {
                         SeccionAvance {
                             Text("Estado de la tarea", fontWeight = FontWeight.SemiBold, color = AvanceInk)
                             Text("Actual: ${EstadoTarea.entries.firstOrNull { it.name == datos.tarea.estado }?.titulo ?: datos.tarea.estado.orEmpty()}", color = AvancePrimary)
@@ -206,7 +200,7 @@ fun RegistrarAvanceScreen(
                             }
                         }
                     }
-                    item {
+                    if (!state.cerrado) item {
                         SeccionAvance {
                             Text("Horas invertidas en esta sesión", fontWeight = FontWeight.SemiBold, color = AvanceInk)
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -219,7 +213,7 @@ fun RegistrarAvanceScreen(
                             Text("Paso: 0,5 h · Entre 0,5 y 16 h por sesión. Se guardan como minutos.", color = AvanceMuted, fontSize = 11.sp)
                         }
                     }
-                    item {
+                    if (!state.cerrado) item {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Descripción del trabajo realizado", fontWeight = FontWeight.SemiBold, color = AvanceInk)
                             OutlinedTextField(
@@ -236,7 +230,7 @@ fun RegistrarAvanceScreen(
                             )
                         }
                     }
-                    item {
+                    if (!state.cerrado) item {
                         Row(Modifier.fillMaxWidth().background(AvanceContainer, RoundedCornerShape(14.dp)).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Surface(color = AvancePrimary, shape = CircleShape) {
                                 Text(datos.perfil.nombre.split(" ").mapNotNull { it.firstOrNull() }.take(2).joinToString("").uppercase(), Modifier.padding(12.dp), color = Color.White)
@@ -258,6 +252,7 @@ fun RegistrarAvanceScreen(
                         }
                     }
                 }
+                }
             }
         }
     }
@@ -266,11 +261,11 @@ fun RegistrarAvanceScreen(
             onDismissRequest = { descartar = false },
             title = { Text("¿Descartar el avance sin guardar?") },
             text = { Text("La descripción y el tiempo de esta sesión aún no se han guardado.") },
-            confirmButton = { TextButton(onClick = { descartar = false; if (salirAPerfil) onPerfil() else onBack() }) { Text("Descartar") } },
+            confirmButton = { TextButton(onClick = { descartar = false; onBack() }) { Text("Descartar") } },
             dismissButton = { TextButton(onClick = { descartar = false }) { Text("Seguir editando") } }
         )
     }
-    nuevoEstado?.let { nombre ->
+    nuevoEstado?.takeUnless { estado?.cerrado == true }?.let { nombre ->
         val opcion = EstadoTarea.valueOf(nombre)
         AlertDialog(
             onDismissRequest = { nuevoEstado = null },

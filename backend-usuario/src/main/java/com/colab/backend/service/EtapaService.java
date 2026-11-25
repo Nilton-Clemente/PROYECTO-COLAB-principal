@@ -39,17 +39,20 @@ public class EtapaService {
     private final IntegranteRepository integranteRepository;
     private final UsuarioRepository usuarioRepository;
     private final DependenciaTareaRepository dependenciaTareaRepository;
+    private final CicloProyectoService cicloProyecto;
 
     public EtapaService(EtapaRepository etapaRepository,
                         PlanificacionRepository planificacionRepository,
                         IntegranteRepository integranteRepository,
                         UsuarioRepository usuarioRepository,
-                        DependenciaTareaRepository dependenciaTareaRepository) {
+                        DependenciaTareaRepository dependenciaTareaRepository,
+                        CicloProyectoService cicloProyecto) {
         this.etapaRepository = etapaRepository;
         this.planificacionRepository = planificacionRepository;
         this.integranteRepository = integranteRepository;
         this.usuarioRepository = usuarioRepository;
         this.dependenciaTareaRepository = dependenciaTareaRepository;
+        this.cicloProyecto = cicloProyecto;
     }
 
     /** Listar todas las fases de un proyecto (cualquier integrante). */
@@ -78,6 +81,7 @@ public class EtapaService {
     @Transactional
     public EtapaResponse crear(Long proyectoId, EtapaRequest request) {
         Usuario u = usuarioActual();
+        cicloProyecto.bloquearProyecto(proyectoId);
         verificarCreador(u, proyectoId);
         Planificacion plan = planificacion(proyectoId);
         verificarPlanEditable(plan);
@@ -95,6 +99,7 @@ public class EtapaService {
     @Transactional
     public EtapaResponse editar(Long proyectoId, Long etapaId, EtapaRequest request) {
         Usuario u = usuarioActual();
+        cicloProyecto.bloquearProyecto(proyectoId);
         verificarCreador(u, proyectoId);
         Etapa etapa = etapaDe(proyectoId, etapaId);
         verificarPlanEditable(etapa.getPlanificacion());
@@ -110,6 +115,7 @@ public class EtapaService {
     @Transactional
     public void eliminar(Long proyectoId, Long etapaId) {
         Usuario u = usuarioActual();
+        cicloProyecto.bloquearProyecto(proyectoId);
         verificarCreador(u, proyectoId);
         Etapa etapa = etapaDe(proyectoId, etapaId);
         verificarPlanEditable(etapa.getPlanificacion());

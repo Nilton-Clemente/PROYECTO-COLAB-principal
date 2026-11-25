@@ -2,11 +2,14 @@ package com.prieto.colab_movil.data.remote
 
 import com.prieto.colab_movil.data.model.IntegranteResponseDto
 import com.prieto.colab_movil.data.model.InvitacionResponseDto
+import com.prieto.colab_movil.data.model.InvitacionRequestDto
+import com.prieto.colab_movil.data.model.MetricasProyectoDto
 import com.prieto.colab_movil.data.model.ProyectoRequest
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
 import com.prieto.colab_movil.data.model.TecnologiaDto
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -19,8 +22,14 @@ interface ProyectoApiService {
     @GET("api/proyectos/{id}")
     suspend fun verProyecto(@Path("id") id: Long): Response<ProyectoResponseDto>
 
+    @GET("api/proyectos/{id}/metricas")
+    suspend fun verMetricas(@Path("id") id: Long): Response<MetricasProyectoDto>
+
     @GET("api/proyectos/{id}/integrantes")
     suspend fun verEquipo(@Path("id") id: Long): Response<List<IntegranteResponseDto>>
+
+    @POST("api/proyectos/{id}/invitaciones")
+    suspend fun invitarIntegrante(@Path("id") id: Long, @Body request: InvitacionRequestDto): Response<Unit>
 
     @GET("api/invitaciones")
     suspend fun listarInvitaciones(): Response<List<InvitacionResponseDto>>
@@ -39,4 +48,10 @@ interface ProyectoApiService {
 
     @PUT("api/proyectos/{id}")
     suspend fun editarProyecto(@Path("id") id: Long, @Body request: ProyectoRequest): Response<ProyectoResponseDto>
+
+    @POST("api/proyectos/{id}/cancelar")
+    suspend fun cancelarProyecto(@Path("id") id: Long): Response<ProyectoResponseDto>
+
+    @DELETE("api/proyectos/{id}")
+    suspend fun eliminarProyecto(@Path("id") id: Long): Response<Unit>
 }

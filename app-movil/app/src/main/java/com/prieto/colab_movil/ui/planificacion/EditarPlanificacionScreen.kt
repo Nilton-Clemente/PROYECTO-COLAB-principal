@@ -63,6 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.prieto.colab_movil.ui.components.ColabBarraSecundaria
 import com.prieto.colab_movil.data.model.IntegranteResponseDto
 
 private val EditBackground = Color(0xFFFAF8FF)
@@ -94,15 +95,7 @@ fun EditarPlanificacionScreen(
     Scaffold(
         containerColor = EditBackground,
         topBar = {
-            TopAppBar(
-                title = { Text("Editar planificación", color = EditText, fontWeight = FontWeight.SemiBold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack, enabled = !isSaving) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = EditText)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = EditBackground)
-            )
+            ColabBarraSecundaria("Editar planificación", onVolver = onBack, habilitado = !isSaving)
         }
     ) { padding ->
         when (val state = uiState) {

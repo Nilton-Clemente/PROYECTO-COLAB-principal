@@ -28,30 +28,20 @@ class PerfilViewModel(
     private fun refrescar() {
         viewModelScope.launch {
             val perfil = repository.obtenerPerfil()
-            val catalogo = repository.listarCatalogo()
 
             val p = perfil.getOrNull()
-            val c = catalogo.getOrNull()
-            if (p != null && c != null) {
+            if (p != null) {
                 _uiState.value = PerfilUiState.Success(
                     nombre = p.nombre,
                     email = p.email,
-                    habilidades = p.habilidades,
-                    catalogo = c
+                    habilidades = p.habilidades
                 )
             } else {
-                val error = perfil.exceptionOrNull() ?: catalogo.exceptionOrNull()
+                val error = perfil.exceptionOrNull()
                 _uiState.value = PerfilUiState.Error(
                     error?.message ?: "No se pudo cargar el perfil."
                 )
             }
-        }
-    }
-
-    fun agregarHabilidad(habilidadId: Long) {
-        viewModelScope.launch {
-            repository.agregarHabilidad(habilidadId)
-            refrescar()
         }
     }
 

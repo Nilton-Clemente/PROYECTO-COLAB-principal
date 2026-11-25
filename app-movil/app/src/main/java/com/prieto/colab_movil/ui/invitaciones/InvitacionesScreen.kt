@@ -11,8 +11,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Mail
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.HowToReg
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +23,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.prieto.colab_movil.data.model.InvitacionResponseDto
+import com.prieto.colab_movil.ui.components.EstadoCarga
+import com.prieto.colab_movil.ui.components.EstadoError
+import com.prieto.colab_movil.ui.components.ColabTopBar
+import com.prieto.colab_movil.ui.components.ColabActualizar
+import com.prieto.colab_movil.ui.components.ColabBottomBar
+import com.prieto.colab_movil.ui.components.SeccionPrincipal
 
 // ----------------------------------------------------
 // COLORES (misma paleta del resto de la app)
@@ -57,10 +61,6 @@ fun InvitacionesScreen(
     val mensaje by viewModel.mensaje.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) {
-        viewModel.cargar()
-    }
-
     LaunchedEffect(mensaje) {
         mensaje?.let {
             snackbarHostState.showSnackbar(it)
@@ -73,117 +73,33 @@ fun InvitacionesScreen(
     Scaffold(
         containerColor = Fondo,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Colab",
-                        fontSize = 21.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextoPrincipal
-                    )
-                },
-                actions = {
-                    IconButton(onClick = onNotificacionesClick) {
-                        Icon(
-                            Icons.Default.Notifications,
-                            contentDescription = "Notificaciones",
-                            tint = TextoSecundario
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .padding(end = 16.dp)
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(Primario),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = "Perfil",
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Fondo)
-            )
+            ColabTopBar(onNotificaciones = onNotificacionesClick, onPerfil = onPerfilClick)
         },
         bottomBar = {
-            NavigationBar(containerColor = Superficie, tonalElevation = 4.dp) {
-                val colores = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Primario,
-                    selectedTextColor = Primario,
-                    indicatorColor = Color.Transparent,
-                    unselectedIconColor = TextoSecundario,
-                    unselectedTextColor = TextoSecundario
-                )
-
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onProyectosClick,
-                    colors = colores,
-                    icon = { Icon(Icons.Default.Folder, contentDescription = "Proyectos") },
-                    label = { Text("Proyectos", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-                )
-
-                NavigationBarItem(
-                    selected = true,
-                    onClick = {},
-                    colors = colores,
-                    icon = { Icon(Icons.Default.Mail, contentDescription = "Invitaciones") },
-                    label = { Text("Invitaciones", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-                )
-
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onPerfilClick,
-                    colors = colores,
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Mi Perfil") },
-                    label = { Text("Mi Perfil", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-                )
-            }
+            ColabBottomBar(
+                seleccionada = SeccionPrincipal.INVITACIONES, onProyectos = onProyectosClick,
+                onInvitaciones = {}, onPerfil = onPerfilClick, iconosRellenos = true, elevacion = 4.dp
+            )
         },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
         }
     ) { padding ->
         when (val state = uiState) {
-            is InvitacionesUiState.Loading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = Primario)
-                }
-            }
+            is InvitacionesUiState.Loading -> EstadoCarga(modifier = Modifier.padding(padding))
 
-            is InvitacionesUiState.Error -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(text = state.message, color = TextoSecundario, fontSize = 14.sp)
-                    Spacer(Modifier.height(16.dp))
-                    Button(onClick = { viewModel.cargar() }) {
-                        Text("Reintentar")
-                    }
-                }
-            }
+            is InvitacionesUiState.Error -> EstadoError(
+                onReintentar = { viewModel.cargar() }, modifier = Modifier.padding(padding)
+            )
 
             is InvitacionesUiState.Success -> {
                 val invitaciones = state.invitaciones
 
+                ColabActualizar(actualizando = state.actualizando, habilitado = !state.actualizando && !state.ocupado,
+                    onActualizar = { viewModel.cargar() }, modifier = Modifier.padding(padding)) {
                 LazyColumn(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
+                        .fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
@@ -268,13 +184,15 @@ fun InvitacionesScreen(
                                 InvitacionCard(
                                     invitacion = invitacion,
                                     onAceptar = { viewModel.aceptar(invitacion.integranteId) },
-                                    onDeclinar = { viewModel.rechazar(invitacion.integranteId) }
+                                    onDeclinar = { viewModel.rechazar(invitacion.integranteId) },
+                                    habilitado = !state.ocupado && !state.actualizando && !state.desactualizado
                                 )
                             }
                         }
                     } else {
                         item { HistorialVacio() }
                     }
+                }
                 }
             }
         }
@@ -289,7 +207,8 @@ fun InvitacionesScreen(
 private fun InvitacionCard(
     invitacion: InvitacionResponseDto,
     onAceptar: () -> Unit,
-    onDeclinar: () -> Unit
+    onDeclinar: () -> Unit,
+    habilitado: Boolean
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -370,6 +289,7 @@ private fun InvitacionCard(
             ) {
                 Button(
                     onClick = onAceptar,
+                    enabled = habilitado,
                     modifier = Modifier
                         .weight(1f)
                         .height(46.dp),
@@ -394,6 +314,7 @@ private fun InvitacionCard(
 
                 OutlinedButton(
                     onClick = onDeclinar,
+                    enabled = habilitado,
                     modifier = Modifier.height(46.dp),
                     shape = RoundedCornerShape(9.dp),
                     colors = ButtonDefaults.outlinedButtonColors(

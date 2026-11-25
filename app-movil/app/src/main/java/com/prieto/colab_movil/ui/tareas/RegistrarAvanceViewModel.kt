@@ -1,5 +1,7 @@
 package com.prieto.colab_movil.ui.tareas
 
+import com.prieto.colab_movil.data.model.estadoProyecto
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.prieto.colab_movil.data.model.RegistroAvanceRequestDto
@@ -33,11 +35,13 @@ sealed interface RegistrarAvanceUiState {
     data class Success(
         val datos: AvanceDatos,
         val ocupado: Boolean = false,
+        val actualizando: Boolean = false,
         val desactualizado: Boolean = false,
         val registroIncierto: Boolean = false,
         val mensaje: String? = null
     ) : RegistrarAvanceUiState {
-        val puedeGestionar: Boolean get() = !ocupado && !desactualizado && datos.planificacion.estado == "ACTIVA"
+        val cerrado: Boolean get() = datos.proyecto.estadoProyecto.cerrado || datos.planificacion.estado in setOf("FINALIZADA", "CANCELADA")
+        val puedeGestionar: Boolean get() = !cerrado && !ocupado && !desactualizado && datos.planificacion.estado == "ACTIVA"
         val puedeRegistrar: Boolean get() = puedeGestionar && !registroIncierto
         val transiciones: List<EstadoTarea> get() = EstadoTarea.transiciones(datos.tarea.estado)
     }
@@ -118,7 +122,7 @@ class RegistrarAvanceViewModel(
 
     private suspend fun actualizar(proyectoId: Long, tareaId: Long, mensaje: String? = null) {
         val anterior = _uiState.value as? RegistrarAvanceUiState.Success
-        _uiState.value = anterior?.copy(ocupado = true, mensaje = null) ?: RegistrarAvanceUiState.Loading
+        _uiState.value = anterior?.copy(ocupado = true, actualizando = true, mensaje = null) ?: RegistrarAvanceUiState.Loading
         repository.cargar(proyectoId, tareaId).fold(
             onSuccess = {
                 _uiState.value = RegistrarAvanceUiState.Success(
@@ -128,7 +132,7 @@ class RegistrarAvanceViewModel(
             onFailure = {
                 val error = it.message ?: "No se pudo cargar la tarea y su historial."
                 _uiState.value = anterior?.copy(
-                    ocupado = false, desactualizado = true,
+                    ocupado = false, actualizando = false, desactualizado = true,
                     mensaje = listOfNotNull(mensaje, "$error Actualiza los datos para continuar.").joinToString("\n")
                 ) ?: RegistrarAvanceUiState.Error(error)
             }

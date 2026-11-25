@@ -61,7 +61,7 @@ class PlanificacionGeneracionScreenTest {
         }
         val vm = mostrar(repo)
         compose.onNodeWithText("Generación pendiente de confirmar").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Editar planificación").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Editar planificación").assertDoesNotExist()
         compose.runOnIdle {
             assertTrue(vm.uiState.value is PlanificacionUiState.PendingGeneration)
             repo.disponibleEnConsulta = repo.gets + 1
@@ -78,7 +78,7 @@ class PlanificacionGeneracionScreenTest {
         val repo = RepositorioPlan().apply { pendiente = CompletableDeferred() }
         val vm = mostrar(repo)
         compose.onNodeWithText("Generando planificación con IA…").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Editar planificación").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Editar planificación").assertDoesNotExist()
         compose.runOnIdle {
             vm.generar(repo.id)
             vm.cargar(repo.id)
@@ -169,6 +169,7 @@ class PlanificacionGeneracionScreenTest {
             error?.let { return Result.failure(it) }
             return Result.success(plan)
         }
+        override suspend fun guardarPlanificacion(proyectoId: Long, request: PlanificacionUpdateRequestDto): Result<PlanificacionResponseDto> = error("No se usa")
         override suspend fun crearEtapa(proyectoId: Long, request: EtapaRequestDto): Result<EtapaResponseDto> = error("No se usa")
         override suspend fun editarEtapa(proyectoId: Long, etapaId: Long, request: EtapaRequestDto): Result<EtapaResponseDto> = error("No se usa")
         override suspend fun eliminarEtapa(proyectoId: Long, etapaId: Long): Result<Unit> = error("No se usa")
@@ -180,6 +181,7 @@ class PlanificacionGeneracionScreenTest {
     }
 
     private class RepositorioProyecto : ProyectoRepository {
+        override suspend fun invitarIntegrante(proyectoId: Long, email: String): Result<Unit> = error("No se usa")
         override suspend fun verProyecto(id: Long) = Result.success(
             Gson().fromJson("""{"id":$id,"nombre":"Proyecto IA"}""", ProyectoResponseDto::class.java))
         override suspend fun verEquipo(id: Long): Result<List<IntegranteResponseDto>> = Result.success(emptyList())
@@ -191,6 +193,8 @@ class PlanificacionGeneracionScreenTest {
         override suspend fun listarTecnologias(): Result<List<TecnologiaDto>> = error("No se usa")
         override suspend fun crearProyecto(request: ProyectoRequest): Result<ProyectoResponseDto> = error("No se usa")
         override suspend fun editarProyecto(id: Long, request: ProyectoRequest): Result<ProyectoResponseDto> = error("No se usa")
+        override suspend fun cancelarProyecto(id: Long): Result<ProyectoResponseDto> = error("No se usa")
+        override suspend fun eliminarProyecto(id: Long): Result<Unit> = error("No se usa")
     }
 
     companion object { private val ids = AtomicLong(100_000) }
