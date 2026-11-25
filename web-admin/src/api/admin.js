@@ -32,6 +32,10 @@ export async function listarHabilidades() {
   return pedir('/habilidades/');
 }
 
+export async function listarIconos() {
+  return pedir('/iconos/');
+}
+
 export async function crearHabilidad(datos) {
   return pedir('/habilidades/', { metodo: 'POST', cuerpo: datos });
 }

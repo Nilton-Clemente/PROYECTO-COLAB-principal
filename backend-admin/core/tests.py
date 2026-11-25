@@ -66,9 +66,9 @@ class HabilidadApiTests(TestCase):
             raise RuntimeError('Estas pruebas aisladas requieren test_settings con SQLite.')
         with connection.cursor() as cursor:
             cursor.execute("ATTACH DATABASE ':memory:' AS usuario")
-            cursor.execute('CREATE TABLE usuario.habilidad (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre VARCHAR(255) NOT NULL UNIQUE, area VARCHAR(255))')
+            cursor.execute('CREATE TABLE usuario.habilidad (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre VARCHAR(255) NOT NULL UNIQUE, area VARCHAR(255), icono VARCHAR(64))')
             cursor.execute('CREATE TABLE usuario.usuario_habilidad (usuario_id INTEGER NOT NULL, habilidad_id INTEGER NOT NULL)')
-            cursor.execute('CREATE TABLE usuario.tecnologia (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre VARCHAR(255) NOT NULL UNIQUE)')
+            cursor.execute('CREATE TABLE usuario.tecnologia (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre VARCHAR(255) NOT NULL UNIQUE, icono VARCHAR(64))')
             cursor.execute('CREATE TABLE usuario.proyecto_tecnologia (proyecto_id INTEGER NOT NULL, tecnologia_id INTEGER NOT NULL)')
 
     @classmethod
@@ -86,9 +86,38 @@ class HabilidadApiTests(TestCase):
 
     def test_requiere_administrador(self):
         self.assertEqual(self.cliente.get('/api/admin/habilidades/').status_code, 401)
+        self.assertEqual(self.cliente.get('/api/admin/iconos/').status_code, 401)
         usuario = get_user_model().objects.create_user(username='normal-habilidades', password='clave')
         self.cliente.force_authenticate(user=usuario)
         self.assertEqual(self.cliente.get('/api/admin/habilidades/').status_code, 403)
+        self.assertEqual(self.cliente.get('/api/admin/iconos/').status_code, 403)
+
+    def test_iconos_en_catalogos_validacion_y_actualizacion(self):
+        self.cliente.force_authenticate(user=self.admin)
+        respuesta = self.cliente.get('/api/admin/iconos/')
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual({i['id'] for i in respuesta.data}, {'java', 'kotlin', 'react', 'spring', 'postgresql'})
+        for recurso in ('habilidades', 'tecnologias'):
+            url = f'/api/admin/{recurso}/'
+            creado = self.cliente.post(url, {'nombre': f'Prueba {recurso}', 'icono': 'java'}, format='json')
+            self.assertEqual(creado.status_code, 201, creado.data)
+            self.assertEqual(creado.data['icono'], 'java')
+            detalle = f"{url}{creado.data['id']}/"
+            for invalido in ('../java', 'https://ejemplo.com/java.svg', 'desconocido', 'JAVA'):
+                self.assertEqual(self.cliente.patch(detalle, {'icono': invalido}, format='json').status_code, 400)
+            self.assertEqual(self.cliente.patch(detalle, {'nombre': f'Editado {recurso}'}, format='json').data['icono'], 'java')
+            self.assertEqual(self.cliente.patch(detalle, {'icono': 'react'}, format='json').data['icono'], 'react')
+            self.assertIsNone(self.cliente.patch(detalle, {'icono': None}, format='json').data['icono'])
+            self.assertIsNone(self.cliente.patch(detalle, {'icono': ''}, format='json').data['icono'])
+            self.assertEqual(self.cliente.delete(detalle).status_code, 204)
+
+    def test_iconos_autorizados_coinciden_con_svg_de_backend_usuario(self):
+        from pathlib import Path
+        from .iconos import IDENTIFICADORES_ICONOS
+
+        raiz = Path(__file__).resolve().parents[2]
+        directorio = raiz / 'backend-usuario' / 'src' / 'main' / 'resources' / 'static' / 'iconos' / 'devicon'
+        self.assertEqual({archivo.stem for archivo in directorio.glob('*.svg')}, IDENTIFICADORES_ICONOS)
 
     def test_crud_validacion_y_borrado_en_uso(self):
         self.cliente.force_authenticate(user=self.admin)

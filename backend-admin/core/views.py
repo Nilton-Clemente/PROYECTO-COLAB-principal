@@ -2,12 +2,19 @@ from django.db import connection, transaction
 from django.db.models import Q
 from django.http import Http404
 from rest_framework import mixins, status, viewsets
+from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Habilidad, Tecnologia, Usuario
 from .serializers import HabilidadSerializer, RestablecerContrasenaSerializer, TecnologiaSerializer, UsuarioSerializer
 from .services import BackendUsuarioError, restablecer_contrasena
+from .iconos import ICONOS
+
+
+class IconosDisponiblesView(APIView):
+    def get(self, request):
+        return Response([{'id': identificador, 'nombre': nombre} for identificador, nombre in ICONOS])
 
 
 class HabilidadViewSet(viewsets.ModelViewSet):

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import * as api from '../api/admin.js';
 import ModalCatalogo from '../components/ModalCatalogo.jsx';
+import IconoCatalogo from '../components/IconoCatalogo.jsx';
 import ModalConfirmacion from '../components/ModalConfirmacion.jsx';
 import EstadoTabla from '../components/EstadoTabla.jsx';
 import Vacio from '../components/Vacio.jsx';
@@ -140,7 +141,7 @@ export default function Habilidades() {
                           </button>
                         </span>
                       </td>
-                      <td><span className="adm-usuario__nombre">{h.nombre}</span></td>
+                      <td><div className="adm-usuario"><IconoCatalogo key={h.icono} icono={h.icono} nombre={h.nombre} className="adm-icono-catalogo" /><span className="adm-usuario__nombre">{h.nombre}</span></div></td>
                       <td>
                         {h.area ? (
                           <span className="adm-area">

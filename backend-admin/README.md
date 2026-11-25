@@ -16,6 +16,14 @@ El login JWT está disponible en `POST /api/admin/auth/login/`, con los campos `
 
 Los recursos `/api/admin/habilidades/` y `/api/admin/tecnologias/` permiten listar y crear con GET y POST; para consultar, editar o eliminar un elemento se usa `/{id}/` con GET, PUT/PATCH o DELETE. Los nombres son obligatorios y únicos; las habilidades admiten un área opcional. Se responde con 409 si se intenta eliminar una habilidad asignada a usuarios o una tecnología vinculada a proyectos. Las tablas son gestionadas por Flyway, no por migraciones Django.
 
+Ambos catálogos admiten `icono` opcional (`null` o un identificador permitido).
+`GET /api/admin/iconos/` proporciona la lista autorizada y requiere administrador.
+La selección `java`, `kotlin`, `postgresql`, `react` y `spring` se mantiene en
+`core/iconos.py` y debe coincidir con los archivos SVG de `backend-usuario`.
+No se aceptan rutas ni URLs arbitrarias. Antes de usar estos campos, ejecutar
+`backend-usuario` contra la misma base para aplicar Flyway V13; Django no gestiona
+la migración de estas tablas. Los iconos existentes no se asignan automáticamente.
+
 ## Cuentas de usuario (HU-18)
 
 `GET /api/admin/usuarios/` lista las cuentas del esquema `usuario` y acepta el parámetro `q` para buscar por email o nombre. `GET /api/admin/usuarios/{id}/` devuelve el detalle de una cuenta. Todas las acciones siguientes requieren token JWT de un usuario `is_staff`:
