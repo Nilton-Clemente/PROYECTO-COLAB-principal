@@ -1,5 +1,7 @@
 const BASE = import.meta.env.VITE_API_URL ?? '';
 
+export const urlBackend = (path) => `${BASE}${path}`;
+
 export class ApiError extends Error {
   constructor(status, message) {
     super(message);
@@ -17,7 +19,7 @@ export function onSesionExpirada(fn) {
 // endpoint autenticado liviano: si también lo rechaza, el token ya no sirve.
 async function tokenRechazado(token) {
   try {
-    const r = await fetch(`${BASE}/api/usuario/perfil`, { headers: { Authorization: `Bearer ${token}` } });
+    const r = await fetch(urlBackend('/api/usuario/perfil'), { headers: { Authorization: `Bearer ${token}` } });
     return r.status === 401 || r.status === 403;
   } catch {
     return false;
@@ -31,7 +33,7 @@ export async function request(path, { method = 'GET', body, token } = {}) {
 
   let res;
   try {
-    res = await fetch(`${BASE}${path}`, {
+    res = await fetch(urlBackend(path), {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,

@@ -67,7 +67,7 @@ function EquipoLateral({ equipo, onVerEquipo }) {
   );
 }
 
-export default function Informacion({ proyecto: p, equipo, onVerEquipo, onEditar, soyCreador }) {
+export default function Informacion({ proyecto: p, equipo, onVerEquipo }) {
   const objetivos = lineas(p.objetivosEspecificos);
   const hayAlcance = lineas(p.alcance).length > 0;
   const hayRestricciones = lineas(p.restricciones).length > 0;
@@ -81,7 +81,6 @@ export default function Informacion({ proyecto: p, equipo, onVerEquipo, onEditar
           <section className="tarjeta vacio-grande">
             <h2>Este proyecto aún no tiene detalle</h2>
             <p>Agrega la problemática, objetivos, alcance, requerimientos y casos de uso. También son necesarios para generar la planificación con IA.</p>
-            {soyCreador && <button type="button" className="btn btn--primario" onClick={onEditar}>Completar información</button>}
           </section>
         )}
 

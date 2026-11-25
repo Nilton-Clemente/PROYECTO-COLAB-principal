@@ -3,6 +3,8 @@ import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom
 import { useAuth } from '../auth/AuthContext.jsx';
 import * as api from '../api/colab.js';
 import Modal from '../components/Modal.jsx';
+import EstadoProyecto from '../components/EstadoProyecto.jsx';
+import { proyectoCerrado } from '../cicloProyecto.js';
 import { codigoTarea, ESTADO_TAREA, fechaCorta, PRIORIDAD } from '../utils.js';
 import { puedeRegistrarAvance } from '../tareas.js';
 
@@ -29,7 +31,7 @@ function minutosTexto(minutos) {
   return `${horas ? `${horas} h` : ''}${horas && resto ? ' ' : ''}${resto ? `${resto} min` : ''}`;
 }
 
-function TarjetaTarea({ tarea, minutos, puedeRegistrar, onRegistrar }) {
+function TarjetaTarea({ tarea, minutos, puedeRegistrar, rutaHistorial, onRegistrar }) {
   const bloqueada = tarea.estado === 'BLOQUEADA';
   return (
     <article className={`tarjeta mis-tareas__tarjeta ${bloqueada ? 'mis-tareas__tarjeta--bloqueada' : ''}`}>
@@ -60,6 +62,7 @@ function TarjetaTarea({ tarea, minutos, puedeRegistrar, onRegistrar }) {
         </div>
         <div className="mis-tareas__acciones-tarea">
           {puedeRegistrar && <button type="button" className="btn btn--ghost btn--chico" onClick={() => onRegistrar(tarea)}>Registrar avance</button>}
+          {rutaHistorial && <Link className="btn btn--ghost btn--chico" to={rutaHistorial}>Ver historial</Link>}
         </div>
       </footer>
     </article>
@@ -117,6 +120,7 @@ export default function MisTareas() {
   }, [tareas, filtro, busqueda]);
   const puedeConfirmar = plan?.estado === 'PROPUESTA' && !confirmacion && tareas.length > 0;
   const cambiosSolicitados = confirmacion?.estado === 'CAMBIOS_SOLICITADOS';
+  const cerrado = proyectoCerrado(proyecto?.estado);
 
   async function confirmar() {
     if (!window.confirm('¿Confirmas que las tareas y estimaciones asignadas son viables?')) return;
@@ -152,7 +156,7 @@ export default function MisTareas() {
   }
 
   function registrarAvance(tarea) {
-    if (!puedeRegistrarAvance(plan?.estado, tarea)) return;
+    if (cerrado || !puedeRegistrarAvance(plan?.estado, tarea)) return;
     navigate(`/proyectos/${proyectoId}/tareas/${tarea.id}/avances/registrar`);
   }
 
@@ -168,7 +172,7 @@ export default function MisTareas() {
     <section className="mis-tareas">
       <div className="mis-tareas__volver">
         <Link className="volver" to={`/proyectos/${proyectoId}`}>← Volver al detalle de {proyecto.nombre}</Link>
-        <span>Planificación: {plan.estado === 'ACTIVA' ? 'Activa' : 'En propuesta'}</span>
+        <EstadoProyecto estado={proyecto.estado} />
       </div>
 
       <section className="tarjeta mis-tareas__portada">
@@ -183,7 +187,7 @@ export default function MisTareas() {
         </dl>
       </section>
 
-      {plan.estado === 'PROPUESTA' && (
+      {!cerrado && plan.estado === 'PROPUESTA' && (
         <section className={cambiosSolicitados ? 'mis-tareas__aviso mis-tareas__aviso--alerta' : 'mis-tareas__aviso'}>
           <div>
             <strong>{cambiosSolicitados ? 'Solicitaste cambios en la planificación' : confirmacion ? 'Confirmaste tus tareas asignadas' : 'Confirmación de viabilidad pendiente'}</strong>
@@ -200,7 +204,13 @@ export default function MisTareas() {
         <label className="busqueda"><span aria-hidden="true">⌕</span><input type="search" value={busqueda} onChange={(event) => setBusqueda(event.target.value)} placeholder="Buscar por tarea o fase…" aria-label="Buscar en mis tareas" /></label>
       </div>
 
-      {tareasVisibles.length === 0 ? <section className="tarjeta vacio-grande"><h2>No hay tareas para este filtro</h2><p>{tareas.length ? 'Prueba con otro estado o término de búsqueda.' : 'Aún no tienes tareas asignadas en esta planificación.'}</p></section> : <div className="mis-tareas__lista">{tareasVisibles.map((tarea) => <TarjetaTarea key={tarea.id} tarea={tarea} minutos={minutosPorTarea[tarea.id]} puedeRegistrar={puedeRegistrarAvance(plan.estado, tarea)} onRegistrar={registrarAvance} />)}</div>}
+      {tareasVisibles.length === 0 ? <section className="tarjeta vacio-grande"><h2>No hay tareas para este filtro</h2><p>{tareas.length ? 'Prueba con otro estado o término de búsqueda.' : 'Aún no tienes tareas asignadas en esta planificación.'}</p></section> : (
+        <div className="mis-tareas__lista">{tareasVisibles.map((tarea) => (
+          <TarjetaTarea key={tarea.id} tarea={tarea} minutos={minutosPorTarea[tarea.id]}
+            puedeRegistrar={!cerrado && puedeRegistrarAvance(plan.estado, tarea)} onRegistrar={registrarAvance}
+            rutaHistorial={cerrado ? `/proyectos/${proyectoId}/tareas/${tarea.id}/avances/registrar` : undefined} />
+        ))}</div>
+      )}
 
       {cambios && <Modal titulo="Solicitar cambios en la planificación" subtitulo="La solicitud se enviará al creador y reiniciará las confirmaciones del equipo." onCerrar={() => setCambios(false)}>
         <form className="modal__form" onSubmit={solicitarCambios}>

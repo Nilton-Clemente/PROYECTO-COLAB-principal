@@ -7,7 +7,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const target = env.VITE_API_PROXY_TARGET || 'http://localhost:8081';
 
-  const proxy = { '/api': { target, changeOrigin: true } };
+  const proxy = {
+    '/api': { target, changeOrigin: true },
+    '/iconos/devicon': { target, changeOrigin: true },
+  };
 
   return {
     plugins: [react()],
