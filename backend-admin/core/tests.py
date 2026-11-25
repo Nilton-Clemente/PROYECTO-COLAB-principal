@@ -96,7 +96,11 @@ class HabilidadApiTests(TestCase):
         self.cliente.force_authenticate(user=self.admin)
         respuesta = self.cliente.get('/api/admin/iconos/')
         self.assertEqual(respuesta.status_code, 200)
-        self.assertEqual({i['id'] for i in respuesta.data}, {'java', 'kotlin', 'react', 'spring', 'postgresql'})
+        self.assertEqual({i['id'] for i in respuesta.data}, {
+            'android', 'django', 'docker', 'flutter', 'git', 'github', 'java',
+            'javascript', 'kotlin', 'mongodb', 'mysql', 'nodejs', 'postgresql',
+            'python', 'react', 'spring', 'typescript',
+        })
         for recurso in ('habilidades', 'tecnologias'):
             url = f'/api/admin/{recurso}/'
             creado = self.cliente.post(url, {'nombre': f'Prueba {recurso}', 'icono': 'java'}, format='json')
@@ -110,6 +114,23 @@ class HabilidadApiTests(TestCase):
             self.assertIsNone(self.cliente.patch(detalle, {'icono': None}, format='json').data['icono'])
             self.assertIsNone(self.cliente.patch(detalle, {'icono': ''}, format='json').data['icono'])
             self.assertEqual(self.cliente.delete(detalle).status_code, 204)
+
+    def test_todos_los_iconos_disponibles_se_guardan_en_ambos_catalogos(self):
+        from .iconos import ICONOS
+
+        self.cliente.force_authenticate(user=self.admin)
+        for recurso in ('habilidades', 'tecnologias'):
+            url = f'/api/admin/{recurso}/'
+            creado = self.cliente.post(url, {'nombre': f'Iconos {recurso}'}, format='json')
+            self.assertEqual(creado.status_code, 201, creado.data)
+            self.assertIsNone(creado.data['icono'])
+            detalle = f"{url}{creado.data['id']}/"
+            for identificador, _ in ICONOS:
+                with self.subTest(recurso=recurso, icono=identificador):
+                    respuesta = self.cliente.patch(detalle, {'icono': identificador}, format='json')
+                    self.assertEqual(respuesta.status_code, 200, respuesta.data)
+                    self.assertEqual(respuesta.data['icono'], identificador)
+                    self.assertEqual(self.cliente.get(detalle).data['icono'], identificador)
 
     def test_iconos_autorizados_coinciden_con_svg_de_backend_usuario(self):
         from pathlib import Path

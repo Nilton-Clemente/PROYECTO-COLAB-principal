@@ -18,8 +18,10 @@ Los recursos `/api/admin/habilidades/` y `/api/admin/tecnologias/` permiten list
 
 Ambos catálogos admiten `icono` opcional (`null` o un identificador permitido).
 `GET /api/admin/iconos/` proporciona la lista autorizada y requiere administrador.
-La selección `java`, `kotlin`, `postgresql`, `react` y `spring` se mantiene en
-`core/iconos.py` y debe coincidir con los archivos SVG de `backend-usuario`.
+La selección de 17 iconos se mantiene en `core/iconos.py` y debe coincidir con
+los archivos SVG de `backend-usuario`: Android, Django, Docker, Flutter, Git,
+GitHub, Java, JavaScript, Kotlin, MongoDB, MySQL, Node.js, PostgreSQL, Python,
+React, Spring y TypeScript.
 No se aceptan rutas ni URLs arbitrarias. Antes de usar estos campos, ejecutar
 `backend-usuario` contra la misma base para aplicar Flyway V13; Django no gestiona
 la migración de estas tablas. Los iconos existentes no se asignan automáticamente.
