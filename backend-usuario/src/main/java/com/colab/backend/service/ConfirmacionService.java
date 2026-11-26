@@ -114,7 +114,9 @@ public class ConfirmacionService {
         Integrante creador = creadorDe(plan);
         if (creador != null) {
             notificacionService.crear(creador.getUsuario(), "PLANIFICACION",
-                    integrante.getUsuario().getNombre() + " solicitó cambios en la planificación: " + comentario);
+                    integrante.getUsuario().getNombre() + " solicitó cambios en la planificación del proyecto \""
+                            + plan.getProyecto().getNombre() + "\" (TEC-" + proyectoId + "): " + comentario,
+                    plan.getProyecto());
         }
 
         return aResponse(c);
@@ -150,7 +152,9 @@ public class ConfirmacionService {
             // RN-22: notificar a todos los integrantes que la planificación se activó.
             for (Integrante i : conTareas) {
                 notificacionService.crear(i.getUsuario(), "PLANIFICACION",
-                        "La planificación del proyecto quedó " + plan.getEstado() + ".");
+                        "La planificación del proyecto \"" + plan.getProyecto().getNombre()
+                                + "\" (TEC-" + plan.getProyecto().getId() + ") quedó " + plan.getEstado() + ".",
+                        plan.getProyecto());
             }
         }
     }

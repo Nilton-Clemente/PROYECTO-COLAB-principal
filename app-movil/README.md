@@ -27,6 +27,15 @@ La app usa Coil con soporte SVG y caché; un icono nunca descargado requiere
 conexión. La prueba automática de error funciona sin el backend; para comprobar
 la carga real, iniciar `backend-usuario` y asignar un icono desde administración.
 
+## Eliminación de proyectos
+
+Desde **Detalle de proyecto → Más acciones → Eliminar proyecto**, se muestra una
+confirmación con el nombre del proyecto y la advertencia de que también se borran
+sus tareas y avances. Basta pulsar **Eliminar**; ya no se pide escribir el nombre.
+**Cancelar** cierra el diálogo sin enviar ninguna petición. Se conservan los
+permisos y estados admitidos por el backend, el bloqueo de operaciones simultáneas
+y la espera de confirmación del servidor antes de retirar el proyecto.
+
 ## Invitaciones a proyectos
 
 Desde **Detalle de proyecto → Equipo → Invitar integrante**, el creador puede
@@ -41,6 +50,40 @@ El destinatario debe iniciar sesión y abrir **Invitaciones → Pendientes**; pu
 deslizar hacia abajo para actualizar. Las invitaciones son internas de la app,
 no notificaciones push ni correos electrónicos. Se pueden usar ambas cuentas
 en el mismo teléfono cerrando sesión entre ellas.
+
+## Notificaciones de solicitudes de cambios
+
+La campana abre la bandeja del usuario autenticado (`GET /api/notificaciones`).
+Desde **Mis proyectos** muestra la cantidad de avisos sin leer y se actualiza al
+volver a la pantalla o deslizar para recargar. La bandeja permite marcar cada aviso como leído mediante
+`PUT /api/notificaciones/{id}/leida`, sin eliminar el mensaje ni aprobar la solicitud.
+En lugar del botón de actualizar, **Eliminar leídas** pide confirmación y utiliza
+`DELETE /api/notificaciones/leidas` (204 sin cuerpo) para borrar solo las leídas de
+la cuenta autenticada; conserva las no leídas. Se deshabilita si no hay leídas,
+los datos están desactualizados o hay una operación en curso. No se retiran avisos
+antes de la confirmación del servidor; si se pierde la respuesta se consulta la
+bandeja sin repetir automáticamente el borrado. Requiere desplegar el backend con
+el nuevo endpoint; esta operación no requiere una migración adicional.
+
+Cuando un integrante solicita cambios desde **Mis tareas**, el backend avisa al
+creador del proyecto. Las nuevas notificaciones incluyen el nombre del solicitante,
+el nombre/código del proyecto y su comentario completo (incluido el contexto de la
+tarea si se indicó). Los mensajes anteriores se conservan tal como se guardaron.
+También se muestran los demás avisos reales que el backend envíe a esa cuenta.
+
+Cada aviso nuevo guarda el proyecto de origen y muestra su **nombre y código
+(TEC-id)** en una línea independiente. Esto incluye activaciones de planificación,
+asignaciones, reasignaciones, cambios de estado y desbloqueos. El nombre se conserva
+como era al generar el aviso, aunque el proyecto se renombre o elimine. Los avisos
+históricos sin ese contexto muestran **Proyecto no identificado**; no se les asigna
+un proyecto por coincidencias de texto. Se requiere actualizar/reiniciar el backend
+para aplicar la migración `V15__notificacion_proyecto.sql` y generar nuevos avisos
+con estos datos; una app actualizada sigue aceptando respuestas del backend anterior.
+
+Son notificaciones **in-app**, no push ni correos: requieren conexión y se consultan
+al abrir/volver o actualizar; no hay recepción en segundo plano con la app cerrada.
+Si falla una consulta se conserva la última bandeja conocida y se indica el error;
+un fallo no se representa como una bandeja vacía ni como una lectura confirmada.
 
 ## Catálogo de habilidades
 

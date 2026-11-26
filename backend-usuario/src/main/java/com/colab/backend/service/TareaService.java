@@ -107,7 +107,8 @@ public class TareaService {
         if (t.getResponsable() != null) {
             notificacionService.crear(t.getResponsable().getUsuario(), "ASIGNACION",
                     "Se te asignó la tarea \"" + t.getNombre() + "\" en el proyecto \""
-                            + etapa.getPlanificacion().getProyecto().getNombre() + "\".");
+                            + etapa.getPlanificacion().getProyecto().getNombre() + "\" (TEC-" + proyectoId + ").",
+                    plan.getProyecto());
         }
         return aDetalle(t);
     }
@@ -166,7 +167,9 @@ public class TareaService {
         // RN-22: notificar reasignación al nuevo responsable.
         if (t.getResponsable() != null) {
             notificacionService.crear(t.getResponsable().getUsuario(), "CAMBIO_RESPONSABLE",
-                    "Ahora eres responsable de la tarea \"" + t.getNombre() + "\".");
+                    "Ahora eres responsable de la tarea \"" + t.getNombre() + "\" en el proyecto \""
+                            + t.getEtapa().getPlanificacion().getProyecto().getNombre() + "\" (TEC-" + proyectoId + ").",
+                    t.getEtapa().getPlanificacion().getProyecto());
         }
         return aDetalle(t);
     }
@@ -202,7 +205,9 @@ public class TareaService {
         Integrante creador = creadorDe(t.getEtapa().getPlanificacion().getProyecto().getId());
         if (creador != null) {
             notificacionService.crear(creador.getUsuario(), "CAMBIO_ESTADO",
-                    "La tarea \"" + t.getNombre() + "\" cambió de estado a " + estadoNormalizado + ".");
+                    "La tarea \"" + t.getNombre() + "\" del proyecto \"" + plan.getProyecto().getNombre()
+                            + "\" (TEC-" + proyectoId + ") cambió de estado a " + estadoNormalizado + ".",
+                    plan.getProyecto());
         }
 
         return aDetalle(t);
@@ -318,7 +323,11 @@ public class TareaService {
                 // RN-22: notificar desbloqueo al responsable de la tarea liberada.
                 if (sucesora.getResponsable() != null) {
                     notificacionService.crear(sucesora.getResponsable().getUsuario(), "DESBLOQUEO",
-                            "La tarea \"" + sucesora.getNombre() + "\" quedó desbloqueada (sus dependencias se completaron).");
+                            "La tarea \"" + sucesora.getNombre() + "\" del proyecto \""
+                                    + sucesora.getEtapa().getPlanificacion().getProyecto().getNombre()
+                                    + "\" (TEC-" + sucesora.getEtapa().getPlanificacion().getProyecto().getId()
+                                    + ") quedó desbloqueada (sus dependencias se completaron).",
+                            sucesora.getEtapa().getPlanificacion().getProyecto());
                 }
             }
         }

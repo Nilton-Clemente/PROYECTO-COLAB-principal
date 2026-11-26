@@ -21,12 +21,19 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Event
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,12 +49,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -94,10 +104,11 @@ data class Proyecto(
     val descripcion: String?,
     val tecnologias: List<TecnologiaDto>,
     val fechaEntrega: String?,
-    val integrantes: List<IntegranteResponseDto> = emptyList()
+    val integrantes: List<IntegranteResponseDto> = emptyList(),
+    val participacion: ParticipacionProyecto = ParticipacionProyecto.SIN_VERIFICAR
 )
 
-private fun mapToProyecto(dto: ProyectoResponseDto, equipo: List<IntegranteResponseDto>): Proyecto {
+internal fun mapToProyecto(dto: ProyectoResponseDto, equipo: List<IntegranteResponseDto>, emailUsuario: String?): Proyecto {
     val codigo = "TEC-${dto.id}"
     val tecnologias = dto.tecnologias.orEmpty()
 
@@ -109,6 +120,7 @@ private fun mapToProyecto(dto: ProyectoResponseDto, equipo: List<IntegranteRespo
         descripcion = dto.descripcion?.takeIf { it.isNotBlank() },
         tecnologias = tecnologias,
         fechaEntrega = dto.fechaEntrega,
+        participacion = determinarParticipacion(emailUsuario, equipo),
         integrantes = equipo.filter { it.estado == "ACTIVO" }
             .sortedWith(compareBy({ it.rol != "CREADOR" }, { it.integranteId }))
     )
@@ -124,7 +136,9 @@ fun ProyectosScreen(
     onProyectoClick: (Proyecto) -> Unit = {},
     onInvitacionesClick: () -> Unit = {},
     proyectoEliminado: Long? = null,
-    onEliminacionConsumida: () -> Unit = {}
+    onEliminacionConsumida: () -> Unit = {},
+    notificacionesSinLeer: Int? = null,
+    onActualizarNotificaciones: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -137,7 +151,10 @@ fun ProyectosScreen(
     }
     DisposableEffect(lifecycle, viewModel) {
         val observer = LifecycleEventObserver { _, evento ->
-            if (evento == Lifecycle.Event.ON_RESUME) viewModel.cargarDatos()
+            if (evento == Lifecycle.Event.ON_RESUME) {
+                viewModel.cargarDatos()
+                onActualizarNotificaciones()
+            }
         }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
@@ -173,7 +190,7 @@ fun ProyectosScreen(
         is ProyectosUiState.Success -> {
             val pendientes = state.invitaciones.map { it.proyectoId }.toSet()
             val proyectos = state.proyectos.filterNot { it.id == proyectoEliminado || it.id in pendientes }
-                .map { mapToProyecto(it, state.equipos[it.id].orEmpty()) }
+                .map { mapToProyecto(it, state.equipos[it.id].orEmpty(), state.emailUsuario) }
             val hayInvitaciones = state.invitaciones.isNotEmpty()
             ProyectosContent(
                 nombre = state.nombre,
@@ -186,7 +203,8 @@ fun ProyectosScreen(
                 hayInvitaciones = hayInvitaciones,
                 actualizando = state.actualizando,
                 aviso = state.aviso,
-                onActualizar = { viewModel.cargarDatos() }
+                onActualizar = { viewModel.cargarDatos(); onActualizarNotificaciones() },
+                notificacionesSinLeer = notificacionesSinLeer
             )
         }
     }
@@ -204,16 +222,23 @@ fun ProyectosContent(
     hayInvitaciones: Boolean = false,
     actualizando: Boolean = false,
     aviso: String? = null,
-    onActualizar: () -> Unit = {}
+    onActualizar: () -> Unit = {},
+    notificacionesSinLeer: Int? = null
 ) {
     var filtro by rememberSaveable { mutableStateOf(Filtro.TODOS) }
+    var busqueda by rememberSaveable { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
 
-    val visibles = proyectos.filter { filtro.coincide(it.estado) }
-    val conteos = Filtro.entries.associateWith { f -> proyectos.count { f.coincide(it.estado) } }
+    val visibles = filtrarProyectos(proyectos, filtro, busqueda)
+    val conteos = Filtro.entries.associateWith { f -> filtrarProyectos(proyectos, f, busqueda).size }
+    val rolesSinVerificar = proyectos.any { it.participacion == ParticipacionProyecto.SIN_VERIFICAR }
 
     Scaffold(
         containerColor = Surface,
-        topBar = { ColabTopBar(onNotificacionesClick, onPerfilClick, colorIconoNotificaciones = OnSurfaceVariant) },
+        topBar = {
+            ColabTopBar(onNotificacionesClick, onPerfilClick, colorIconoNotificaciones = OnSurfaceVariant,
+                notificacionesSinLeer = notificacionesSinLeer)
+        },
         bottomBar = {
             ColabBottomBar(SeccionPrincipal.PROYECTOS, onProyectos = {},
                 onInvitaciones = onInvitacionesClick, onPerfil = onPerfilClick,
@@ -222,14 +247,44 @@ fun ProyectosContent(
     ) { padding ->
         ColabActualizar(actualizando = actualizando, habilitado = !actualizando, onActualizar = onActualizar, modifier = Modifier.padding(padding)) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().testTag("proyectos-lista"),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (aviso != null) item { Text(aviso, color = OnErrorContainer, fontSize = 13.sp) }
             item { Saludo(nombre, proyectos.size, onCrearClick) }
             item {
+                OutlinedTextField(
+                    value = busqueda,
+                    onValueChange = { busqueda = it },
+                    modifier = Modifier.fillMaxWidth().testTag("buscar-proyectos"),
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    label = { Text("Buscar proyectos") },
+                    placeholder = { Text("Nombre, código o tecnología", fontSize = 13.sp) },
+                    leadingIcon = { Icon(Icons.Outlined.Search, null, tint = OnSurfaceVariant) },
+                    trailingIcon = {
+                        if (busqueda.isNotEmpty()) IconButton(onClick = { busqueda = "" }) {
+                            Icon(Icons.Outlined.Close, contentDescription = "Limpiar búsqueda")
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = SurfaceLowest,
+                        focusedContainerColor = SurfaceLowest
+                    )
+                )
+            }
+            item {
                 FiltrosRow(filtro, conteos) { filtro = it }
+            }
+            if (rolesSinVerificar) item {
+                Text(
+                    if (actualizando) "Verificando tu participación en los proyectos…"
+                    else "Hay proyectos cuyo rol no se pudo verificar. Desliza para reintentar.",
+                    color = OnSurfaceVariant, fontSize = 13.sp
+                )
             }
             if (visibles.isEmpty()) {
                 item {
@@ -239,7 +294,13 @@ fun ProyectosContent(
                             .padding(vertical = 32.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(if (filtro == Filtro.TODOS) "No hay proyectos disponibles" else "No hay proyectos con este estado", color = OnSurfaceVariant, fontSize = 14.sp)
+                        val mensaje = when {
+                            busqueda.isNotBlank() && filtro != Filtro.TODOS -> "No hay proyectos que coincidan con la búsqueda y este estado"
+                            busqueda.isNotBlank() -> "No se encontraron proyectos con esta búsqueda"
+                            filtro != Filtro.TODOS -> "No hay proyectos con este estado"
+                            else -> "No hay proyectos disponibles"
+                        }
+                        Text(mensaje, color = OnSurfaceVariant, fontSize = 14.sp)
                     }
                 }
             } else {
@@ -297,12 +358,13 @@ private fun Saludo(nombre: String, total: Int, onCrear: () -> Unit) {
 
 @Composable
 private fun FiltrosRow(seleccionado: Filtro, conteos: Map<Filtro, Int>, onSelect: (Filtro) -> Unit) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyRow(modifier = Modifier.testTag("filtros-estado"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(Filtro.entries) { f ->
             val activo = f == seleccionado
             Row(
                 modifier = Modifier
                     .clip(CircleShape)
+                    .testTag("estado-${f.name}")
                     .background(if (activo) Primary else SurfaceContainer)
                     .clickable { onSelect(f) }
                     .padding(horizontal = 14.dp, vertical = 6.dp),
@@ -336,6 +398,7 @@ private fun ProyectoCard(p: Proyecto, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag("proyecto-${p.id}")
             .shadow(2.dp, RoundedCornerShape(12.dp))
             .clip(RoundedCornerShape(12.dp))
             .background(SurfaceLowest)
@@ -344,18 +407,41 @@ private fun ProyectoCard(p: Proyecto, onClick: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        p.codigo, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                        fontFamily = FontFamily.Monospace, color = OnSurfaceVariant
-                    )
-                    EstadoProyectoBadge(p.estado)
-                }
+            Text(
+                p.codigo, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                fontFamily = FontFamily.Monospace, color = OnSurfaceVariant
+            )
+            FlowRow(
+                modifier = Modifier.fillMaxWidth().testTag("etiquetas-proyecto-${p.id}"),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Box(Modifier.testTag("estado-proyecto-${p.id}")) { EstadoProyectoBadge(p.estado) }
                 Text(
-                    p.titulo, fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold,
-                    color = OnSurface, maxLines = 2, overflow = TextOverflow.Ellipsis
+                    p.participacion.etiqueta,
+                    modifier = Modifier
+                        .testTag("rol-proyecto-${p.id}")
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(when (p.participacion) {
+                            ParticipacionProyecto.CREADOR -> Color(0xFFE2DFFF)
+                            ParticipacionProyecto.PARTICIPANTE -> Color(0xFFD8F3E5)
+                            ParticipacionProyecto.SIN_VERIFICAR -> SurfaceContainer
+                        })
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    color = when (p.participacion) {
+                        ParticipacionProyecto.CREADOR -> Primary
+                        ParticipacionProyecto.PARTICIPANTE -> Color(0xFF195C3D)
+                        ParticipacionProyecto.SIN_VERIFICAR -> OnSurfaceVariant
+                    },
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
                 )
-                p.descripcion?.let { Text(it, color = OnSurfaceVariant, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+            }
+            Text(
+                p.titulo, fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold,
+                color = OnSurface, maxLines = 2, overflow = TextOverflow.Ellipsis
+            )
+            p.descripcion?.let { Text(it, color = OnSurfaceVariant, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }
         }
 
         FlowRow(

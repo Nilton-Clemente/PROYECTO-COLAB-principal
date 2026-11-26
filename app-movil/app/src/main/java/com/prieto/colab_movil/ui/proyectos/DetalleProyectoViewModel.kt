@@ -46,7 +46,7 @@ class DetalleProyectoViewModel(
         operacion = viewModelScope.launch {
             val resultado = repository.invitarIntegrante(proyectoId, correo)
             val aviso = if (resultado.isSuccess) {
-                "Invitación enviada a $correo. Aparecerá en Invitaciones de esa cuenta."
+                null
             } else {
                 when ((resultado.exceptionOrNull() as? HttpException)?.code()) {
                     400 -> "El servidor rechazó el correo. Revisa los datos del invitado."
@@ -62,10 +62,10 @@ class DetalleProyectoViewModel(
         }
     }
 
-    fun cambiarCiclo(proyectoId: Long, accion: AccionProyecto, confirmacion: String = "") {
+    fun cambiarCiclo(proyectoId: Long, accion: AccionProyecto) {
         val anterior = _uiState.value as? DetalleProyectoUiState.Success ?: return
         if (anterior.proyecto.id != proyectoId || !anterior.puedeModificar || accion !in anterior.acciones || operacion?.isActive == true) return
-        if (accion == AccionProyecto.EDITAR || (accion == AccionProyecto.ELIMINAR && !confirmaNombreProyecto(anterior.proyecto.nombre, confirmacion))) return
+        if (accion == AccionProyecto.EDITAR) return
         _uiState.value = anterior.copy(accionEnCurso = accion, aviso = null)
         operacion = viewModelScope.launch {
             val resultado = when (accion) {

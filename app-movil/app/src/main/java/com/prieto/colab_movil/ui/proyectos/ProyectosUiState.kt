@@ -12,7 +12,8 @@ sealed interface ProyectosUiState {
         val invitaciones: List<InvitacionResponseDto>,
         val actualizando: Boolean = false,
         val aviso: String? = null,
-        val equipos: Map<Long, List<IntegranteResponseDto>> = emptyMap()
+        val equipos: Map<Long, List<IntegranteResponseDto>> = emptyMap(),
+        val emailUsuario: String? = null
     ) : ProyectosUiState
     data class Error(val message: String) : ProyectosUiState
 }

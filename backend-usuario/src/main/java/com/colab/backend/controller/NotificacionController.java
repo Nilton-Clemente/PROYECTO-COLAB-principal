@@ -4,6 +4,7 @@ import com.colab.backend.dto.NotificacionResponse;
 import com.colab.backend.service.NotificacionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -38,5 +39,11 @@ public class NotificacionController {
     @PutMapping("/{id}/leida")
     public ResponseEntity<NotificacionResponse> marcarLeida(@PathVariable Long id) {
         return ResponseEntity.ok(notificacionService.marcarLeida(id));
+    }
+
+    @DeleteMapping("/leidas")
+    public ResponseEntity<Void> eliminarLeidas() {
+        notificacionService.eliminarLeidas();
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1,15 +1,12 @@
 package com.prieto.colab_movil.ui.proyectos
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -52,30 +49,21 @@ internal fun MenuProyecto(acciones: List<AccionProyecto>, habilitado: Boolean, o
 
 @Composable
 internal fun ConfirmarCicloProyecto(
-    id: Long, nombre: String, accion: AccionProyecto, onCerrar: () -> Unit, onConfirmar: (String) -> Unit
+    nombre: String, accion: AccionProyecto, onCerrar: () -> Unit, onConfirmar: () -> Unit
 ) {
     val eliminar = accion == AccionProyecto.ELIMINAR
-    var confirmacion by rememberSaveable(id, accion) { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onCerrar,
         title = { Text(accion.titulo) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(if (eliminar) "Se eliminará definitivamente «$nombre», junto con sus tareas y avances."
-                else "Se detendrá «$nombre». El equipo podrá consultar la planificación, las tareas y el historial en modo de solo lectura.")
-                if (eliminar) OutlinedTextField(
-                    value = confirmacion,
-                    onValueChange = { confirmacion = it },
-                    singleLine = true,
-                    label = { Text("Escribe el nombre del proyecto") }
-                )
-            }
+            Text(if (eliminar) "¿Quieres eliminar definitivamente «$nombre»? Se eliminarán también sus tareas y avances. Esta acción no se puede deshacer."
+            else "Se detendrá «$nombre». El equipo podrá consultar la planificación, las tareas y el historial en modo de solo lectura.")
         },
         confirmButton = {
-            TextButton(onClick = { onConfirmar(confirmacion) }, enabled = !eliminar || confirmaNombreProyecto(nombre, confirmacion)) {
-                Text(if (eliminar) "Eliminar definitivamente" else "Confirmar cancelación")
+            TextButton(onClick = onConfirmar) {
+                Text(if (eliminar) "Eliminar" else "Confirmar cancelación", color = MaterialTheme.colorScheme.error)
             }
         },
-        dismissButton = { TextButton(onClick = onCerrar) { Text("Volver") } }
+        dismissButton = { TextButton(onClick = onCerrar) { Text(if (eliminar) "Cancelar" else "Volver") } }
     )
 }

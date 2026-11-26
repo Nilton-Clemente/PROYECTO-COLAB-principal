@@ -159,9 +159,9 @@ fun DetalleProyectoScreen(
         }
     }
     confirmando?.takeIf { detalle?.puedeModificar == true && it in detalle.acciones }?.let { accion ->
-        ConfirmarCicloProyecto(proyectoId, detalle!!.proyecto.nombre, accion, onCerrar = { confirmando = null }) { texto ->
+        ConfirmarCicloProyecto(detalle!!.proyecto.nombre, accion, onCerrar = { confirmando = null }) {
             confirmando = null
-            viewModel.cambiarCiclo(proyectoId, accion, texto)
+            viewModel.cambiarCiclo(proyectoId, accion)
         }
     }
 }

@@ -10,6 +10,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -21,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,13 +34,23 @@ import androidx.compose.ui.unit.sp
 fun ColabTopBar(
     onNotificaciones: () -> Unit,
     onPerfil: () -> Unit,
-    colorIconoNotificaciones: Color = Color(0xFF64647A)
+    colorIconoNotificaciones: Color = Color(0xFF64647A),
+    notificacionesSinLeer: Int? = null
 ) {
     TopAppBar(
         title = { Text("Colab", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = Color(0xFF131B2E)) },
         actions = {
-            IconButton(onClick = onNotificaciones) {
-                Icon(Icons.Outlined.Notifications, contentDescription = "Notificaciones", tint = colorIconoNotificaciones)
+            IconButton(onClick = onNotificaciones, modifier = Modifier.semantics {
+                stateDescription = notificacionesSinLeer?.let { "$it notificaciones sin leer" }
+                    ?: "Notificaciones sin consultar"
+            }) {
+                BadgedBox(badge = {
+                    if (notificacionesSinLeer != null && notificacionesSinLeer > 0) Badge {
+                        Text(if (notificacionesSinLeer > 99) "99+" else notificacionesSinLeer.toString())
+                    }
+                }) {
+                    Icon(Icons.Outlined.Notifications, contentDescription = "Notificaciones", tint = colorIconoNotificaciones)
+                }
             }
             Box(
                 modifier = Modifier.padding(end = 16.dp).size(34.dp).clip(CircleShape)

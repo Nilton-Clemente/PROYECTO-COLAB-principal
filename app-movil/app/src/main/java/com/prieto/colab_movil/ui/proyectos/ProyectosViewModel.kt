@@ -50,6 +50,7 @@ class ProyectosViewModel(
                 val previos = anterior?.equipos.orEmpty().filterKeys { it in ids }
                 val listado = ProyectosUiState.Success(
                     nombre = perfilRes.getOrNull()?.nombre ?: anterior!!.nombre,
+                    emailUsuario = perfilRes.getOrNull()?.email ?: anterior?.emailUsuario,
                     proyectos = proyectos,
                     invitaciones = invitaciones,
                     actualizando = ids.isNotEmpty(),

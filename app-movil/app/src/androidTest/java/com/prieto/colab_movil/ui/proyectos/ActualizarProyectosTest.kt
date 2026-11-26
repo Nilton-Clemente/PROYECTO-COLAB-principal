@@ -73,6 +73,49 @@ class ActualizarProyectosTest {
     }
 
     @Test
+    fun listadoConservaIdentidadYEtiquetaSiFallaActualizarPerfilYEquipo() {
+        val repo = Repositorio()
+        val vm = ProyectosViewModel(repo)
+        compose.setContent { ProyectosScreen(viewModel = vm) }
+        compose.waitUntil(5_000) { (vm.uiState.value as? ProyectosUiState.Success)?.actualizando == false }
+        compose.onNodeWithText("Creado por mí").assertExists()
+        compose.runOnIdle { repo.fallarPerfil = true; repo.fallarEquipo = true; vm.cargarDatos() }
+        compose.waitUntil(5_000) { (vm.uiState.value as? ProyectosUiState.Success)?.let { !it.actualizando && it.aviso != null } == true }
+        compose.runOnIdle { assertEquals("a@tecsup.edu.pe", (vm.uiState.value as ProyectosUiState.Success).emailUsuario) }
+        compose.onNodeWithText("Creado por mí").assertExists()
+        compose.onNodeWithText("Participante").assertDoesNotExist()
+    }
+
+    @Test
+    fun listadoVerificaParticipacionDelUsuarioAutenticado() {
+        val repo = Repositorio().apply {
+            equipo = listOf(
+                IntegranteResponseDto(1, "otra@tecsup.edu.pe", "Otra persona", "CREADOR", "ACTIVO"),
+                IntegranteResponseDto(2, "a@tecsup.edu.pe", "Alex", "INTEGRANTE", "ACTIVO")
+            )
+        }
+        val vm = ProyectosViewModel(repo)
+        compose.setContent { ProyectosScreen(viewModel = vm) }
+        compose.waitUntil(5_000) { (vm.uiState.value as? ProyectosUiState.Success)?.actualizando == false }
+        compose.onNodeWithText("Participante").assertExists()
+        compose.onNodeWithText("Creado por mí").assertDoesNotExist()
+    }
+
+    @Test
+    fun primerFalloDeEquipoNoInventaRolYReintentarLoRecupera() {
+        val repo = Repositorio().apply { fallarEquipo = true }
+        val vm = ProyectosViewModel(repo)
+        compose.setContent { ProyectosScreen(viewModel = vm) }
+        compose.waitUntil(5_000) { (vm.uiState.value as? ProyectosUiState.Success)?.let { !it.actualizando && it.aviso != null } == true }
+        compose.onNodeWithText("Rol por verificar").assertExists()
+        compose.onNodeWithText("Participante").assertDoesNotExist()
+        compose.runOnIdle { repo.fallarEquipo = false; vm.cargarDatos() }
+        compose.waitUntil(5_000) { (vm.uiState.value as? ProyectosUiState.Success)?.let { !it.actualizando && it.aviso == null } == true }
+        compose.onNodeWithText("Creado por mí").assertExists()
+        compose.onNodeWithText("Rol por verificar").assertDoesNotExist()
+    }
+
+    @Test
     fun detalleConservaEquipoYPlanificacionSiFallaLaConsulta() {
         val repo = Repositorio()
         val plan = PlanRepository()
@@ -99,7 +142,7 @@ class ActualizarProyectosTest {
     }
 
     @Test
-    fun cancelarMantieneElDetalleYEliminarRequiereElNombre() {
+    fun cancelarMantieneElDetalleYEliminarSoloRequiereConfirmacion() {
         val repo = Repositorio()
         val vm = DetalleProyectoViewModel(repo, PlanRepository())
         var eliminado = 0L
@@ -112,10 +155,79 @@ class ActualizarProyectosTest {
         compose.onNodeWithText("Mis tareas e historial").assertExists()
         compose.onNodeWithContentDescription("Más acciones del proyecto").performClick()
         compose.onNodeWithText("Eliminar proyecto").performClick()
-        compose.onNodeWithText("Eliminar definitivamente").assertIsNotEnabled()
-        compose.onNodeWithText("Escribe el nombre del proyecto").performTextInput("Proyecto")
-        compose.onNodeWithText("Eliminar definitivamente").assertIsEnabled().performClick()
-        compose.runOnIdle { assertEquals(7L, eliminado) }
+        compose.onNodeWithText("¿Quieres eliminar definitivamente «Proyecto»? Se eliminarán también sus tareas y avances. Esta acción no se puede deshacer.").assertIsDisplayed()
+        compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
+        compose.onNodeWithText("Eliminar", substring = false).assertIsEnabled()
+        compose.runOnIdle { assertEquals(0, repo.eliminaciones) }
+        compose.onNodeWithText("Cancelar", substring = false).performClick()
+        compose.runOnIdle { assertEquals(0, repo.eliminaciones); assertEquals(0L, eliminado) }
+        compose.onNodeWithContentDescription("Más acciones del proyecto").performClick()
+        compose.onNodeWithText("Eliminar proyecto").performClick()
+        compose.onNodeWithText("Eliminar", substring = false).performClick()
+        compose.runOnIdle { assertEquals(7L, eliminado); assertEquals(1, repo.eliminaciones) }
+    }
+
+    @Test
+    fun eliminarEsperaConfirmacionDelServidorYNoDuplicaLaPeticion() {
+        val repo = Repositorio().apply { proyecto = proyecto.copy(estado = "CANCELADO", puedeCancelar = false, puedeEliminar = true) }
+        val vm = DetalleProyectoViewModel(repo, PlanRepository())
+        val espera = CompletableDeferred<Result<Unit>>()
+        var eliminado = 0L
+        compose.setContent { DetalleProyectoScreen(proyectoId = 7, viewModel = vm, onEliminado = { eliminado = it }) }
+        compose.waitUntil(5_000) { vm.uiState.value is DetalleProyectoUiState.Success }
+        compose.runOnIdle { repo.eliminacion = espera }
+        compose.onNodeWithContentDescription("Más acciones del proyecto").performClick()
+        compose.onNodeWithText("Eliminar proyecto").performClick()
+        compose.onNodeWithText("Eliminar", substring = false).performClick()
+        compose.onNodeWithText("Eliminar", substring = false).assertDoesNotExist()
+        compose.runOnIdle {
+            vm.cambiarCiclo(7, AccionProyecto.ELIMINAR)
+            vm.cargarDetalle(7)
+            assertEquals(1, repo.eliminaciones)
+            assertEquals(0L, eliminado)
+            assertEquals(AccionProyecto.ELIMINAR, (vm.uiState.value as DetalleProyectoUiState.Success).accionEnCurso)
+            espera.complete(Result.success(Unit))
+        }
+        compose.runOnIdle { assertEquals(7L, eliminado); assertEquals(1, repo.eliminaciones) }
+    }
+
+    @Test
+    fun eliminarSinPermisoDelServidorNiSiElIdNoCoincideNoEnviaPeticion() {
+        val repo = Repositorio()
+        val vm = DetalleProyectoViewModel(repo, PlanRepository())
+        compose.setContent { DetalleProyectoScreen(proyectoId = 7, viewModel = vm) }
+        compose.waitUntil(5_000) { vm.uiState.value is DetalleProyectoUiState.Success }
+        compose.onNodeWithContentDescription("Más acciones del proyecto").performClick()
+        compose.onNodeWithText("Eliminar proyecto").assertDoesNotExist()
+        compose.runOnIdle {
+            vm.cambiarCiclo(7, AccionProyecto.ELIMINAR)
+            assertEquals(0, repo.eliminaciones)
+            repo.proyecto = repo.proyecto.copy(puedeEliminar = true)
+            vm.cargarDetalle(7)
+        }
+        compose.waitUntil(5_000) { (vm.uiState.value as? DetalleProyectoUiState.Success)?.proyecto?.puedeEliminar == true }
+        compose.runOnIdle { vm.cambiarCiclo(99, AccionProyecto.ELIMINAR); assertEquals(0, repo.eliminaciones) }
+    }
+
+    @Test
+    fun falloAlEliminarConservaDetalleSinSimularEliminacion() {
+        val repo = Repositorio().apply {
+            proyecto = proyecto.copy(estado = "CANCELADO", puedeCancelar = false, puedeEliminar = true)
+            eliminacion = CompletableDeferred(Result.failure(HttpException(Response.error<Unit>(403, "".toResponseBody()))))
+        }
+        val vm = DetalleProyectoViewModel(repo, PlanRepository())
+        var eliminado = 0L
+        compose.setContent { DetalleProyectoScreen(proyectoId = 7, viewModel = vm, onEliminado = { eliminado = it }) }
+        compose.waitUntil(5_000) { vm.uiState.value is DetalleProyectoUiState.Success }
+        compose.onNodeWithContentDescription("Más acciones del proyecto").performClick()
+        compose.onNodeWithText("Eliminar proyecto").performClick()
+        compose.onNodeWithText("Eliminar", substring = false).performClick()
+        compose.onNodeWithText("Ya no tienes permiso para realizar esta acción.").assertIsDisplayed()
+        compose.runOnIdle {
+            assertEquals(0L, eliminado)
+            assertEquals(1, repo.eliminaciones)
+            assertTrue(vm.uiState.value is DetalleProyectoUiState.Success)
+        }
     }
 
     @Test
@@ -166,7 +278,7 @@ class ActualizarProyectosTest {
     }
 
     @Test
-    fun invitarDesdeEquipoEnviaElCorreoYActualizaElPendiente() {
+    fun invitarDesdeEquipoActualizaElPendienteSinMostrarAvisoSuperior() {
         val repo = Repositorio().apply { proyecto = proyecto.copy(estado = "SIN_PLANIFICACION") }
         val vm = DetalleProyectoViewModel(repo, PlanRepository().apply { sinPlan = true })
         compose.setContent { DetalleProyectoScreen(proyectoId = 7, viewModel = vm) }
@@ -180,9 +292,11 @@ class ActualizarProyectosTest {
             assertEquals(listOf(7L to "b@tecsup.edu.pe"), repo.envios)
             val estado = vm.uiState.value as DetalleProyectoUiState.Success
             assertEquals("PENDIENTE", estado.equipo.last().estado)
-            assertTrue(estado.aviso!!.contains("Invitación enviada"))
+            assertNull(estado.aviso)
             assertFalse(estado.enviandoInvitacion)
         }
+        compose.onNodeWithText("Invitación enviada", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Pendiente").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -202,7 +316,12 @@ class ActualizarProyectosTest {
             assertTrue((vm.uiState.value as DetalleProyectoUiState.Success).enviandoInvitacion)
             espera.complete(Result.success(Unit))
         }
-        compose.waitUntil(5_000) { (vm.uiState.value as? DetalleProyectoUiState.Success)?.aviso != null }
+        compose.waitUntil(5_000) {
+            (vm.uiState.value as? DetalleProyectoUiState.Success)?.let {
+                !it.enviandoInvitacion && !it.actualizando && it.equipo.size == 2
+            } == true
+        }
+        compose.runOnIdle { assertNull((vm.uiState.value as DetalleProyectoUiState.Success).aviso) }
     }
 
     @Test
@@ -212,7 +331,7 @@ class ActualizarProyectosTest {
             envio = CompletableDeferred(Result.failure(HttpException(Response.error<Unit>(404, "".toResponseBody()))))
         }
         val vm = DetalleProyectoViewModel(repo, PlanRepository().apply { sinPlan = true })
-        compose.runOnIdle { vm.cargarDetalle(7) }
+        compose.setContent { DetalleProyectoScreen(proyectoId = 7, viewModel = vm) }
         compose.waitUntil(5_000) { vm.uiState.value is DetalleProyectoUiState.Success }
         compose.runOnIdle { vm.invitarIntegrante(7, "b@tecsup.edu.pe") }
         compose.waitUntil(5_000) { (vm.uiState.value as? DetalleProyectoUiState.Success)?.aviso != null }
@@ -220,15 +339,19 @@ class ActualizarProyectosTest {
         assertTrue(estado.aviso!!.contains("no está registrado"))
         assertEquals(1, estado.equipo.size)
         assertTrue(estado.puedeModificar)
+        compose.onNodeWithText("El usuario invitado no está registrado o el proyecto ya no existe.").assertIsDisplayed()
     }
 
     private class Repositorio : ProyectoRepository {
         var proyecto = Gson().fromJson("""{"id":7,"nombre":"Proyecto","estado":"EN_DESARROLLO","puedeCancelar":true}""", ProyectoResponseDto::class.java)
         var conflicto = false
         var cancelaciones = 0
+        var eliminaciones = 0
+        var eliminacion: CompletableDeferred<Result<Unit>>? = null
         var fallarProyectos = false
         var fallarInvitaciones = false
         var fallarEquipo = false
+        var fallarPerfil = false
         var equipo = listOf(IntegranteResponseDto(1, "a@tecsup.edu.pe", "Alex", "CREADOR", "ACTIVO"))
         var aceptaciones = 0
         var aceptacion: CompletableDeferred<Result<Unit>>? = null
@@ -240,7 +363,9 @@ class ActualizarProyectosTest {
             if (resultado.isSuccess) equipo = equipo + IntegranteResponseDto(2, email, "Beatriz", "INTEGRANTE", "PENDIENTE")
             return resultado
         }
-        override suspend fun obtenerPerfil() = Result.success(PerfilResponseDto("a@tecsup.edu.pe", "Alex", emptyList()))
+        override suspend fun obtenerPerfil(): Result<PerfilResponseDto> =
+            if (fallarPerfil) Result.failure(Exception("Error"))
+            else Result.success(PerfilResponseDto("a@tecsup.edu.pe", "Alex", emptyList()))
         override suspend fun listarProyectos(): Result<List<ProyectoResponseDto>> =
             if (fallarProyectos) Result.failure(Exception("Error")) else Result.success(listOf(Gson().fromJson("""{"id":7,"nombre":"Proyecto"}""", ProyectoResponseDto::class.java)))
         override suspend fun listarInvitaciones(): Result<List<InvitacionResponseDto>> = if (fallarInvitaciones) Result.failure(Exception("Error")) else Result.success(emptyList())
@@ -258,7 +383,10 @@ class ActualizarProyectosTest {
             proyecto = proyecto.copy(estado = if (conflicto) "FINALIZADO" else "CANCELADO", puedeCancelar = false, puedeEliminar = true)
             return if (conflicto) Result.failure(HttpException(Response.error<ProyectoResponseDto>(409, "".toResponseBody()))) else Result.success(proyecto)
         }
-        override suspend fun eliminarProyecto(id: Long): Result<Unit> = Result.success(Unit)
+        override suspend fun eliminarProyecto(id: Long): Result<Unit> {
+            eliminaciones++
+            return eliminacion?.await() ?: Result.success(Unit)
+        }
     }
 
     private class PlanRepository : PlanificacionRepository {

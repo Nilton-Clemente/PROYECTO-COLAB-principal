@@ -9,9 +9,6 @@ enum class AccionProyecto(val titulo: String) {
     EDITAR("Editar proyecto"), CANCELAR("Cancelar proyecto"), ELIMINAR("Eliminar proyecto")
 }
 
-internal fun confirmaNombreProyecto(nombre: String, confirmacion: String) =
-    nombre.isNotBlank() && nombre.trim() == confirmacion.trim()
-
 sealed interface DetalleProyectoUiState {
     object Loading : DetalleProyectoUiState
     data class Eliminado(val proyectoId: Long) : DetalleProyectoUiState

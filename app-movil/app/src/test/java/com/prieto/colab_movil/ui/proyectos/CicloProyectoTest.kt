@@ -29,10 +29,12 @@ class CicloProyectoTest {
         assertTrue(DetalleProyectoUiState.Success(activo.copy(puedeCancelar = false), emptyList(), true).acciones.isEmpty())
     }
 
-    @Test fun exigeNombreExactoParaEliminar() {
-        assertTrue(confirmaNombreProyecto("Proyecto", " Proyecto "))
-        assertFalse(confirmaNombreProyecto("Proyecto", "proyecto"))
-        assertFalse(confirmaNombreProyecto("Proyecto", ""))
-        assertFalse(confirmaNombreProyecto("", ""))
+    @Test fun bloqueaCambiosDuranteOperacionesOSiLosDatosEstanDesactualizados() {
+        val estado = DetalleProyectoUiState.Success(dto.copy(puedeEliminar = true), emptyList(), false)
+        assertTrue(estado.puedeModificar)
+        assertFalse(estado.copy(actualizando = true).puedeModificar)
+        assertFalse(estado.copy(datosDesactualizados = true).puedeModificar)
+        assertFalse(estado.copy(accionEnCurso = AccionProyecto.ELIMINAR).puedeModificar)
+        assertFalse(estado.copy(enviandoInvitacion = true).puedeModificar)
     }
 }

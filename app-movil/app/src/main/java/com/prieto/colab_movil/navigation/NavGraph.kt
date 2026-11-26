@@ -26,11 +26,15 @@ import com.prieto.colab_movil.ui.register.RegisterScreen
 import com.prieto.colab_movil.ui.tareas.MisTareasScreen
 import com.prieto.colab_movil.ui.tareas.RegistrarAvanceScreen
 import com.prieto.colab_movil.ui.metricas.MetricasProyectoScreen
+import com.prieto.colab_movil.ui.notificaciones.NotificacionesScreen
+import com.prieto.colab_movil.ui.notificaciones.NotificacionesViewModel
+import com.prieto.colab_movil.ui.notificaciones.NotificacionesUiState
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
     object Proyectos : Screen("proyectos")
+    object Notificaciones : Screen("notificaciones")
     object Perfil : Screen("perfil")
     object CatalogoHabilidades : Screen("catalogo_habilidades")
     object DetalleProyecto : Screen("proyecto_detalle/{proyectoId}") {
@@ -107,7 +111,11 @@ fun AppNavigation(
 
         composable(Screen.Proyectos.route) { entrada ->
             val eliminado by entrada.savedStateHandle.getStateFlow<Long?>("proyecto_eliminado", null).collectAsState()
+            val notificacionesViewModel: NotificacionesViewModel = androidx.lifecycle.viewmodel.compose.viewModel(entrada)
+            val notificaciones by notificacionesViewModel.uiState.collectAsState()
             ProyectosScreen(
+                notificacionesSinLeer = (notificaciones as? NotificacionesUiState.Success)?.noLeidas,
+                onActualizarNotificaciones = notificacionesViewModel::cargar,
                 proyectoEliminado = eliminado,
                 onEliminacionConsumida = { entrada.savedStateHandle["proyecto_eliminado"] = null as Long? },
                 onProyectoClick = { proyecto ->
@@ -123,9 +131,18 @@ fun AppNavigation(
                     navController.navigate(Screen.CrearProyecto.route)
                 },
                 onNotificacionesClick = {
-                    Toast.makeText(context, "Notificaciones", Toast.LENGTH_SHORT).show()
+                    navController.navigate(Screen.Notificaciones.route) { launchSingleTop = true }
                 }
             )
+        }
+
+        composable(Screen.Notificaciones.route) { entrada ->
+            // Compartir la bandeja con el listado: al marcar leída se actualiza también la campana.
+            val propietario = androidx.compose.runtime.remember(entrada) {
+                runCatching { navController.getBackStackEntry(Screen.Proyectos.route) }.getOrDefault(entrada)
+            }
+            val notificacionesViewModel: NotificacionesViewModel = androidx.lifecycle.viewmodel.compose.viewModel(propietario)
+            NotificacionesScreen(onBack = { navController.popBackStack() }, viewModel = notificacionesViewModel)
         }
 
         composable(Screen.CrearProyecto.route) {
@@ -267,7 +284,7 @@ fun AppNavigation(
                 onPerfilClick = {},
                 onCatalogo = { navController.navigate(Screen.CatalogoHabilidades.route) },
                 onNotificacionesClick = {
-                    Toast.makeText(context, "Notificaciones", Toast.LENGTH_SHORT).show()
+                    navController.navigate(Screen.Notificaciones.route) { launchSingleTop = true }
                 },
                 onCerrarSesion = {
                     SessionManager.token = null
@@ -298,7 +315,7 @@ fun AppNavigation(
                     navController.navigate(Screen.Perfil.route) { launchSingleTop = true }
                 },
                 onNotificacionesClick = {
-                    Toast.makeText(context, "Notificaciones", Toast.LENGTH_SHORT).show()
+                    navController.navigate(Screen.Notificaciones.route) { launchSingleTop = true }
                 }
             )
         }
