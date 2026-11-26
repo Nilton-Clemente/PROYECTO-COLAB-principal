@@ -39,10 +39,15 @@ class MisTareasScreenTest {
         mostrar()
         compose.onNodeWithText("Proyecto de prueba").assertIsDisplayed()
         compose.onNodeWithText("Hola, Alexis").assertIsDisplayed()
+        compose.onNodeWithTag("mis-tareas-lista").performScrollToNode(hasText("API de matrícula"))
         compose.onNodeWithText("API de matrícula").assertIsDisplayed()
+        compose.onNodeWithTag("mis-tareas-lista").performScrollToNode(hasText("Confirmadas (0)"))
         compose.onNodeWithText("Confirmadas (0)").performClick()
+        compose.onNodeWithTag("mis-tareas-lista").performScrollToNode(hasText("No hay tareas en esta categoría."))
         compose.onNodeWithText("No hay tareas en esta categoría.").assertIsDisplayed()
+        compose.onNodeWithTag("mis-tareas-lista").performScrollToNode(hasText("Por confirmar (1)"))
         compose.onNodeWithText("Por confirmar (1)").performClick()
+        compose.onNodeWithTag("mis-tareas-lista").performScrollToNode(hasText("API de matrícula"))
         compose.onNodeWithText("API de matrícula").assertIsDisplayed()
     }
 
@@ -66,6 +71,7 @@ class MisTareasScreenTest {
         compose.onAllNodesWithText("Confirmar todas").onLast().performClick()
         compose.onNodeWithText("Esperando confirmaciones del equipo").assertIsDisplayed()
         compose.onNodeWithText("Confirmar todas").assertIsNotEnabled()
+        compose.onNodeWithTag("mis-tareas-lista").performScrollToNode(hasText("ALTA"))
         compose.onNodeWithText("ALTA").assertExists()
         compose.runOnIdle {
             assertEquals(1, repository.confirmaciones)
@@ -156,6 +162,72 @@ class MisTareasScreenTest {
         compose.onNodeWithText("Confirmar todas").assertDoesNotExist()
         compose.onNodeWithText("Registrar avance").assertIsEnabled()
         compose.onNodeWithText("Por confirmar (1)").assertDoesNotExist()
+    }
+
+    @Test
+    fun buscaPorNombreYLimpiaResultadosSinModificarDatos() {
+        val repo = RepositorioPrueba()
+        mostrar(repo)
+        compose.onNodeWithTag("buscar-mis-tareas").performTextInput("sin coincidencias")
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.onNodeWithTag("mis-tareas-lista").performScrollToNode(hasText("No hay tareas que coincidan con tu búsqueda."))
+        compose.onNodeWithText("Mostrar todas las tareas").performClick()
+        compose.onNodeWithTag("mis-tareas-lista").performScrollToNode(hasText("API de matrícula"))
+        compose.onNodeWithText("API de matrícula").assertIsDisplayed()
+        compose.runOnIdle { assertEquals(0, repo.confirmaciones); assertEquals(1, repo.datos.tareas.size) }
+    }
+
+    @Test
+    fun filtraEstadosRealesDuranteLaEjecucion() {
+        val repo = RepositorioPrueba()
+        repo.datos = repo.datos.copy(
+            planificacion = repo.datos.planificacion!!.copy(estado = "ACTIVA"),
+            tareas = listOf(repo.datos.tareas.single().copy(estado = "COMPLETADA"))
+        )
+        mostrar(repo)
+        compose.onNodeWithTag("mis-tareas-lista").performScrollToNode(hasText("Pendientes (0)"))
+        compose.onNodeWithText("Pendientes (0)").performClick()
+        compose.onNodeWithTag("mis-tareas-lista").performScrollToNode(hasText("No hay tareas en esta categoría."))
+        compose.onNodeWithText("No hay tareas en esta categoría.").assertIsDisplayed()
+        compose.onNodeWithText("Mostrar todas las tareas").performClick()
+        compose.onNodeWithTag("mis-tareas-lista").performScrollToNode(hasText("Completada"))
+        compose.onNodeWithText("Completada").assertIsDisplayed()
+        compose.onNodeWithText("Por confirmar").assertDoesNotExist()
+    }
+
+    @Test
+    fun detallesMuestranDescripcionCompletaYDependencias() {
+        mostrar()
+        compose.onNodeWithTag("mis-tareas-lista").performScrollToNode(hasText("Ver detalles"))
+        compose.onNodeWithText("Ver detalles").performClick()
+        compose.onNodeWithText("TK-21 · API de matrícula").assertIsDisplayed()
+        compose.onNodeWithText("Responsable: alexis@ejemplo.com").assertIsDisplayed()
+        compose.onNodeWithText("Estado de ejecución: Pendiente").assertIsDisplayed()
+        compose.onNodeWithText("Cerrar").performClick()
+        compose.onNodeWithText("TK-21 · API de matrícula").assertDoesNotExist()
+    }
+
+    @Test
+    fun sinTareasNoOfreceConfirmacionesNiBuscador() {
+        val repo = RepositorioPrueba()
+        repo.datos = repo.datos.copy(tareas = emptyList())
+        mostrar(repo)
+        compose.onNodeWithText("Confirmar todas").assertDoesNotExist()
+        compose.onNodeWithTag("buscar-mis-tareas").assertDoesNotExist()
+        compose.onNodeWithTag("mis-tareas-lista").performScrollToNode(hasText("No tienes tareas asignadas en este proyecto."))
+        compose.onNodeWithText("No tienes tareas asignadas en este proyecto.").assertIsDisplayed()
+    }
+
+    @Test
+    fun proyectoCerradoSoloOfreceHistorialSinConfirmaciones() {
+        val repo = RepositorioPrueba()
+        repo.datos = repo.datos.copy(planificacion = repo.datos.planificacion!!.copy(estado = "FINALIZADA"))
+        mostrar(repo)
+        compose.onNodeWithText("Confirmar todas").assertDoesNotExist()
+        compose.onNodeWithText("Registrar avance").assertDoesNotExist()
+        compose.onNodeWithTag("mis-tareas-lista").performScrollToNode(hasText("Ver historial de avances"))
+        compose.onNodeWithText("Ver historial de avances").assertIsDisplayed()
+        compose.onNodeWithText("Por confirmar").assertDoesNotExist()
     }
 
     private class RepositorioPrueba : MisTareasRepository {
