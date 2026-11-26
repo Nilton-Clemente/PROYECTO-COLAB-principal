@@ -13,6 +13,7 @@ Cliente web de Colab para estudiantes. Consume `backend-usuario` (Spring Boot, p
 | `/proyectos/:id/equipo` | Equipo: invitar, eliminar del equipo, cancelar invitación | `GET /api/proyectos/{id}/integrantes`, `POST …/invitaciones`, `DELETE …/integrantes/{id}` |
 | `/proyectos/:id/planificacion` | Plan maestro generado por IA: etapas, tareas, dependencias, responsables, filtros | `GET/POST /api/proyectos/{id}/planificacion` |
 | `/invitaciones` | Invitaciones recibidas: aceptar / rechazar | `GET /api/invitaciones`, `POST …/{id}/aceptar`, `POST …/{id}/rechazar` |
+| `/notificaciones` | Bandeja, contador sin leer, lectura y eliminación de leídas | `GET /api/notificaciones`, `GET …/no-leidas`, `PUT …/{id}/leida`, `DELETE …/leidas` |
 | `/perfil` | Perfil y habilidades | `GET /api/usuario/perfil`, `GET /api/habilidades`, `PUT/DELETE /api/usuario/habilidades/{id}` |
 
 Cerrar sesión borra el token. Si el token vence, la app cierra sesión sola y lo avisa.
@@ -43,6 +44,23 @@ Los datos viven en PostgreSQL (esquema `usuario`); las tablas y los catálogos i
    npm run dev      # http://localhost:5173
    ```
 4. Crear una cuenta en `/registro` (crea dos para probar invitaciones) (correo `@tecsup.edu.pe`, mínimo 6 caracteres con letras y números) y luego iniciar sesión.
+
+## Notificaciones: comportamiento y despliegue
+
+- Invitaciones y notificaciones son secciones independientes. Entrar en la bandeja no marca los avisos como leídos.
+- Cada aviso nuevo conserva el identificador y el nombre del proyecto al generarse y muestra su código `TEC-id`. Los avisos históricos sin contexto muestran «Proyecto no identificado»; no se deduce una relación a partir del mensaje.
+- Las fechas `LocalDateTime` se muestran sin convertirlas a una zona horaria que el contrato no especifica.
+- El estado es compartido por la bandeja y la campana, aislado por sesión. Se consulta al entrar y al recuperar foco/visibilidad. No hay botón Actualizar, polling, WebSocket ni notificaciones push; con la web cerrada no se reciben avisos.
+- El contador no se sustituye por cero cuando falla la consulta. Los cambios se reflejan después de la confirmación del servidor. El borrado exige confirmación y solo afecta a las leídas de la cuenta autenticada; responde `204` sin JSON.
+- Si se pierde la respuesta de una operación, se vuelve a consultar sin repetirla automáticamente. Si también falla esa consulta, se avisa de los datos sin actualizar y se bloquean cambios hasta reintentar la carga.
+- Desplegar primero el backend con `V15__notificacion_proyecto.sql`: Flyway añade dos columnas nullable y no rellena el historial por inferencia. Reiniciar el proceso del backend después de compilar; cambiar de rama no actualiza un proceso Java que ya está ejecutándose. No alterar una migración ya aplicada ni la configuración local para activar esta funcionalidad.
+- Un `404/405` al eliminar indica que debe comprobarse la versión/ruta del backend; la web no borra localmente avisos sin confirmación.
+
+### Validación
+
+Desde el directorio de esta web: `node --test src/*.test.js` y `npm run build`.
+Desde el directorio del backend: `./mvnw test` con Java 21 o superior y PostgreSQL disponible.
+`NotificacionHttpTest` arranca en un puerto aleatorio, genera dos cuentas de prueba y limpia sus registros; verifica aislamiento y el `204`. No usa cuentas reales. El resto de las pruebas nuevas comprueba DTO, controlador y emisión de contexto en planificación/tareas.
 
 ## CORS
 

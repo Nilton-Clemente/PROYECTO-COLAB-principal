@@ -1,6 +1,7 @@
 package com.colab.backend.service;
 
 import com.colab.backend.domain.Notificacion;
+import com.colab.backend.domain.Proyecto;
 import com.colab.backend.domain.Usuario;
 import com.colab.backend.dto.NotificacionResponse;
 import com.colab.backend.repository.NotificacionRepository;
@@ -34,10 +35,20 @@ public class NotificacionService {
     /** RF-33 — Crea una notificación para un usuario (uso interno de otros servicios). */
     @Transactional
     public void crear(Usuario destinatario, String tipoEvento, String mensaje) {
+        crear(destinatario, tipoEvento, mensaje, null);
+    }
+
+    /** Guarda el proyecto de origen sin deducirlo del texto del mensaje. */
+    @Transactional
+    public void crear(Usuario destinatario, String tipoEvento, String mensaje, Proyecto proyecto) {
         Notificacion n = new Notificacion();
         n.setUsuario(destinatario);
         n.setTipoEvento(tipoEvento);
         n.setMensaje(mensaje);
+        if (proyecto != null) {
+            n.setProyectoId(proyecto.getId());
+            n.setProyectoNombre(proyecto.getNombre());
+        }
         n.setLeida(false);
         notificacionRepository.save(n);
     }
@@ -72,13 +83,23 @@ public class NotificacionService {
         return aResponse(n);
     }
 
+    /** Elimina únicamente los avisos leídos de la cuenta autenticada. */
+    @Transactional
+    public void eliminarLeidas() {
+        Usuario u = usuarioActual();
+        notificacionRepository.eliminarLeidasDeUsuario(u.getId());
+    }
+
     private NotificacionResponse aResponse(Notificacion n) {
         return new NotificacionResponse(
                 n.getId(),
                 n.getTipoEvento(),
                 n.getMensaje(),
                 n.isLeida(),
-                n.getFechaCreacion());
+                n.getFechaCreacion(),
+                n.getProyectoId(),
+                n.getProyectoNombre(),
+                n.getProyectoId() != null ? "TEC-" + n.getProyectoId() : null);
     }
 
     private Usuario usuarioActual() {

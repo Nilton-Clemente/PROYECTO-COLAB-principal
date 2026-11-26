@@ -44,6 +44,13 @@ public class Notificacion {
     @Column(nullable = false)
     private String mensaje;
 
+    // Contexto histórico: se conserva aunque el proyecto se renombre o elimine.
+    @Column(name = "proyecto_id")
+    private Long proyectoId;
+
+    @Column(name = "proyecto_nombre")
+    private String proyectoNombre;
+
     @Column(nullable = false)
     private boolean leida = false;
 

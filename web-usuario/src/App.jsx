@@ -9,6 +9,7 @@ import EditarPlanificacion from './pages/EditarPlanificacion.jsx';
 import MisTareas from './pages/MisTareas.jsx';
 import RegistrarAvance from './pages/RegistrarAvance.jsx';
 import Invitaciones from './pages/Invitaciones.jsx';
+import Notificaciones from './pages/Notificaciones.jsx';
 import Perfil from './pages/Perfil.jsx';
 import CatalogoHabilidades from './pages/CatalogoHabilidades.jsx';
 
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/proyectos/:id/tareas/:tareaId/avances/registrar" element={<RegistrarAvance />} />
         <Route path="/proyectos/:id/:tab?" element={<ProyectoDetalle />} />
         <Route path="/invitaciones" element={<Invitaciones />} />
+        <Route path="/notificaciones" element={<Notificaciones />} />
         <Route path="/perfil" element={<Perfil />} />
         <Route path="/perfil/habilidades" element={<CatalogoHabilidades />} />
       </Route>

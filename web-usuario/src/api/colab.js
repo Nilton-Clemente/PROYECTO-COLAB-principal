@@ -34,6 +34,21 @@ export const misInvitaciones = (token) => request('/api/invitaciones', { token }
 export const aceptarInvitacion = (token, id) => request(`/api/invitaciones/${id}/aceptar`, { method: 'POST', token });
 export const rechazarInvitacion = (token, id) => request(`/api/invitaciones/${id}/rechazar`, { method: 'POST', token });
 
+// Notificaciones in-app de la cuenta autenticada.
+export const listarNotificaciones = (token) => request('/api/notificaciones', { token });
+export const contarNotificaciones = (token) => request('/api/notificaciones/no-leidas', { token });
+export const marcarNotificacionLeida = (token, id) => request(`/api/notificaciones/${id}/leida`, { method: 'PUT', token });
+export async function eliminarNotificacionesLeidas(token) {
+  try {
+    return await request('/api/notificaciones/leidas', { method: 'DELETE', token });
+  } catch (err) {
+    if (err.status === 404 || err.status === 405) {
+      err.message = 'El servidor no tiene disponible la eliminación de notificaciones leídas. Actualiza o reinicia el backend e inténtalo de nuevo.';
+    }
+    throw err;
+  }
+}
+
 // Planificación con IA
 export const obtenerPlanificacion = (token, id) => request(`/api/proyectos/${id}/planificacion`, { token });
 export const generarPlanificacion = (token, id) =>

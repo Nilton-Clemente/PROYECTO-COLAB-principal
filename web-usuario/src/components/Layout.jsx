@@ -1,11 +1,33 @@
-import { useCallback, useEffect, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import * as api from '../api/colab.js';
 import { iniciales } from '../utils.js';
+import { IconBell } from './Icons.jsx';
+import { crearBandejaNotificaciones } from '../notificaciones.js';
+
+export function EnlaceNotificaciones({ noLeidas, contadorError, className }) {
+  const descripcion = contadorError ? 'Contador sin actualizar' : noLeidas == null
+    ? 'Contador no disponible' : `${noLeidas} sin leer`;
+  return (
+    <NavLink to="/notificaciones" className={className} aria-label={`Notificaciones: ${descripcion}`}>
+      <IconBell /> Notificaciones
+      {noLeidas > 0 && <span className="nav__insignia" aria-hidden="true">{noLeidas}</span>}
+      {contadorError && <span className="nav__contador-error" title="Contador sin actualizar" aria-hidden="true">!</span>}
+    </NavLink>
+  );
+}
 
 export default function Layout() {
   const { token } = useAuth();
+  const { pathname } = useLocation();
+  const bandeja = useMemo(() => crearBandejaNotificaciones({
+    listar: () => api.listarNotificaciones(token),
+    contar: () => api.contarNotificaciones(token),
+    marcarLeida: (id) => api.marcarNotificacionLeida(token, id),
+    eliminarLeidas: () => api.eliminarNotificacionesLeidas(token),
+  }), [token]);
+  const notificaciones = useSyncExternalStore(bandeja.subscribe, bandeja.getSnapshot, bandeja.getSnapshot);
   const [usuario, setUsuario] = useState(null);
   const [error, setError] = useState('');
   const [pendientes, setPendientes] = useState(0);
@@ -25,6 +47,23 @@ export default function Layout() {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  useEffect(() => {
+    if (!token) return undefined;
+    const refrescar = () => {
+      if (document.visibilityState === 'hidden') return;
+      if (pathname === '/notificaciones') bandeja.cargar();
+      else bandeja.refrescarContador();
+    };
+    // La propia página carga la bandeja al entrar; fuera de ella basta el contador.
+    if (pathname !== '/notificaciones') bandeja.refrescarContador();
+    window.addEventListener('focus', refrescar);
+    document.addEventListener('visibilitychange', refrescar);
+    return () => {
+      window.removeEventListener('focus', refrescar);
+      document.removeEventListener('visibilitychange', refrescar);
+    };
+  }, [bandeja, pathname, token]);
 
   useEffect(() => {
     if (!aviso) return undefined;
@@ -55,6 +94,7 @@ export default function Layout() {
               Invitaciones
               {pendientes > 0 && <span className="nav__insignia" aria-label={`${pendientes} pendientes`}>{pendientes}</span>}
             </NavLink>
+            <EnlaceNotificaciones noLeidas={notificaciones.noLeidas} contadorError={notificaciones.contadorError} className={enlace} />
             <NavLink to="/perfil" className={enlace}>Mi perfil</NavLink>
           </nav>
           <div className="barra__usuario">
@@ -79,7 +119,7 @@ export default function Layout() {
             <button type="button" className="btn btn--primario" onClick={cargar}>Reintentar</button>
           </div>
         )}
-        {usuario && <Outlet context={{ usuario, pendientes, refrescarInvitaciones, avisar }} />}
+        {usuario && <Outlet context={{ usuario, pendientes, refrescarInvitaciones, avisar, bandeja }} />}
       </main>
 
       <footer className="pie">

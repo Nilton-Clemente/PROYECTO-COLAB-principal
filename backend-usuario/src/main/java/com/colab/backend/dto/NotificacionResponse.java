@@ -7,4 +7,7 @@ public record NotificacionResponse(
         String tipoEvento,
         String mensaje,
         boolean leida,
-        LocalDateTime fechaCreacion) {}
+        LocalDateTime fechaCreacion,
+        Long proyectoId,
+        String proyectoNombre,
+        String proyectoCodigo) {}

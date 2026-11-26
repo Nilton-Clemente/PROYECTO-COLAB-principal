@@ -67,6 +67,7 @@ export async function request(path, { method = 'GET', body, token } = {}) {
     throw new ApiError(res.status, mensaje);
   }
 
+  if (res.status === 204) return null;
   const texto = await res.text();
   return texto ? JSON.parse(texto) : null;
 }

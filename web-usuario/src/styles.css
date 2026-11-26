@@ -165,7 +165,7 @@ a:hover { text-decoration: underline; }
 }
 .logo { font-weight: 700; font-size: 17px; color: var(--indigo); letter-spacing: -0.01em; }
 .logo--chico { font-size: 13px; }
-.nav { flex: 1; display: flex; justify-content: center; gap: 4px; }
+.nav { flex: 1; display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }
 
 .barra__usuario { display: flex; align-items: center; gap: 16px; }
 .barra__datos { display: flex; align-items: center; gap: 10px; line-height: 1.25; }
@@ -401,6 +401,26 @@ a:hover { text-decoration: underline; }
 .nav__enlace:hover { background: var(--fondo); text-decoration: none; }
 .nav__enlace--activo { background: var(--indigo-suave); color: var(--indigo); }
 .nav__insignia { min-width: 18px; padding: 0 5px; border-radius: 999px; background: var(--indigo); color: #fff; font-size: 11px; line-height: 18px; text-align: center; }
+.nav__contador-error { color: var(--rojo); font-weight: 700; }
+
+/* ---------- Bandeja de notificaciones ---------- */
+.notificaciones { display: flex; flex-direction: column; gap: 20px; }
+.notificaciones__contador, .notificaciones__cargando { color: var(--apagado); font-size: 13px; }
+.notificaciones__lista { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+.notificacion { padding: 20px; min-width: 0; border-left: 4px solid var(--linea); }
+.notificacion--sin-leer { border-left-color: var(--indigo); }
+.notificacion__cabecera, .notificacion__pie { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.notificacion__tipo { color: var(--apagado); font-size: 12px; font-weight: 600; }
+.notificacion__proyecto { font-size: 17px; margin: 10px 0 8px; overflow-wrap: anywhere; }
+.notificacion__mensaje { white-space: pre-wrap; overflow-wrap: anywhere; }
+.notificacion__pie { margin-top: 16px; }
+.notificacion__fecha { color: var(--apagado); font-size: 12px; }
+.notificaciones__error { padding: 16px; border: 1px solid var(--rojo-linea); background: var(--rojo-suave); border-radius: 10px; color: var(--rojo); display: grid; gap: 10px; justify-items: start; }
+.notificaciones__error p { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  .nav__enlace { padding: 6px 8px; font-size: 12px; }
+  .notificacion { padding: 16px; }
+}
 
 .btn--ghost { background: #fff; color: var(--tinta); border-color: var(--linea); }
 .btn--ghost:hover:not(:disabled) { background: var(--fondo); }
