@@ -35,6 +35,8 @@ import com.prieto.colab_movil.ui.components.ColabBarraSecundaria
 import com.prieto.colab_movil.ui.components.ColabActualizar
 import com.prieto.colab_movil.data.model.IntegranteResponseDto
 import com.prieto.colab_movil.data.model.ProyectoResponseDto
+import com.prieto.colab_movil.data.model.RequerimientoFuncionalDto
+import com.prieto.colab_movil.data.model.RequerimientoNoFuncionalDto
 import com.prieto.colab_movil.data.model.EstadoProyecto
 import com.prieto.colab_movil.data.model.estadoProyecto
 
@@ -58,14 +60,7 @@ private val OnErrorContainer = Color(0xFF93000A)
 /* ───────────── Enum y Clases de Soporte UI ───────────── */
 enum class Pestana(val titulo: String) { INFO("Información"), EQUIPO("Equipo") }
 
-enum class Etiqueta(val texto: String, val fondo: Color, val fg: Color) {
-    ALTA("Alta Prioridad", ErrorContainer, OnErrorContainer),
-    MEDIA("Media Prioridad", SecondaryContainer, OnSecondaryContainer),
-    RENDIMIENTO("Rendimiento", ErrorContainer, OnErrorContainer),
-    SEGURIDAD("Seguridad", SurfaceHighest, OnSurface)
-}
-
-data class Requerimiento(val codigo: String, val titulo: String, val detalle: String, val etiqueta: Etiqueta)
+private data class Requerimiento(val codigo: String, val detalle: String, val categoria: String? = null)
 data class Tech(val nombre: String, val destacado: Boolean = false, val neutro: Boolean = false)
 data class Miembro(val iniciales: String, val nombre: String, val rol: String, val tag: String)
 
@@ -207,28 +202,6 @@ private fun DetalleProyectoContenido(
         )
     } ?: emptyList()
 
-    val requerimientos = mutableListOf<Requerimiento>()
-    proyectoDto.requerimientosFuncionales?.forEachIndexed { i, rf ->
-        requerimientos.add(
-            Requerimiento(
-                codigo = rf.codigo ?: "RF-0${i + 1}",
-                titulo = "Requerimiento Funcional",
-                detalle = rf.descripcion,
-                etiqueta = if (i == 0) Etiqueta.ALTA else Etiqueta.MEDIA
-            )
-        )
-    }
-    proyectoDto.requerimientosNoFuncionales?.forEachIndexed { i, rnf ->
-        requerimientos.add(
-            Requerimiento(
-                codigo = rnf.codigo ?: "RNF-0${i + 1}",
-                titulo = rnf.categoria ?: "Calidad y Rendimiento",
-                detalle = rnf.descripcion,
-                etiqueta = Etiqueta.RENDIMIENTO
-            )
-        )
-    }
-
     val equipo = equipoDto.map { m ->
         val iniciales = m.nombre.split(" ")
             .mapNotNull { it.firstOrNull()?.toString() }
@@ -281,7 +254,11 @@ private fun DetalleProyectoContenido(
         ResumenCard(proyectoDto)
 
         when (pestana) {
-            Pestana.INFO -> InfoTab(problematica, objetivoGeneral, objetivosEspecificos, stack, requerimientos)
+            Pestana.INFO -> InfoTab(
+                problematica, objetivoGeneral, objetivosEspecificos, stack,
+                proyectoDto.requerimientosFuncionales.orEmpty(),
+                proyectoDto.requerimientosNoFuncionales.orEmpty()
+            )
             Pestana.EQUIPO -> EquipoProyectoContent(
                 equipoDto = equipoDto,
                 puedeInvitar = puedeGenerar && habilitarAcciones && !tienePlanificacion,
@@ -398,7 +375,8 @@ private fun InfoTab(
     objetivoGeneral: String,
     objetivosEspecificos: List<String>,
     stack: List<Tech>,
-    requerimientos: List<Requerimiento>
+    funcionales: List<RequerimientoFuncionalDto>,
+    noFuncionales: List<RequerimientoNoFuncionalDto>
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ProblematicaCard(problematica)
@@ -406,9 +384,7 @@ private fun InfoTab(
         if (stack.isNotEmpty()) {
             StackCard(stack)
         }
-        if (requerimientos.isNotEmpty()) {
-            RequerimientosCard(requerimientos)
-        }
+        RequerimientosProyecto(funcionales, noFuncionales)
     }
 }
 
@@ -494,9 +470,35 @@ private fun StackCard(stack: List<Tech>) {
 }
 
 @Composable
-private fun RequerimientosCard(reqs: List<Requerimiento>) {
+internal fun RequerimientosProyecto(
+    funcionales: List<RequerimientoFuncionalDto>,
+    noFuncionales: List<RequerimientoNoFuncionalDto>
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        if (funcionales.isNotEmpty()) {
+            RequerimientosCard("Requerimientos funcionales (RF)", funcionales.mapIndexed { i, rf ->
+                Requerimiento(
+                    codigo = rf.codigo ?: "RF-0${i + 1}",
+                    detalle = rf.descripcion
+                )
+            })
+        }
+        if (noFuncionales.isNotEmpty()) {
+            RequerimientosCard("Requerimientos no funcionales (RNF)", noFuncionales.mapIndexed { i, rnf ->
+                Requerimiento(
+                    codigo = rnf.codigo ?: "RNF-0${i + 1}",
+                    detalle = rnf.descripcion,
+                    categoria = rnf.categoria?.takeIf { it.isNotBlank() }
+                )
+            })
+        }
+    }
+}
+
+@Composable
+private fun RequerimientosCard(titulo: String, reqs: List<Requerimiento>) {
     Tarjeta {
-        TituloSeccion(Icons.Outlined.Checklist, "Requerimientos Clave")
+        TituloSeccion(Icons.Outlined.Checklist, titulo)
         reqs.forEach { r ->
             Column(
                 modifier = Modifier
@@ -506,22 +508,10 @@ private fun RequerimientosCard(reqs: List<Requerimiento>) {
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(r.codigo, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace, color = Primary)
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(r.etiqueta.fondo)
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text(r.etiqueta.texto, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = r.etiqueta.fg)
-                    }
+                Text(r.codigo, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace, color = Primary)
+                r.categoria?.let { categoria ->
+                    Text(categoria, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = OnSurface)
                 }
-                Text(r.titulo, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = OnSurface)
                 Text(r.detalle, fontSize = 13.sp, lineHeight = 18.sp, color = OnSurfaceVariant)
             }
         }
