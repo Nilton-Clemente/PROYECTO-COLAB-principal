@@ -5,7 +5,7 @@ import * as api from '../api/colab.js';
 import { iniciales } from '../utils.js';
 
 export default function Layout() {
-  const { token, cerrarSesion } = useAuth();
+  const { token } = useAuth();
   const [usuario, setUsuario] = useState(null);
   const [error, setError] = useState('');
   const [pendientes, setPendientes] = useState(0);
@@ -67,7 +67,6 @@ export default function Layout() {
                 </div>
               </div>
             )}
-            <button type="button" className="enlace-peligro" onClick={cerrarSesion}>Cerrar sesión</button>
           </div>
         </div>
       </header>

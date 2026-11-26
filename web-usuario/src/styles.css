@@ -216,38 +216,99 @@ a:hover { text-decoration: underline; }
 .habilidad h3 { font-size: 15px; font-weight: 600; margin-top: 8px; }
 .chip { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 6px; background: var(--indigo-suave); color: var(--indigo); }
 
-/* Perfil y catálogo de habilidades */
-.perfil-habilidades, .perfil-habilidades__acceso { padding: clamp(16px, 4vw, 28px); }
-.perfil-habilidades__cab, .perfil-habilidades__acceso {
-  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 20px;
+/* Perfil: estilos limitados a esta pantalla, sin cambiar el catálogo. */
+.perfil { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
+.perfil .tarjeta { border-radius: 16px; box-shadow: 0 1px 3px rgb(15 23 42 / 7%); }
+.perfil__portada {
+  min-height: 180px; padding: 30px 36px; gap: 28px; margin-bottom: 10px;
+  background: radial-gradient(ellipse at top right, #e2e7ff80, transparent 50%),
+    linear-gradient(110deg, #f6f7ff, #fff 58%, #f2f3ff);
 }
-.perfil-habilidades__cab { padding-bottom: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--linea); }
-.perfil-habilidades__cab .seccion__cab { flex-wrap: wrap; }
-.perfil-habilidades__cab .seccion__sub, .perfil-habilidades__acceso .seccion__sub { margin: 3px 0 0; }
-.perfil-habilidades__acceso h2 { font-size: 18px; }
-.perfil-habilidades__acceso .btn { text-decoration: none; }
-.perfil-habilidades__ver { color: var(--indigo); background: transparent; padding: 6px 0; }
-.perfil-habilidades__ver:hover { text-decoration: underline; }
+.perfil__portada .avatar { width: 108px; height: 108px; border-radius: 14px; font-size: 34px; box-shadow: 0 3px 10px rgb(15 23 42 / 13%); }
+.perfil__identidad { flex: 1; min-width: 0; }
+.perfil__cerrar-sesion { flex: none; min-height: 44px; }
+.perfil__portada h1 { font-size: clamp(25px, 3vw, 34px); line-height: 1.2; letter-spacing: -0.04em; overflow-wrap: anywhere; }
+.perfil__portada .portada__correo { margin-top: 8px; font-size: 13px; overflow-wrap: anywhere; }
+.perfil-habilidades { padding: 32px 36px 36px; }
+.perfil-habilidades__cab, .perfil-habilidades__acceso {
+  display: flex; justify-content: space-between; align-items: center; gap: 20px;
+}
+.perfil-habilidades__cab { padding-bottom: 14px; margin-bottom: 22px; border-bottom: 1px solid #e2e7ff; }
+.perfil-habilidades__cab > div { min-width: 0; }
+.perfil-habilidades__cab .seccion__cab { flex-wrap: wrap; gap: 12px; }
+.perfil-habilidades__cab h2 { font-size: 24px; line-height: 1.25; letter-spacing: -0.035em; }
+.perfil-habilidades__cab .contador { padding: 3px 11px; background: #e4e0ff; color: #3525cd; font-size: 12px; font-weight: 700; }
+.perfil-habilidades__cab .seccion__sub { margin: 7px 0 0; font-size: 15px; }
+.perfil-habilidades__ver { flex: none; gap: 5px; color: #3525cd; background: transparent; padding: 9px 0 9px 12px; }
+.perfil-habilidades__ver:hover { color: #2014a7; text-decoration: underline; }
+.perfil-habilidades__ver > span { font-size: 24px; line-height: 1; }
 .perfil-habilidades__grilla {
   list-style: none; padding: 0; margin: 0; display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(106px, 100%), 1fr)); gap: 10px;
+  grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 18px;
 }
 .perfil-habilidades__tarjeta {
-  display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0;
-  padding: 12px 8px 8px; text-align: center; border-radius: 12px; background: var(--fondo);
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  min-width: 0; min-height: 154px; padding: 12px 7px 8px; text-align: center; border-radius: 14px; background: #f1f2ff;
 }
-.perfil-habilidades__tarjeta h3 { font-size: 13px; line-height: 1.3; overflow-wrap: anywhere; }
-.perfil-habilidades__nivel { font-size: 11px; color: var(--apagado); overflow-wrap: anywhere; }
-.perfil-habilidades__quitar { margin-top: auto; padding: 4px; color: var(--rojo); background: transparent; font-size: 11px; }
+.perfil-habilidades__tarjeta .habilidad-icono { width: 52px; height: 52px; margin-bottom: 4px; border: 0; box-shadow: 0 1px 3px rgb(15 23 42 / 4%); }
+.perfil-habilidades__tarjeta .habilidad-icono img { width: 32px; height: 32px; }
+.perfil-habilidades__tarjeta h3 { max-width: 100%; font-size: 14px; line-height: 1.25; overflow-wrap: anywhere; }
+.perfil-habilidades__nivel { max-width: 100%; font: 400 11px var(--mono); color: #55566b; overflow-wrap: anywhere; }
+.perfil-habilidades__indicador { position: absolute; top: -6px; right: -5px; width: 23px; height: 23px; display: grid; place-items: center; border-radius: 50%; color: #fff; }
+.perfil-habilidades__indicador--avanzado { background: #3525cd; }
+.perfil-habilidades__indicador--intermedio { background: #00714d; }
+.perfil-habilidades__indicador--basico { background: #5b5c70; }
+.perfil-habilidades__indicador svg { width: 14px; height: 14px; }
+.perfil-habilidades__quitar { margin-top: auto; min-height: 28px; max-width: 100%; gap: 3px; padding: 4px; color: var(--rojo); background: transparent; font-size: 11px; }
 .perfil-habilidades__quitar:hover:not(:disabled) { background: var(--rojo-suave); }
 .perfil-habilidades__quitar svg, .catalogo-habilidades__acciones svg { width: 14px; height: 14px; flex: none; }
-.perfil-habilidades__mas { display: flex; }
+.perfil-habilidades__mas { display: flex; min-width: 0; }
 .perfil-habilidades__mas .btn {
-  flex: 1; flex-direction: column; border: 1px dashed var(--linea); border-radius: 12px; background: #fff;
-  color: var(--indigo); font-size: 12px;
+  flex: 1; min-width: 0; min-height: 154px; flex-direction: column; gap: 6px; padding: 10px 6px;
+  border: 2px dashed #d9d7e9; border-radius: 14px; background: #fff; color: #55566b; font-size: 14px;
 }
-.perfil-habilidades__mas .btn:hover { border-color: var(--indigo); background: var(--fondo); }
-.perfil-habilidades__mas strong { font-size: 20px; }
+.perfil-habilidades__mas .btn:hover { border-color: #a7a0e8; background: #fafaff; }
+.perfil-habilidades__restantes { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 10px; background: #f1f2ff; color: #45465b; font-size: 18px; }
+.perfil-habilidades__mas small { margin-top: -4px; color: var(--apagado); font-size: 12px; font-weight: 400; }
+.perfil-habilidades__acceso { padding: 25px 27px; min-height: 109px; }
+.perfil-habilidades__catalogo-texto { display: flex; align-items: center; gap: 18px; min-width: 0; }
+.perfil-habilidades__catalogo-icono { flex: none; width: 54px; height: 54px; display: grid; place-items: center; border-radius: 13px; background: #e5e0ff; color: #3525cd; }
+.perfil-habilidades__acceso h2 { font-size: 17px; line-height: 1.3; }
+.perfil-habilidades__acceso .seccion__sub { margin: 4px 0 0; font-size: 14px; }
+.perfil-habilidades__catalogo-boton { flex: none; gap: 12px; min-height: 44px; padding: 0 18px; border-radius: 10px; background: #e4e7ff; color: #182139; }
+.perfil-habilidades__catalogo-boton:hover { background: #d7dcff; text-decoration: none; }
+.perfil-habilidades__catalogo-boton > span { font-size: 20px; line-height: 1; }
+@media (max-width: 1100px) {
+  .perfil-habilidades__grilla { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .perfil { gap: 18px; }
+  .perfil__portada { min-height: 0; padding: 22px; gap: 16px; margin-bottom: 4px; }
+  .perfil__portada .avatar { width: 82px; height: 82px; font-size: 27px; }
+  .perfil__portada h1 { font-size: 23px; }
+  .perfil-habilidades { padding: 22px 18px; }
+  .perfil-habilidades__cab { align-items: flex-start; gap: 12px; }
+  .perfil-habilidades__cab h2 { font-size: 20px; }
+  .perfil-habilidades__cab .seccion__sub { font-size: 13px; }
+  .perfil-habilidades__ver { padding-left: 0; font-size: 12px; }
+  .perfil-habilidades__grilla { gap: 12px; }
+  .perfil-habilidades__acceso { flex-direction: column; align-items: stretch; padding: 20px; gap: 18px; }
+  .perfil-habilidades__catalogo-texto { align-items: flex-start; gap: 12px; }
+  .perfil-habilidades__catalogo-icono { width: 46px; height: 46px; }
+  .perfil-habilidades__acceso h2 { font-size: 15px; }
+  .perfil-habilidades__acceso .seccion__sub { font-size: 12px; }
+}
+@media (max-width: 430px) {
+  .perfil-habilidades__grilla { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .perfil-habilidades__cab { gap: 8px; }
+  .perfil-habilidades__cab .seccion__cab { gap: 7px; }
+  .perfil-habilidades__cab .contador { font-size: 10px; }
+}
+@media (max-width: 640px) {
+  .perfil__identidad { width: 100%; }
+  .perfil__cerrar-sesion { width: 100%; }
+}
+/* Componentes compartidos y catálogo de habilidades */
 .habilidad-icono {
   flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 10px;
   background: #fff; border: 1px solid var(--linea); color: var(--indigo); font: 700 13px var(--mono);
